@@ -68,6 +68,11 @@ if [ "$os_name" = "Linux" ] ; then
 	#
 	#export FC="gfortran -fconvert=swap -ffree-line-length-none"
 	export FC="gfortran -fconvert=swap -ffree-line-length-none -g -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -fbounds-check"
+
+elif [ "$os_name" = "Darwin" ] ; then
+
+	export FC="gfortran -fconvert=swap -ffree-line-length-none -g -ffpe-trap=invalid,zero,overflow,underflow -fbacktrace -fbounds-check -Ofast"
+
 elif [ "$os_name" = "DEC" ] ; then
 	#
 	#-----------------------------------------------
