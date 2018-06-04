@@ -7,7 +7,7 @@ import sys
 import os
 
 # Add src directory to Python path
-sys.path.append('{}/../src/'.format(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.abspath('{}/../src/'.format(os.path.dirname(os.path.abspath(__file__)))))
 
 # DALES specific tools to read/write in- and output:
 import DALES_tools as dt

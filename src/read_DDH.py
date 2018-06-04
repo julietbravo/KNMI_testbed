@@ -1,15 +1,15 @@
 """
-  Quick 'n dirty Python "interface" to DDH files.
-  Should work for other LFA files, but `read_DDH`
+  Quick 'n dirty Python "interface" to DDH (LFA) files.
+  Should work for other LFA files, but `DDH_LFA`
   class contains some DDH specific routines.
-  
+
   Requires LFA compiled, and its executables (lfac, lfalaf)
   available in the path. LFA code is available in external/LFA,
-  and should compile out-of-the-box in KNMI desktops with the 
+  and should compile out-of-the-box in KNMI desktops with the
   install script
-  
+
   TO-DO: write real interface to LFA Fortran library!
-  
+
   Bart van Stratum (KNMI)
 """
 
@@ -19,6 +19,10 @@ import numpy as np
 import sys
 import datetime
 import os
+
+# Extend PATH to include LFA binaries
+path = os.path.abspath('{}/../external/LFA/'.format(os.path.dirname(os.path.abspath(__file__))))
+os.environ["PATH"] += os.pathsep + path
 
 # Some "private" functions
 def _cl_call(call):
@@ -42,7 +46,7 @@ def _datetime_offset(date, offset, type):
         return date + offset*datetime.timedelta(days=1)
 
 
-class DDH_file:
+class DDH_LFA:
     """
     Read individual DDH LFA files.
     Calls certain selected LFA command line routines,
@@ -114,3 +118,11 @@ class DDH_file:
             return np.array(list(filter(None,data)), dtype=self.attributes[name]['type']).reshape(int(ncol),-1).squeeze()
         else:
             return np.array(list(filter(None,data)), dtype=self.attributes[name]['type'])
+
+
+if __name__ == '__main__':
+    # Only executed if script is called directly, for testing..
+
+    data = '/Users/bart/meteo/data/Harmonie_DDH/20100228_00_ws/06/DHFDLHARM+0016'
+    lfa  = DDH_LFA(data)
+    v    = lfa.read_variable('VUU0')

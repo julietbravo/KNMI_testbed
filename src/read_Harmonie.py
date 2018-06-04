@@ -101,7 +101,7 @@ class Read_DDH_files:
                 # Exception for t==0, the instantaneous variables are
                 # hidden in the first output file (t=1)
 
-                f = ddh.DDH_file('{0:}DHFDLHARM+{1:04d}'.format(path,1))
+                f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,1))
 
                 self.datetime.append(f.attributes['datetime']['forecast_date']-one_min)
 
