@@ -80,11 +80,16 @@ class DDH_LFA:
         self.attributes = {}
         for line in lines:
             if (len(line) > 0):
-                bits   = line.replace('|','').split()
-                type_o = bits[1]                       # Original type
-                type   = _type_conversion(type_o)      # Numpy data type
-                length = int(bits[3])                  # Size of data array
-                name   = bits[4]                       # Variable name in LFA
+                try:
+                    bits   = line.replace('|','').split()
+                    type_o = bits[1]                       # Original type
+                    type   = _type_conversion(type_o)      # Numpy data type
+                    length = int(bits[3])                  # Size of data array
+                    name   = bits[4]                       # Variable name in LFA
+                except: # not pretty to catch all, but LFA does weird stuff now and then..
+                    print('Error reading LFA:')
+                    print(data)
+                    sys.exit()
 
                 # Save variable as dictionary in dictionary....
                 self.attributes[name] = {'type': type, 'length': length, 'type_o': type_o}
@@ -111,13 +116,18 @@ class DDH_LFA:
         # Call `lfac` to get the data from one single variable:
         data = _cl_call('lfac {} {}'.format(self.file_path, name)).split('\n')
 
-        # Return data as Numpy array of correct data type. `filter(None,data)` removes empty lines
-        ncol = self.attributes[name]['length'] / self.levels
+        # Remove empty elements
+        cleaned_data = list(filter(None,data))
 
-        if (ncol%1 == 0 and reshape):
-            return np.array(list(filter(None,data)), dtype=self.attributes[name]['type']).reshape(int(ncol),-1).squeeze()
+        # Return data as Numpy array of correct data type. `filter(None,data)` removes empty lines
+        ncol = int(self.attributes[name]['length'] / self.levels)
+
+        if len(cleaned_data) == 1:
+            return np.array(cleaned_data, dtype=self.attributes[name]['type'])[0]
+        elif (ncol%1 == 0 and reshape):
+            return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(int(ncol),-1).squeeze()
         else:
-            return np.array(list(filter(None,data)), dtype=self.attributes[name]['type'])
+            return np.array(cleaned_data, dtype=self.attributes[name]['type'])
 
 
 if __name__ == '__main__':

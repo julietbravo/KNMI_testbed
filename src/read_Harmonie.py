@@ -36,6 +36,8 @@ class Read_DDH_files:
         self.time = np.zeros(self.nt)
         self.datetime = []
 
+        # Atmospheric quantities
+        # ----------------------
         self.cp   = np.zeros((self.nt, self.nlev))        # Specific heat at const pressure (J kg-1 K-1)
         self.p    = np.zeros((self.nt, self.nlev))        # Pressure (Pa)
         self.ph   = np.zeros((self.nt, self.nlev))        # Half level pressure (Pa)
@@ -53,6 +55,13 @@ class Read_DDH_files:
         self.qr   = np.zeros((self.nt, self.nlev))        # specific humidity (rain)    (kg kg-1)
         self.qs   = np.zeros((self.nt, self.nlev))        # specific humidity (snow)    (kg kg-1)
         self.qg   = np.zeros((self.nt, self.nlev))        # specific humidity (graupel) (kg kg-1)
+
+        # Surface quantities
+        # ----------------------
+        self.H    = np.zeros(self.nt)       # surface sensible heat flux
+        self.LE   = np.zeros(self.nt)       # surface latent heat flux
+        self.Tsk  = np.zeros(self.nt)       # surface temperature
+        self.qsk  = np.zeros(self.nt)       # surface specific humidity
 
         if (tendencies):
             # Physics, dynamics and total tendencies
@@ -127,9 +136,14 @@ class Read_DDH_files:
                 self.qs[t,:] = f.read_variable('VQS0') / self.dp[t,:]
                 self.qg[t,:] = f.read_variable('VQG0') / self.dp[t,:]
 
+                self.H[t]    = f.read_variable('VSHF0')
+                self.LE[t]   = f.read_variable('VLHF0')
+                self.Tsk[t]  = f.read_variable('VTSK0')
+                self.qsk[t]  = f.read_variable('VQSK0')
+
                 # There are no tendencies for t == 0...!
             else:
-                f = ddh.DDH_file('{0:}DHFDLHARM+{1:04d}'.format(path,tt))
+                f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,tt))
 
                 self.datetime.append(f.attributes['datetime']['forecast_date'])
 
@@ -154,6 +168,11 @@ class Read_DDH_files:
                 self.qr[t,:] = f.read_variable('VQR1') / self.dp[t,:]
                 self.qs[t,:] = f.read_variable('VQS1') / self.dp[t,:]
                 self.qg[t,:] = f.read_variable('VQG1') / self.dp[t,:]
+
+                self.H[t]    = f.read_variable('VSHF1')
+                self.LE[t]   = f.read_variable('VLHF1')
+                self.Tsk[t]  = f.read_variable('VTSK1')
+                self.qsk[t]  = f.read_variable('VQSK1')
 
                 if (tendencies):
                     # Accumulated tendencies/variables/..
@@ -305,9 +324,9 @@ class Read_DDH_files:
         f = nc4.Dataset(file_name, 'w')
 
         # Set some global attributes
-        f.set_global_attribute('title', 'LES large-scale forcings')
-        f.set_global_attribute('institution', 'KNMI')
-        f.set_global_attribute('source', 'Harmonie 40h1.2tg2 DOWA reanalysis')
+        f.setncattr('title', 'LES large-scale forcings')
+        f.setncattr('institution', 'KNMI')
+        f.setncattr('source', 'Harmonie 40h1.2tg2 DOWA reanalysis')
 
         # Create dimensions
         f.createDimension('time',   self.nt)
@@ -365,6 +384,115 @@ if (__name__ == '__main__'):
     dt    = 60      # model time step (s)
     t_end = 180     # final file to read (-)
     step  = 1       # interval to read (-)
+
+
+    if (True):
+        # ---------------------
+        # Surface tests
+        # ---------------------
+        year  = 2010
+        month = 2
+        day   = 28
+        cycle = 15
+
+        data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
+        data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}_sfc/'.format(data_root, year, month, day, cycle)
+
+        if 'data' not in locals():
+            data = Read_DDH_files(data_path, t_end, step)
+
+        pl.figure()
+        pl.subplot(221)
+        pl.plot(data.time, data.H)
+
+        pl.subplot(222)
+        pl.plot(data.time, data.LE)
+
+        pl.subplot(223)
+        pl.plot(data.time, data.Tsk)
+
+        pl.subplot(224)
+        pl.plot(data.time, data.qsk)
+
+
+    if (False):
+        # ---------------------
+        # Convert DDH to NetCDF
+        # ---------------------
+        year  = 2010
+        month = 2
+        day   = 28
+        cycle = 15
+
+        data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
+        data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
+
+        data = Read_DDH_files(data_path, t_end, step)
+        data.to_netcdf('{}/DDH.nc'.format(data_path))
+
+
+
+    if (False):
+        # ---------------------
+        # Budget potential temperature (temperature/pressure)
+        # ---------------------
+        year  = 2010
+        month = 2
+        day   = 28
+
+        data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
+        data_path1 = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, 12)
+        data_path2 = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, 15)
+
+        if 'data1' not in locals():
+            data1 = Read_DDH_files(data_path1, t_end, step)
+            data2 = Read_DDH_files(data_path2, t_end, step)
+
+        k = -1
+        n = 2
+
+        # --------------------
+        # T + p, plus budget theta
+        # --------------------
+
+        pl.figure()
+        gs = gridspec.GridSpec(2, 2, height_ratios=[1,2])
+
+        pl.subplot(gs[0,0])
+        pl.plot(data1.time[::n]+12, data1.p[::n,k], 'k-')
+        pl.plot(data2.time[::n]+15, data2.p[::n,k], 'k-')
+
+        pl.subplot(gs[0,1])
+        pl.plot(data1.time[::n]+12, data1.T[::n,k], 'k-')
+        pl.plot(data2.time[::n]+15, data2.T[::n,k], 'k-')
+
+        pl.subplot(gs[1,:])
+        pl.plot(data1.time[::n]+12, data1.dtth_tot[::n,k]*3600.,   color='C0', label='total')
+        pl.plot(data1.time[::n]+12, data1.dtth_tot_T[::n,k]*3600., color='C1', label='dtT')
+        pl.plot(data1.time[::n]+12, data1.dtth_tot_e[::n,k]*3600., color='C2', label='dtp')
+
+        pl.plot(data2.time[::n]+15, data2.dtth_tot[::n,k]*3600.)
+        pl.plot(data2.time[::n]+15, data2.dtth_tot_T[::n,k]*3600.)
+        pl.plot(data2.time[::n]+15, data2.dtth_tot_e[::n,k]*3600.)
+        pl.legend()
+
+        # --------------------
+        # High/low bound tendencies T
+        # --------------------
+        pl.figure()
+        pl.plot(data2.time[::]+12, data2.dtth_tot[::,k]*3600., label='t=0,1,2,3,... min')
+        pl.plot(data2.time[::2]+12, data2.dtth_tot[::2,k]*3600., label='t=0,2,4,6,... min')
+        pl.plot(data2.time[1::2]+12, data2.dtth_tot[1::2,k]*3600., label='t=1,3,5,7,... min')
+        pl.legend()
+
+
+
+
+
+
+
+
+
 
     #forecast_dir = '/nobackup/users/stratum/HARMONIE/experiments/DOWA_40h12tg2_fERA5_small/20160705_00/forecast/'
     #forecast_dir = '/nobackup/users/stratum/HARMONIE/experiments/DOWA_40h12tg2_fERA5_small/20170112_12/forecast/'
