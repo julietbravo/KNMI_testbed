@@ -310,7 +310,7 @@ class Read_DDH_files:
     def to_netcdf(self, file_name):
 
         def add_variable(file, name, type, dims, ncatts, data):
-            v = file.createVariable(name, type, dims)
+            v = file.createVariable(name, type, dims, fill_value=nc4.default_fillvals['f4'])
             v.setncatts(ncatts)
             if dims[-1] in ['z', 'zh']:
                 v[:] = data[:,::-1]
@@ -324,7 +324,7 @@ class Read_DDH_files:
         f = nc4.Dataset(file_name, 'w')
 
         # Set some global attributes
-        f.setncattr('title', 'LES large-scale forcings')
+        f.setncattr('title', 'Large-scale forcings LES')
         f.setncattr('institution', 'KNMI')
         f.setncattr('source', 'Harmonie 40h1.2tg2 DOWA reanalysis')
 
@@ -343,6 +343,11 @@ class Read_DDH_files:
         add_variable(f, 'u',    'f4', ('time', 'z'), {'units': 'm s-1',   'long_name': 'Zonal wind'}, self.u)
         add_variable(f, 'v',    'f4', ('time', 'z'), {'units': 'm s-1',   'long_name': 'Meridional wind'}, self.v)
         add_variable(f, 'q',    'f4', ('time', 'z'), {'units': 'kg kg-1', 'long_name': 'Total specific humidity'}, self.q)
+
+        # Surface variables
+        add_variable(f, 'Tsk',   'f4', ('time'), {'units': 'K', 'long_name': 'Absolute surface temperature'}, self.Tsk)
+        add_variable(f, 'qsk',   'f4', ('time'), {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
+        add_variable(f, 'ps',    'f4', ('time'), {'units': 'Pa', 'long_name': 'Surface pressure'}, self.ph[:,-1])
 
         for qtype,qname in qtypes.items():
             add_variable(f, qtype, 'f4', ('time', 'z'), {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
@@ -385,7 +390,6 @@ if (__name__ == '__main__'):
     t_end = 180     # final file to read (-)
     step  = 1       # interval to read (-)
 
-
     if (True):
         # ---------------------
         # Surface tests
@@ -393,26 +397,30 @@ if (__name__ == '__main__'):
         year  = 2010
         month = 2
         day   = 28
-        cycle = 15
+        cycle = 6
 
-        data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
-        data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}_sfc/'.format(data_root, year, month, day, cycle)
+        for cycle in range(6,16,3):
 
-        if 'data' not in locals():
+            data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
+            data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
+
+            #if 'data' not in locals():
             data = Read_DDH_files(data_path, t_end, step)
+            data.to_netcdf('{0:}/LES_forcings_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.format(data_root, year, month, day, cycle))
 
-        pl.figure()
-        pl.subplot(221)
-        pl.plot(data.time, data.H)
 
-        pl.subplot(222)
-        pl.plot(data.time, data.LE)
+        #pl.figure()
+        #pl.subplot(221)
+        #pl.plot(data.time, data.H)
 
-        pl.subplot(223)
-        pl.plot(data.time, data.Tsk)
+        #pl.subplot(222)
+        #pl.plot(data.time, data.LE)
 
-        pl.subplot(224)
-        pl.plot(data.time, data.qsk)
+        #pl.subplot(223)
+        #pl.plot(data.time, data.Tsk)
+
+        #pl.subplot(224)
+        #pl.plot(data.time, data.qsk)
 
 
     if (False):

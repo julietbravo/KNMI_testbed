@@ -45,6 +45,14 @@ def _convert_value(value):
 
 
 # ---------------------------
+# DALES constants (from modglobal.f90)
+# ---------------------------
+constants = dict(rd = 287.04,
+                 cp = 1004.,
+                 lv = 2.53e6,
+                 p0 = 1e5)
+
+# ---------------------------
 # Function to read DALES in/output
 # ---------------------------
 
@@ -129,7 +137,7 @@ def write_dummy_forcings(file_name, n_scalars, z):
         f.write('{0:>10s}{1:<8d}'.format('sv', i+1))
     f.write('\n')
 
-    for time in [0,1e16]:
+    for time in [0,1e6]:
         f.write('{0:+1.10E} '.format(time))
         for i in range(n_scalars):
             f.write('{0:+1.10E} '.format(0))
@@ -138,8 +146,8 @@ def write_dummy_forcings(file_name, n_scalars, z):
     # Atmospheric forcings
     f.write('\n')
 
-    for time in [0,1e16]:
-        f.write('# {0:+1.10E}\n'.format(1e16))
+    for time in [0,1e6]:
+        f.write('# {0:+1.10E}\n'.format(time))
         for k in range(z.size):
             f.write('{0:+1.10E} '.format(z[k]))
             for i in range(n_scalars):

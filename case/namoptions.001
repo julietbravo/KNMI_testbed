@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 3600
+runtime = 28800
 trestart = 3600
 dtmax = 10
 ladaptive = .true.
@@ -15,13 +15,13 @@ nsv = 2
 &DOMAIN
 itot = 32
 jtot = 32
-kmax = 64
+kmax = 160
 
 xsize = 3200.
 ysize = 3200.
 
 xlat = 51.967
-xlon = 4.9
+xlon = 4.
 xday = 0.
 xtime = 0.
 /
@@ -30,7 +30,7 @@ xtime = 0.
 ps = 100000.00
 thls = 300.00       ! Surface thl
 lmoist = .true.
-lcoriol = .true.
+lcoriol = .false.
 ltimedep = .true.
 iradiation = 0      ! 4 = RRTMG
 igrw_damp = 3       ! 3 = nudge (damping) to mean profile
@@ -39,7 +39,7 @@ igrw_damp = 3       ! 3 = nudge (damping) to mean profile
 &NAMSURFACE
 wtsurf =  0.1
 wqsurf =  0.1e-3
-isurf = 4           ! 4 = prescribed thl+qt flux, calculate u*
+isurf = 2           ! 2 = Ts, 4 = thl+qt flux, calculate u*
 z0mav = 0.035
 z0hav = 0.035
 /
@@ -48,11 +48,11 @@ z0hav = 0.035
 cu =  0.
 cv =  0.
 
-iadv_mom = 52
-iadv_tke = 52
-iadv_thl = 52
-iadv_qt  = 52
-iadv_sv  = 52
+iadv_mom = 2
+iadv_tke = 2
+iadv_thl = 2
+iadv_qt  = 2
+iadv_sv  = 2
 /
 
 &SUBGRID
@@ -79,7 +79,7 @@ dtav = 300
 /
 
 &NAMCHECKSIM
-tcheck = 100
+tcheck = 10
 /
 
 &NAMNETCDFSTATS
@@ -89,27 +89,27 @@ lnetcdf = .true.
 &NAMTIMESTAT
 ltimestat = .true.
 lascii = .false.
-dtav = 60
+dtav = 120
 /
 
 &NAMGENSTAT
 lstat  = .true.
 lascii = .false.
-dtav   = 300
-timeav = 300
+dtav   = 120
+timeav = 120
 /
 
 &NAMBUDGET
 lbudget = .false.
 lascii  = .false.
-dtav = 300.
-timeav = 300.
+dtav = 120.
+timeav = 120.
 /
 
 &NAMSTATTEND
 ltend  = .true.
 lascii = .false.
-dtav = 300
+dtav = 120
 /
 
 &NAMSAMPLING
@@ -118,8 +118,8 @@ lsampco    = .false.
 lsampup    = .false.
 lsampbuup  = .false.
 lsampcldup = .false.
-dtav = 300
-timeav = 300.
+dtav = 120
+timeav = 120.
 /
 
 &NAMFIELDDUMP
