@@ -74,6 +74,9 @@ def integrate_tend(u, v, dtu, dtv):
 
 
 if __name__ == '__main__':
+
+    z = 200.     # Height to compare (m)
+
     # Fixed colors per model/obs type
     ch = 'C1'   # Harmonie
     cd = 'k'    # Dales
@@ -82,13 +85,14 @@ if __name__ == '__main__':
 
     mpl.rcParams['lines.linewidth'] = 1.3
 
-
     # Read Cabauw observations
     # ========================
     pwd  = '/nobackup/users/stratum/Cabauw'
     cb   = xr.open_dataset('{}/cesar_tower_meteo_lc1_t10_v1.0_201002.nc'.format(pwd))
+    k_cb = np.abs(cb.z.values-z).argmin()
 
-    k10m = 5
+    if (np.abs(cb.z[k_cb] - z) > 0.1):
+        print('Height is not an observation height at Cabauw!!')
 
     # ERA5 data & tendencies
     # ======================
@@ -108,8 +112,14 @@ if __name__ == '__main__':
     e5.datetime = [format_h_since(h, t0) for h in e5.time]
 
     # Interpolate wind to 10m
-    e5_u10 = interp(e5.u_mean, e5.z_mean[0,:], 10.)
-    e5_v10 = interp(e5.v_mean, e5.z_mean[0,:], 10.)
+    e5_u = interp(e5.u_mean, e5.z_mean[0,:], z)
+    e5_v = interp(e5.v_mean, e5.z_mean[0,:], z)
+
+    # Interpolate dynamic tendency
+    tmp = e5.dtu_advec+e5.dtu_coriolis
+    e5_dtu_dyn = interp(tmp, e5.z_mean[0,:], z)
+    tmp = e5.dtv_advec+e5.dtv_coriolis
+    e5_dtv_dyn = interp(tmp, e5.z_mean[0,:], z)
 
     # Harmonie data & tendencies
     # ==========================
@@ -119,28 +129,24 @@ if __name__ == '__main__':
     hm    = xr.open_mfdataset(files)
 
     # Interpolate wind to 10m
-    hm_u10 = interp(hm.u.values, hm.zg.values[0,:], 10.)
-    hm_v10 = interp(hm.v.values, hm.zg.values[0,:], 10.)
+    hm_u = interp(hm.u.values, hm.zg.values[0,:], z)
+    hm_v = interp(hm.v.values, hm.zg.values[0,:], z)
 
-    # Integrate dynamic tendencies
-    udi, vdi = integrate_tend(hm.u.values[0], hm.v.values[0], hm.dtu_dyn.values, hm.dtv_dyn.values)
-    upi, vpi = integrate_tend(hm.u.values[0], hm.v.values[0], hm.dtu_phy.values, hm.dtv_phy.values)
-    ui, vi   = integrate_tend(hm.u.values[0], hm.v.values[0], hm.dtu_phy.values+hm.dtu_dyn.values, hm.dtv_phy.values+hm.dtv_dyn.values)
+    # Interpolate tendencies
+    hm_dtu_dyn = interp(hm.dtu_dyn.values, hm.zg.values[0,:], z)
+    hm_dtu_phy = interp(hm.dtu_phy.values, hm.zg.values[0,:], z)
 
-    hm_u10_di = interp(udi, hm.zg.values[0,:], 10.)
-    hm_v10_di = interp(vdi, hm.zg.values[0,:], 10.)
-
-    hm_u10_pi = interp(upi, hm.zg.values[0,:], 10.)
-    hm_v10_pi = interp(vpi, hm.zg.values[0,:], 10.)
-
-    hm_u10_i = interp(ui, hm.zg.values[0,:], 10.)
-    hm_v10_i = interp(vi, hm.zg.values[0,:], 10.)
+    hm_dtv_dyn = interp(hm.dtv_dyn.values, hm.zg.values[0,:], z)
+    hm_dtv_phy = interp(hm.dtv_phy.values, hm.zg.values[0,:], z)
 
     # DALES runs
     # ==========
     da   = xr.open_dataset('profiles.001.nc')
     t0   = datetime.datetime(2010, 2, 28, 6)
     time = [format_h_since(s/3600., t0) for s in da.time]
+
+    da_u = interp(da.u.values, da.zt.values, z)
+    da_v = interp(da.v.values, da.zt.values, z)
 
     if (True):
         # ----------------
@@ -153,37 +159,37 @@ if __name__ == '__main__':
         gs = gridspec.GridSpec(2, 2, height_ratios=[1,2])
 
         pl.subplot(gs[0,0])
-        pl.title('2010-02-28, Cabauw', loc='left')
-        pl.plot(cb.time, wind_to_components(cb.F, cb.D)[0][:,k10m], '+', label='Cabauw')
-        pl.plot(e5.datetime, e5_u10, color=ce, label='ERA5', dashes=[2,2])
-        pl.plot(hm.time,     hm_u10, color=ch, label='Harmonie')
+        pl.title('2010-02-28, Cabauw, {}m'.format(z), loc='left')
+        pl.plot(cb.time, wind_to_components(cb.F, cb.D)[0][:,k_cb], '+', label='Cabauw')
+        pl.plot(e5.datetime, e5_u, color=ce, label='ERA5', dashes=[2,2])
+        pl.plot(hm.time,     hm_u, color=ch, label='Harmonie')
         format_ax()
         pl.legend()
         pl.xlim(xlim)
-        pl.ylabel('$u_{10m}$ (m s$^{-1}$)')
+        pl.ylabel('$u$ (m s$^{-1}$)')
 
         pl.subplot(gs[0,1])
-        pl.plot(cb.time, wind_to_components(cb.F, cb.D)[1][:,k10m], '+', label='Cabauw')
-        pl.plot(e5.datetime, e5_v10, color=ce, label='ERA5', dashes=[2,2])
-        pl.plot(hm.time,     hm_v10, color=ch, label='Harmonie')
+        pl.plot(cb.time, wind_to_components(cb.F, cb.D)[1][:,k_cb], '+', label='Cabauw')
+        pl.plot(e5.datetime, e5_v, color=ce, label='ERA5', dashes=[2,2])
+        pl.plot(hm.time,     hm_v, color=ch, label='Harmonie')
         format_ax()
         pl.legend()
         pl.xlim(xlim)
-        pl.ylabel('$v_{10m}$ (m s$^{-1}$)')
+        pl.ylabel('$v$ (m s$^{-1}$)')
 
         pl.subplot(gs[1,0])
-        pl.plot(hm.time,     hm.dtu_dyn[:,0]*3600, color=ch, label='Harmonie dynamics')
-        pl.plot(hm.time,     hm.dtu_phy[:,0]*3600, color=ch, label='Harmonie physics', dashes=[1,1])
-        pl.plot(e5.datetime, (e5.dtu_advec[:,0]+e5.dtu_coriolis[:,0])*3600, color=ce, label='ERA5 dynamics')
+        pl.plot(hm.time,     hm_dtu_dyn*3600, color=ch, label='Harmonie dynamics')
+        pl.plot(hm.time,     hm_dtu_phy*3600, color=ch, label='Harmonie physics', dashes=[1,1])
+        pl.plot(e5.datetime, e5_dtu_dyn*3600, color=ce, label='ERA5 dynamics')
         format_ax()
         pl.legend()
         pl.xlim(xlim)
         pl.ylabel('$\partial_t u$ (m s$^{-1} h^{-1}$)')
 
         pl.subplot(gs[1,1])
-        pl.plot(hm.time,     hm.dtv_dyn[:,0], color=ch, label='Harmonie dynamics')
-        pl.plot(hm.time,     hm.dtv_phy[:,0], color=ch, label='Harmonie physics', dashes=[1,1])
-        pl.plot(e5.datetime, e5.dtv_advec[:,0]+e5.dtv_coriolis[:,0], color=ce, label='ERA5 dynamics')
+        pl.plot(hm.time,     hm_dtv_dyn*3600, color=ch, label='Harmonie dynamics')
+        pl.plot(hm.time,     hm_dtv_phy*3600, color=ch, label='Harmonie physics', dashes=[1,1])
+        pl.plot(e5.datetime, e5_dtv_dyn*3600, color=ce, label='ERA5 dynamics')
         format_ax()
         pl.legend()
         pl.xlim(xlim)
@@ -198,30 +204,47 @@ if __name__ == '__main__':
         pl.figure(figsize=(8,4))
         pl.subplot(121)
         pl.title('2010-02-28, Cabauw', loc='left')
-        pl.plot(cb.time,     wind_to_components(cb.F, cb.D)[0][:,k10m], '+', label='Cabauw')
-        pl.plot(e5.datetime, e5_u10, label='ERA5', dashes=[2,2])
-        pl.plot(hm.time,     hm_u10, label='Harmonie')
-        pl.plot(time,        da.u[:,0], label='DALES', color='k')
+        pl.plot(cb.time,     wind_to_components(cb.F, cb.D)[0][:,k_cb], '+', label='Cabauw')
+        pl.plot(e5.datetime, e5_u, label='ERA5', dashes=[2,2])
+        pl.plot(hm.time,     hm_u, label='Harmonie')
+        pl.plot(time,        da_u, label='DALES', color='k')
         format_ax()
         pl.legend()
         pl.xlim(xlim)
-        pl.ylabel('$u_{10m}$ (m s$^{-1}$)')
+        pl.ylabel('$u_{{{0:.0f} m}}$ (m s$^{{-1}}$)'.format(z))
         pl.xlabel('time (UTC)')
 
         pl.subplot(122)
-        pl.plot(cb.time,     wind_to_components(cb.F, cb.D)[1][:,k10m], '+', label='Cabauw')
-        pl.plot(e5.datetime, e5_v10, label='ERA5', dashes=[2,2])
-        pl.plot(hm.time,     hm_v10, label='Harmonie')
-        pl.plot(time,        da.v[:,0], label='DALES', color='k')
+        pl.plot(cb.time,     wind_to_components(cb.F, cb.D)[1][:,k_cb], '+', label='Cabauw')
+        pl.plot(e5.datetime, e5_v, label='ERA5', dashes=[2,2])
+        pl.plot(hm.time,     hm_v, label='Harmonie')
+        pl.plot(time,        da_v, label='DALES', color='k')
         format_ax()
         pl.xlim(xlim)
-        pl.ylabel('$v_{10m}$ (m s$^{-1}$)')
+        pl.ylabel('$v_{{{0:.0f} m}}$ (m s$^{{-1}}$)'.format(z))
         pl.xlabel('time (UTC)')
 
         pl.tight_layout()
+        pl.savefig('figures/uv_{0:.0f}m.pdf'.format(z))
+        pl.savefig('figures/uv_{0:.0f}m.png'.format(z))
 
 
-    if (True):
+    if (False):
+
+        # Integrate dynamic tendencies
+        #udi, vdi = integrate_tend(hm.u.values[0], hm.v.values[0], hm.dtu_dyn.values, hm.dtv_dyn.values)
+        #upi, vpi = integrate_tend(hm.u.values[0], hm.v.values[0], hm.dtu_phy.values, hm.dtv_phy.values)
+        #ui, vi   = integrate_tend(hm.u.values[0], hm.v.values[0], hm.dtu_phy.values+hm.dtu_dyn.values, hm.dtv_phy.values+hm.dtv_dyn.values)
+
+        #hm_u10_di = interp(udi, hm.zg.values[0,:], 10.)
+        #hm_v10_di = interp(vdi, hm.zg.values[0,:], 10.)
+
+        #hm_u10_pi = interp(upi, hm.zg.values[0,:], 10.)
+        #hm_v10_pi = interp(vpi, hm.zg.values[0,:], 10.)
+
+        #hm_u10_i = interp(ui, hm.zg.values[0,:], 10.)
+        #hm_v10_i = interp(vi, hm.zg.values[0,:], 10.)
+
         # ----------------
         # Budget of u,v tendencies
         # ----------------
