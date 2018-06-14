@@ -12,8 +12,7 @@ import glob
 sys.path.append(os.path.abspath('{}/../src/'.format(os.path.dirname(os.path.abspath(__file__)))))
 
 # DALES specific tools to read/write in- and output:
-import DALES_tools as dt
-from DALES_tools import constants
+from DALES_tools import *
 
 def interp_z(z_Harmonie, z_LES, variable):
     return np.interp(z_LES, z_Harmonie, variable)
@@ -29,12 +28,16 @@ if __name__ == '__main__':
     pl.close('all')
 
     # Read DALES namelist
-    nl = dt.Read_namelist('namoptions.001')
+    nl = Read_namelist('namoptions.001')
 
     # Create vertical grid
     # ====================
-    grid = dt.Stretched_grid(nl['domain']['kmax'], 80, 20, dz1=20, dz2=130)
-    grid.plot()
+    dz0  = 20.   # Grid spacing near surface
+    dz1  = 130   # Grid spacing near domain top
+    loc  = 80    # Transition level from dz0->dz1
+    nloc = 20    # Depth of transition
+    grid = Grid_stretched(nl['domain']['kmax'], dz0, loc, nloc, dz1)
+    #grid.plot()
 
     # Read Harmonie initial conditions & forcings
     files = glob.glob('/nobackup/users/stratum/DOWA/LES_forcing/LES_forcings_20100228*')
@@ -61,12 +64,12 @@ if __name__ == '__main__':
     # Write to prof.inp.001
     output = odict({'z (m)':grid.z, 'thl (K)':thetal, 'qt (kg kg-1)':qt, \
                     'u (m s-1)':u, 'v (m s-1)':v, 'tke (m2 s-2)':tke})
-    dt.write_profiles('prof.inp.001', output, 'DOWA Harmonie testbed')
+    write_profiles('prof.inp.001', output, 'DOWA Harmonie testbed')
 
     # Initial scalar profiles (for microphysics) are zero
     zero = np.zeros(grid.kmax)
     output = odict({'z (m)':grid.z, 'qr (kg kg-1)':zero, 'nr (kg kg-1)':zero})
-    dt.write_profiles('scalar.inp.001', output, 'DOWA Harmonie testbed')
+    write_profiles('scalar.inp.001', output, 'DOWA Harmonie testbed')
 
     # Surface and atmospheric forcings
     # ================================
@@ -103,13 +106,13 @@ if __name__ == '__main__':
     output_sfc = odict({'time':time_sec, 'wthl_s':dums, 'wqt_s':dums, 'p_s':ps, 'thl_s':ths, 'qt_s':qs})
     output_ls  = odict({'time':time_sec, 'z':grid.z, 'ug':duma, 'vg':duma, \
                         'dqtdt':dtqv, 'dthldt':dtthl, 'dudt':dtu, 'dvdt':dtv})
-    dt.write_forcings('ls_flux.inp.001', output_sfc, output_ls, 'DOWA Harmonie testbed')
+    write_forcings('ls_flux.inp.001', output_sfc, output_ls, 'DOWA Harmonie testbed')
 
     # Dummy forcings for the microphysics scalars
-    dt.write_dummy_forcings('ls_fluxsv.inp.001', 2, grid.z)
+    write_dummy_forcings('ls_fluxsv.inp.001', 2, grid.z)
 
     # Also create non-time dependent input file (lscale.inp)
     zero = np.zeros_like(grid.z)
     output_ls  = odict({'height': grid.z, 'ug':zero, 'vg':zero, 'wfls':zero, \
                         'dqtdxls':zero, 'dqtdyls':zero, 'dqtdtls': zero, 'dthldt':zero})
-    dt.write_profiles('lscale.inp.001', output_ls, 'DOWA Harmonie testbed')
+    write_profiles('lscale.inp.001', output_ls, 'DOWA Harmonie testbed')

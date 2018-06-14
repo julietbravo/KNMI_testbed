@@ -139,14 +139,14 @@ if __name__ == '__main__':
     # DALES runs
     # ==========
     da   = xr.open_dataset('profiles.001.nc')
-    t0   = datetime.datetime(2010, 2, 28, 9)
+    t0   = datetime.datetime(2010, 2, 28, 6)
     time = [format_h_since(s/3600., t0) for s in da.time]
 
     if (True):
         # ----------------
         # Overview & tendencies Harmonie / ERA5
         # ----------------
-        xlim = [datetime.datetime(2010,2,28,8), datetime.datetime(2010,2,28,18)]
+        xlim = [datetime.datetime(2010,2,28,6), datetime.datetime(2010,2,28,18)]
 
         pl.figure(figsize=(8,6))
 
@@ -194,7 +194,6 @@ if __name__ == '__main__':
         # ----------------
         # Compare DALES with others
         # ----------------
-        xlim = [datetime.datetime(2010,2,28,8), datetime.datetime(2010,2,28,18)]
 
         pl.figure(figsize=(8,4))
         pl.subplot(121)

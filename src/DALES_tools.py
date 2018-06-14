@@ -231,38 +231,46 @@ def write_forcings(file_name, timedep_sfc, timedep_atm, docstring=''):
     f.close()
 
 # ---------------------------
-# Grid stretching
+# Vertical grids
 # ---------------------------
-class Linear_stretched_grid:
-    def __init__(self, dz0, kmax, alpha):
+class Grid:
+    def __init__(self, kmax, dz0):
+        self.kmax = kmax
+        self.dz0  = dz0
 
-        self.kmax   = kmax
-        self.dz     = dz0 * (1 + alpha)**np.arange(kmax)        # Grid spacing (m)
-        self.zh     = np.zeros(kmax+1)
-        self.zh[1:] = np.cumsum(self.dz)                        # Half level heights (m)
-        self.z      = 0.5 * (self.zh[1:] + self.zh[:-1])        # Full level heights (m)
-
-        print('Domain height: {0:.1f} m'.format(self.zh[-1]))
+        self.z = np.zeros(kmax)
+        self.dz = np.zeros(kmax)
+        self.zsize = None
 
     def plot(self):
         pl.figure()
+        pl.title('zsize = {0:.1f} m'.format(self.zsize), loc='left')
         pl.plot(self.dz, self.z, '-x')
+        pl.xlabel('dz (m)')
+        pl.ylabel('z (m)')
 
+class Grid_equidist(Grid):
+    def __init__(self, kmax, dz0):
+        Grid.__init__(self, kmax, dz0)
 
-class Stretched_grid:
-    def __init__(self, kmax, nloc1, nbuf1, dz1, dz2):
+        self.zsize = kmax * dz0
+        self.z[:]  = np.arange(dz0/2, self.zsize, dz0)
+        self.dz[:] = dz0
+
+class Grid_stretched(Grid):
+    def __init__(self, kmax, dz0, nloc1, nbuf1, dz1):
+        Grid.__init__(self, kmax, dz0)
+
         dn         = 1./kmax
         n          = np.linspace(dn, 1.-dn, kmax)
         nloc1     *= dn
         nbuf1     *= dn
-        dzdn1      = dz1/dn
-        dzdn2      = dz2/dn
+        dzdn1      = dz0/dn
+        dzdn2      = dz1/dn
 
         dzdn       = dzdn1 + 0.5*(dzdn2-dzdn1)*(1. + np.tanh((n-nloc1)/nbuf1))
-        self.dz    = dzdn*dn
+        self.dz[:] = dzdn*dn
 
-        self.kmax  = kmax
-        self.z     = np.zeros(self.dz.size)
         stretch    = np.zeros(self.dz.size)
 
         self.z[0]  = 0.5*self.dz[0]
@@ -274,17 +282,43 @@ class Stretched_grid:
 
         self.zsize = self.z[kmax-1] + 0.5*self.dz[kmax-1]
 
-        print('Domain height: {0:.1f} m'.format(self.zsize))
+class Grid_linear_stretched(Grid):
+    def __init__(self, kmax, dz0, alpha):
+        Grid.__init__(self, kmax, dz0)
 
-    def plot(self):
-        pl.figure()
-        pl.plot(self.dz, self.z, '-x')
+        self.dz[:] = dz0 * (1 + alpha)**np.arange(kmax)
+        zh         = np.zeros(kmax+1)
+        zh[1:]     = np.cumsum(self.dz)
+        self.z[:]  = 0.5 * (zh[1:] + zh[:-1])
+        self.zsize = zh[-1]
+
 
 
 if __name__ == '__main__':
     #
     # Only executed (for debugging/examples) if script is called directly
     #
+
+    pl.close('all')
+
+    if True:
+        """
+        Demo of the different vertical grids
+        """
+        ktot = 64
+        dz0  = 25
+
+        equidist  = Grid_equidist(ktot, dz0)
+        linear    = Grid_linear_stretched(ktot, dz0, 0.005)
+        stretched = Grid_stretched(ktot, dz0, 40, 10, 40)
+
+        pl.figure()
+        pl.plot(equidist.dz, equidist.z, '-x', label='equidistant')
+        pl.plot(linear.dz, linear.z, '-x', label='linear')
+        pl.plot(stretched.dz, stretched.z, '-x', label='stretched')
+        pl.legend()
+        pl.xlabel('dz (m)')
+        pl.ylabel('z (m)')
 
     if False:
         """
