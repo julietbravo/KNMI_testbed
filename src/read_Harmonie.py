@@ -264,8 +264,8 @@ class Read_DDH_files:
                            self.dtqr_tot + self.dtqs_tot + self.dtqg_tot
 
         # Derived quantities
-        self.exner  = (self.p / cd['p0'])**(cd['Rd']/cd['cp'])       # Exner (-)
-        self.exneri = (cd['p0'] / self.p)**(cd['Rd']/cd['cp'])       # Exner^-1 (-)
+        self.exner  = (self.p / cd['p0'])**(cd['Rd']/cd['cp'])   # Exner (-)
+        self.exneri = (cd['p0'] / self.p)**(cd['Rd']/cd['cp'])   # Exner^-1 (-)
         self.th     = self.T * self.exneri                       # Potential temperature (K)
 
         # Check...: sum of dyn+phys
@@ -283,7 +283,7 @@ class Read_DDH_files:
         self.dtq_off  = self.calc_tendency(self.q , step*dt)
 
         # -------------------------------------------
-        dtexneri  = self.calc_tendency(self.exneri,step*dt)
+        dtexneri  = self.calc_tendency(self.exneri, step*dt)
 
         if (tendencies):
             self.dtth_phy = self.dtT_phy * self.exneri
@@ -391,36 +391,72 @@ if (__name__ == '__main__'):
     step  = 1       # interval to read (-)
 
     if (True):
-        # ---------------------
-        # Surface tests
-        # ---------------------
         year  = 2010
         month = 2
         day   = 28
-        cycle = 6
 
-        for cycle in range(6,16,3):
+        if "runs" not in locals():
+            runs = []
+            for cycle in range(9,16,3):
 
-            data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
-            data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
+                data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
+                data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
 
-            #if 'data' not in locals():
-            data = Read_DDH_files(data_path, t_end, step)
-            data.to_netcdf('{0:}/LES_forcings_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.format(data_root, year, month, day, cycle))
+                #if 'data' not in locals():
+                data = Read_DDH_files(data_path, t_end, step)
+                runs.append(data)
 
+                #data.to_netcdf('{0:}/LES_forcings_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.format(data_root, year, month, day, cycle))
 
-        #pl.figure()
-        #pl.subplot(221)
-        #pl.plot(data.time, data.H)
+        def format_ax(ax=None, interval=2):
+            import matplotlib.dates as mdates
 
-        #pl.subplot(222)
-        #pl.plot(data.time, data.LE)
+            if ax is None:
+                ax = pl.gca()
 
-        #pl.subplot(223)
-        #pl.plot(data.time, data.Tsk)
+            hours = mdates.HourLocator(interval=interval)
+            hours_fmt = mdates.DateFormatter('%H:%M')
+            ax.xaxis.set_major_locator(hours)
+            ax.xaxis.set_major_formatter(hours_fmt)
 
-        #pl.subplot(224)
-        #pl.plot(data.time, data.qsk)
+        # Quick n dirty merge
+        dtth_T   = np.array([])
+        dtth_p   = np.array([])
+        dtth_tot = np.array([])
+        date     = np.array([])
+
+        for r in runs:
+            date     = np.append(date, r.datetime[:-1])
+            dtth_T   = np.append(dtth_T,   0.5 * (r.dtth_tot_T[1:,k] + r.dtth_tot_T[:-1,k]))
+            dtth_p   = np.append(dtth_p,   0.5 * (r.dtth_tot_e[1:,k] + r.dtth_tot_e[:-1,k]))
+            dtth_tot = np.append(dtth_tot, 0.5 * (r.dtth_tot  [1:,k] + r.dtth_tot  [:-1,k]))
+
+        dtth_T_c   = np.cumsum(dtth_T*60)
+        dtth_p_c   = np.cumsum(dtth_p*60)
+        dtth_tot_c = np.cumsum(dtth_tot*60)
+
+        pl.figure()
+        k = -1
+
+        x = [datetime.datetime(2010,2,28,8,30),datetime.datetime(2010,2,28,18,30)]
+
+        pl.subplot(211)
+        pl.plot(date, dtth_tot*3600, label='total', color='k')
+        pl.plot(date, dtth_T  *3600, label='$\pi \partial T/\partial t$', color='C1')
+        pl.plot(date, dtth_p  *3600, label='$T \partial \pi / \partial t$', color='C2')
+        pl.plot(x, [0,0], 'k:')
+        pl.legend()
+        format_ax()
+        pl.ylabel(r'$\partial_t \theta$ $\mathrm{(K h^{-1})}$')
+
+        pl.subplot(212)
+        pl.plot(date, dtth_tot_c, color='k')
+        pl.plot(date, dtth_T_c, color='C1')
+        pl.plot(date, dtth_p_c, color='C2')
+        pl.plot(x, [0,0], 'k:')
+        format_ax()
+        pl.xlabel('time (UTC)')
+        pl.ylabel(r'$\partial_t \theta$ $\mathrm{(K h^{-1})}$ (cumulative)')
 
 
     if (False):
