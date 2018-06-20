@@ -256,7 +256,7 @@ class Read_DDH_files:
             v = file.createVariable(name, type, dims, fill_value=nc4.default_fillvals['f4'])
             v.setncatts(ncatts)
             if dims[-1] in ['z', 'zh']:
-                v[:] = data[:,::-1]
+                v[:] = data[:,:,::-1]
             else:
                 v[:] = data[:]
 
