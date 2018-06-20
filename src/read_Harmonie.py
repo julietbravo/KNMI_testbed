@@ -31,8 +31,12 @@ class Read_DDH_files:
         self.time = np.zeros(self.nt)
         self.datetime = []
 
+        # Array dimensions
         dim3d = (self.nt, self.ndom, self.nlev)
         dim2d = (self.nt, self.ndom)
+
+        # Harmonie's moisture phases
+        self.qtypes = {'qv':'vapor', 'ql':'liquid', 'qi':'ice', 'qr':'rain', 'qs':'snow', 'qg':'graupel'}
 
         # Atmospheric quantities
         # ----------------------
@@ -46,12 +50,8 @@ class Read_DDH_files:
         self.v    = np.zeros(dim3d)  # v-component wind (m s-1)
         self.T    = np.zeros(dim3d)  # Absolute temperature (K)
 
-        self.qv   = np.zeros(dim3d)  # Specific humidity (vapor)   (kg kg-1)
-        self.ql   = np.zeros(dim3d)  # Specific humidity (liquid)  (kg kg-1)
-        self.qi   = np.zeros(dim3d)  # Specific humidity (ice)     (kg kg-1)
-        self.qr   = np.zeros(dim3d)  # Specific humidity (rain)    (kg kg-1)
-        self.qs   = np.zeros(dim3d)  # Specific humidity (snow)    (kg kg-1)
-        self.qg   = np.zeros(dim3d)  # Specific humidity (graupel) (kg kg-1)
+        for q in self.qtypes.keys(): # Specific humidity (kg kg-1)
+            setattr(self, q, np.zeros(dim3d))
 
         # Surface quantities
         # ----------------------
@@ -75,26 +75,10 @@ class Read_DDH_files:
         self.dtT_tot = np.zeros(dim3d)
 
         # Specific humidity tendencies
-        self.dtqv_tot = np.zeros(dim3d)
-        self.dtql_tot = np.zeros(dim3d)
-        self.dtqi_tot = np.zeros(dim3d)
-        self.dtqr_tot = np.zeros(dim3d)
-        self.dtqs_tot = np.zeros(dim3d)
-        self.dtqg_tot = np.zeros(dim3d)
-
-        self.dtqv_dyn = np.zeros(dim3d)
-        self.dtql_dyn = np.zeros(dim3d)
-        self.dtqi_dyn = np.zeros(dim3d)
-        self.dtqr_dyn = np.zeros(dim3d)
-        self.dtqs_dyn = np.zeros(dim3d)
-        self.dtqg_dyn = np.zeros(dim3d)
-
-        self.dtqv_phy = np.zeros(dim3d)
-        self.dtql_phy = np.zeros(dim3d)
-        self.dtqi_phy = np.zeros(dim3d)
-        self.dtqr_phy = np.zeros(dim3d)
-        self.dtqs_phy = np.zeros(dim3d)
-        self.dtqg_phy = np.zeros(dim3d)
+        for q in self.qtypes.keys():
+            setattr(self, 'dt{}_tot'.format(q), np.zeros(dim3d))
+            setattr(self, 'dt{}_dyn'.format(q), np.zeros(dim3d))
+            setattr(self, 'dt{}_phy'.format(q), np.zeros(dim3d))
 
         # Read all files
         for tt in range(0, t_end+1, step):
@@ -124,12 +108,8 @@ class Read_DDH_files:
                 self.v [t,:,:] = f.read_variable('VVV0') / self.dp[t,:,:]
                 self.T [t,:,:] = f.read_variable('VCT0') / self.dp[t,:,:]/self.cp[t,:,:]
 
-                self.qv[t,:,:] = f.read_variable('VQV0') / self.dp[t,:,:]
-                self.ql[t,:,:] = f.read_variable('VQL0') / self.dp[t,:,:]
-                self.qi[t,:,:] = f.read_variable('VQI0') / self.dp[t,:,:]
-                self.qr[t,:,:] = f.read_variable('VQR0') / self.dp[t,:,:]
-                self.qs[t,:,:] = f.read_variable('VQS0') / self.dp[t,:,:]
-                self.qg[t,:,:] = f.read_variable('VQG0') / self.dp[t,:,:]
+                for q in self.qtypes.keys():
+                    getattr(self, q)[t,:,:] = f.read_variable('V{}0'.format(q.upper())) / self.dp[t,:,:]
 
                 self.H[t,:]    = f.read_variable('VSHF0')
                 self.LE[t,:]   = f.read_variable('VLHF0')
@@ -154,12 +134,8 @@ class Read_DDH_files:
                 self.v [t,:,:] = f.read_variable('VVV1') / self.dp[t,:,:]
                 self.T [t,:,:] = f.read_variable('VCT1') / self.dp[t,:,:]/self.cp[t,:,:]
 
-                self.qv[t,:,:] = f.read_variable('VQV1') / self.dp[t,:,:]
-                self.ql[t,:,:] = f.read_variable('VQL1') / self.dp[t,:,:]
-                self.qi[t,:,:] = f.read_variable('VQI1') / self.dp[t,:,:]
-                self.qr[t,:,:] = f.read_variable('VQR1') / self.dp[t,:,:]
-                self.qs[t,:,:] = f.read_variable('VQS1') / self.dp[t,:,:]
-                self.qg[t,:,:] = f.read_variable('VQG1') / self.dp[t,:,:]
+                for q in self.qtypes.keys():
+                    getattr(self, q)[t,:,:] = f.read_variable('V{}1'.format(q.upper())) / self.dp[t,:,:]
 
                 self.H[t,:]    = f.read_variable('VSHF1')
                 self.LE[t,:]   = f.read_variable('VLHF1')
@@ -180,26 +156,10 @@ class Read_DDH_files:
                 self.dtT_tot[t,:,:] = f.read_variable('TCTTOT9')
 
                 # Specific humidity tendencies
-                self.dtqv_tot[t,:,:] = f.read_variable('TQVTOT9')
-                self.dtql_tot[t,:,:] = f.read_variable('TQLTOT9')
-                self.dtqi_tot[t,:,:] = f.read_variable('TQITOT9')
-                self.dtqr_tot[t,:,:] = f.read_variable('TQRTOT9')
-                self.dtqs_tot[t,:,:] = f.read_variable('TQSTOT9')
-                self.dtqg_tot[t,:,:] = f.read_variable('TQGTOT9')
-
-                self.dtqv_dyn[t,:,:] = f.read_variable('TQVDYN9')
-                self.dtql_dyn[t,:,:] = f.read_variable('TQLDYN9')
-                self.dtqi_dyn[t,:,:] = f.read_variable('TQIDYN9')
-                self.dtqr_dyn[t,:,:] = f.read_variable('TQRDYN9')
-                self.dtqs_dyn[t,:,:] = f.read_variable('TQSDYN9')
-                self.dtqg_dyn[t,:,:] = f.read_variable('TQGDYN9')
-
-                self.dtqv_phy[t,:,:] = f.read_variable('TQVPHY9')
-                self.dtql_phy[t,:,:] = f.read_variable('TQLPHY9')
-                self.dtqi_phy[t,:,:] = f.read_variable('TQIPHY9')
-                self.dtqr_phy[t,:,:] = f.read_variable('TQRPHY9')
-                self.dtqs_phy[t,:,:] = f.read_variable('TQSPHY9')
-                self.dtqg_phy[t,:,:] = f.read_variable('TQGPHY9')
+                for q in self.qtypes.keys():
+                    getattr(self, 'dt{}_tot'.format(q))[t,:,:] = f.read_variable('T{}TOT9'.format(q.upper()))
+                    getattr(self, 'dt{}_dyn'.format(q))[t,:,:] = f.read_variable('T{}DYN9'.format(q.upper()))
+                    getattr(self, 'dt{}_phy'.format(q))[t,:,:] = f.read_variable('T{}PHY9'.format(q.upper()))
 
             # Manually calculate time; DDH can't handle times < 1hour
             self.time[t] = tt/60.
@@ -300,9 +260,6 @@ class Read_DDH_files:
             else:
                 v[:] = data[:]
 
-        # Harmonie's moisture types and more descriptive names
-        qtypes = {'qv':'vapor', 'ql':'liquid', 'qi':'ice', 'qr':'rain', 'qs':'snow', 'qg':'graupel'}
-
         # Create new NetCDF file
         f = nc4.Dataset(file_name, 'w')
 
@@ -340,7 +297,7 @@ class Read_DDH_files:
         add_variable(f, 'qsk',  dtype, dim2d, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
         add_variable(f, 'ps',   dtype, dim2d, {'units': 'Pa', 'long_name': 'Surface pressure'}, self.ph[:,:,-1])
 
-        for qtype,qname in qtypes.items():
+        for qtype,qname in self.qtypes.items():
             add_variable(f, qtype, dtype, dim3d, {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
 
         # Tendencies
@@ -360,7 +317,7 @@ class Read_DDH_files:
         add_variable(f, 'dtq_dyn', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Dynamics total specific humidity tendency'}, self.dtq_dyn)
         add_variable(f, 'dtq_tot', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Total total specific humidity tendency'},    self.dtq_tot)
 
-        for qtype,qname in qtypes.items():
+        for qtype,qname in self.qtypes.items():
             add_variable(f, 'dt{}_phy'.format(qtype),  dtype, dim3d,\
                 {'units': 'kg kg-1 s-1', 'long_name': 'Physics specific humidity ({}) tendency'.format(qname)},  getattr(self, 'dt{}_phy'.format(qtype)))
             add_variable(f, 'dt{}_dyn'.format(qtype),  dtype, dim3d,\
@@ -374,8 +331,6 @@ class Read_DDH_files:
 if (__name__ == '__main__'):
     import matplotlib.pyplot as pl
     import matplotlib.gridspec as gridspec
-
-    from DDH_domains import create_info_dict
 
     pl.close('all')
 
