@@ -23,24 +23,35 @@ if __name__ == '__main__':
 
     locations = [
                     dict(name='Cabauw',   lat=51.97, lon=4.90),
-                    dict(name='IJmuiden', lat=52.85, lon=3.44),
-                    dict(name='Joyce',    lat=50.91, lon=6.41)
+                    dict(name='IJmuiden', lat=52.85, lon=3.44)
                 ]
 
-    area_size = 25000   # m
+                    #dict(name='Joyce',    lat=50.91, lon=6.41)
 
-    # Write input for harmonie_namelists.pm
-    # BE CAREFULL: all output locations are assigned to the same plane (BDEDDH(2,X)=1).
-    # If one or more output domains overlap, they need to be given a unique plane.
-    # See DDH documentation for details.
-    for i,loc in enumerate(locations):
+    i = 1
+    for plane, area_size in enumerate([-1, 10000, 30000]):
 
-        diff_lon = dlon(area_size/2, loc['lat'])
-        diff_lat = dlat(area_size/2)
+        # Write input for harmonie_namelists.pm
+        # BE CAREFULL: all output locations are assigned to the same plane (BDEDDH(2,X)=1).
+        # If one or more output domains overlap, they need to be given a unique plane.
+        # See DDH documentation for details.
+        for loc in locations:
 
-        print('\'BDEDDH(1,{0:})\' => \'4\',        # {1:} : Area average'  .format(i+1, loc['name']))
-        print('\'BDEDDH(2,{0:})\' => \'1\',        # Plane'         .format(i+1, loc['name']))
-        print('\'BDEDDH(3,{0:})\' => \'{1:.2f}\',  # West longitude'.format(i+1,loc['lon']-diff_lon))
-        print('\'BDEDDH(4,{0:})\' => \'{1:.2f}\',  # South latitude'.format(i+1,loc['lat']-diff_lat))
-        print('\'BDEDDH(5,{0:})\' => \'{1:.2f}\',  # East longitude'.format(i+1,loc['lon']+diff_lon))
-        print('\'BDEDDH(6,{0:})\' => \'{1:.2f}\',  # North latitude'.format(i+1,loc['lat']+diff_lat))
+            if area_size == -1:
+                print('\'BDEDDH(1,{0:})\' => \'4\',         # {1:}, single column' .format(i, loc['name']))
+                print('\'BDEDDH(2,{0:})\' => \'{1:}\',         # Plane'            .format(i, plane+1))
+                print('\'BDEDDH(3,{0:})\' => \'{1:.2f}\',      # Central longitude'.format(i,loc['lon']))
+                print('\'BDEDDH(4,{0:})\' => \'{1:.2f}\',     # Central latitude'  .format(i,loc['lat']))
+
+            else:
+                diff_lon = dlon(area_size/2, loc['lat'])
+                diff_lat = dlat(area_size/2)
+
+                print('\'BDEDDH(1,{0:})\' => \'3\',         # {1:}, {2:.0f}x{2:.0f}km'.format(i, loc['name'], area_size/1000.))
+                print('\'BDEDDH(2,{0:})\' => \'{1:}\',         # Plane'               .format(i, plane+1))
+                print('\'BDEDDH(3,{0:})\' => \'{1:.2f}\',      # West longitude'      .format(i,loc['lon']-diff_lon))
+                print('\'BDEDDH(4,{0:})\' => \'{1:.2f}\',     # South latitude'       .format(i,loc['lat']-diff_lat))
+                print('\'BDEDDH(5,{0:})\' => \'{1:.2f}\',      # East longitude'      .format(i,loc['lon']+diff_lon))
+                print('\'BDEDDH(6,{0:})\' => \'{1:.2f}\',     # North latitude'       .format(i,loc['lat']+diff_lat))
+
+            i += 1
