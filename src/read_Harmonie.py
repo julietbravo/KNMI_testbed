@@ -21,11 +21,11 @@ class Read_DDH_files:
         """
 
         # Read first DDH file to get some settings
-        f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,1))
+        f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path, step))
 
-        self.nlev = f.attributes['doc']['nlev']       # Number of vertical levels
-        self.ndom = f.attributes['doc']['ndom']       # Number of output domains
-        self.nt   = int(t_end/step)+1                 # Number of output time steps
+        self.nlev = f.attributes['doc']['nlev']  # Number of vertical levels
+        self.ndom = f.attributes['doc']['ndom']  # Number of output domains
+        self.nt   = int(t_end/step)+1            # Number of output time steps
 
         # Create empty arrays to store the individual DDH data
         self.time = np.zeros(self.nt)
@@ -81,85 +81,85 @@ class Read_DDH_files:
             setattr(self, 'dt{}_phy'.format(q), np.zeros(dim3d))
 
         # Read all files
-        for tt in range(0, t_end+1, step):
+        for tt in range(step, t_end+1, step):
             t = int(tt/step)
 
             if not quiet:
                 print('Reading DDH file #{0:3d} (index {1:<3d})'.format(tt,t))
 
-            if tt == 0:
+            if tt == step:
                 # Exception for t==0, the instantaneous variables are
                 # hidden in the first output file (t=1)
 
-                f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,1))
+                f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path, step))
 
                 # Subtract one minute..
-                self.datetime.append(f.attributes['datetime']['forecast_date']-datetime.timedelta(minutes=1))
+                self.datetime.append(f.attributes['datetime']['forecast_date']-datetime.timedelta(minutes=step))
 
-                self.cp[t,:,:] = f.read_variable('VCP0') * ch['grav']
-                self.p [t,:,:] = f.read_variable('VPF0') * ch['grav']
-                self.ph[t,:,:] = f.read_variable('VPH0') * ch['grav']
-                self.z [t,:,:] = f.read_variable('VZF0')
+                self.cp[t-1,:,:] = f.read_variable('VCP0') * ch['grav']
+                self.p [t-1,:,:] = f.read_variable('VPF0') * ch['grav']
+                self.ph[t-1,:,:] = f.read_variable('VPH0') * ch['grav']
+                self.z [t-1,:,:] = f.read_variable('VZF0')
 
                 # Non-accumulated variables
-                self.dp[t,:,:] = f.read_variable('VPP0')
+                self.dp[t-1,:,:] = f.read_variable('VPP0')
 
-                self.u [t,:,:] = f.read_variable('VUU0') / self.dp[t,:,:]
-                self.v [t,:,:] = f.read_variable('VVV0') / self.dp[t,:,:]
-                self.T [t,:,:] = f.read_variable('VCT0') / self.dp[t,:,:]/self.cp[t,:,:]
+                self.u [t-1,:,:] = f.read_variable('VUU0') / self.dp[t-1,:,:]
+                self.v [t-1,:,:] = f.read_variable('VVV0') / self.dp[t-1,:,:]
+                self.T [t-1,:,:] = f.read_variable('VCT0') / self.dp[t-1,:,:]/self.cp[t-1,:,:]
 
                 for q in self.qtypes.keys():
-                    getattr(self, q)[t,:,:] = f.read_variable('V{}0'.format(q.upper())) / self.dp[t,:,:]
+                    getattr(self, q)[t-1,:,:] = f.read_variable('V{}0'.format(q.upper())) / self.dp[t-1,:,:]
 
-                self.H[t,:]    = f.read_variable('VSHF0')
-                self.LE[t,:]   = f.read_variable('VLHF0')
-                self.Tsk[t,:]  = f.read_variable('VTSK0')
-                self.qsk[t,:]  = f.read_variable('VQSK0')
+                self.H[t-1,:]    = f.read_variable('VSHF0')
+                self.LE[t-1,:]   = f.read_variable('VLHF0')
+                self.Tsk[t-1,:]  = f.read_variable('VTSK0')
+                self.qsk[t-1,:]  = f.read_variable('VQSK0')
 
                 # There are no tendencies for t == 0...!
-            else:
-                f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,tt))
+            #else:
+            f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,tt))
 
-                self.datetime.append(f.attributes['datetime']['forecast_date'])
+            self.datetime.append(f.attributes['datetime']['forecast_date'])
 
-                self.cp[t,:,:] = f.read_variable('VCP1') * ch['grav']
-                self.p [t,:,:] = f.read_variable('VPF1') * ch['grav']
-                self.ph[t,:,:] = f.read_variable('VPH1') * ch['grav']
-                self.z [t,:,:] = f.read_variable('VZF1')
+            self.cp[t,:,:] = f.read_variable('VCP1') * ch['grav']
+            self.p [t,:,:] = f.read_variable('VPF1') * ch['grav']
+            self.ph[t,:,:] = f.read_variable('VPH1') * ch['grav']
+            self.z [t,:,:] = f.read_variable('VZF1')
 
-                # Non-accumulated variables
-                self.dp[t,:,:] = f.read_variable('VPP1')
+            # Non-accumulated variables
+            self.dp[t,:,:] = f.read_variable('VPP1')
 
-                self.u [t,:,:] = f.read_variable('VUU1') / self.dp[t,:,:]
-                self.v [t,:,:] = f.read_variable('VVV1') / self.dp[t,:,:]
-                self.T [t,:,:] = f.read_variable('VCT1') / self.dp[t,:,:]/self.cp[t,:,:]
+            self.u [t,:,:] = f.read_variable('VUU1') / self.dp[t,:,:]
+            self.v [t,:,:] = f.read_variable('VVV1') / self.dp[t,:,:]
+            self.T [t,:,:] = f.read_variable('VCT1') / self.dp[t,:,:]/self.cp[t,:,:]
 
-                for q in self.qtypes.keys():
-                    getattr(self, q)[t,:,:] = f.read_variable('V{}1'.format(q.upper())) / self.dp[t,:,:]
+            for q in self.qtypes.keys():
+                getattr(self, q)[t,:,:] = f.read_variable('V{}1'.format(q.upper())) / self.dp[t,:,:]
 
-                self.H[t,:]    = f.read_variable('VSHF1')
-                self.LE[t,:]   = f.read_variable('VLHF1')
-                self.Tsk[t,:]  = f.read_variable('VTSK1')
-                self.qsk[t,:]  = f.read_variable('VQSK1')
+            self.H[t,:]    = f.read_variable('VSHF1')
+            self.LE[t,:]   = f.read_variable('VLHF1')
+            self.Tsk[t,:]  = f.read_variable('VTSK1')
+            self.qsk[t,:]  = f.read_variable('VQSK1')
 
-                # Accumulated tendencies/variables/..
-                self.dtu_phy[t,:,:] = f.read_variable('TUUPHY9')
-                self.dtv_phy[t,:,:] = f.read_variable('TVVPHY9')
-                self.dtT_phy[t,:,:] = f.read_variable('TCTPHY9')
+            # Accumulated tendencies/variables/..
+            self.dtu_phy[t,:,:] = f.read_variable('TUUPHY9')
+            self.dtv_phy[t,:,:] = f.read_variable('TVVPHY9')
+            self.dtT_phy[t,:,:] = f.read_variable('TCTPHY9')
 
-                self.dtu_dyn[t,:,:] = f.read_variable('TUUDYN9')
-                self.dtv_dyn[t,:,:] = f.read_variable('TVVDYN9')
-                self.dtT_dyn[t,:,:] = f.read_variable('TCTDYN9')
+            self.dtu_dyn[t,:,:] = f.read_variable('TUUDYN9')
+            self.dtv_dyn[t,:,:] = f.read_variable('TVVDYN9')
+            self.dtT_dyn[t,:,:] = f.read_variable('TCTDYN9')
 
-                self.dtu_tot[t,:,:] = f.read_variable('TUUTOT9')
-                self.dtv_tot[t,:,:] = f.read_variable('TVVTOT9')
-                self.dtT_tot[t,:,:] = f.read_variable('TCTTOT9')
+            #self.dtu_tot[t,:,:] = f.read_variable('TUUTOT9')
+            #self.dtv_tot[t,:,:] = f.read_variable('TVVTOT9')
+            #self.dtT_tot[t,:,:] = f.read_variable('TCTTOT9')
 
-                # Specific humidity tendencies
-                for q in self.qtypes.keys():
-                    getattr(self, 'dt{}_tot'.format(q))[t,:,:] = f.read_variable('T{}TOT9'.format(q.upper()))
-                    getattr(self, 'dt{}_dyn'.format(q))[t,:,:] = f.read_variable('T{}DYN9'.format(q.upper()))
-                    getattr(self, 'dt{}_phy'.format(q))[t,:,:] = f.read_variable('T{}PHY9'.format(q.upper()))
+            # Specific humidity tendencies
+            for q in self.qtypes.keys():
+                getattr(self, 'dt{}_dyn'.format(q))[t,:,:] = f.read_variable('T{}DYN9'.format(q.upper()))
+                getattr(self, 'dt{}_phy'.format(q))[t,:,:] = f.read_variable('T{}PHY9'.format(q.upper()))
+                #getattr(self, 'dt{}_tot'.format(q))[t,:,:] = f.read_variable('T{}TOT9'.format(q.upper()))
 
             # Manually calculate time; DDH can't handle times < 1hour
             self.time[t] = tt/60.
@@ -177,16 +177,16 @@ class Read_DDH_files:
         self.deaccumulate(self.dtv_dyn, step*dt)
         self.deaccumulate(self.dtT_dyn, step*dt)
 
-        self.deaccumulate(self.dtu_tot, step*dt)
-        self.deaccumulate(self.dtv_tot, step*dt)
-        self.deaccumulate(self.dtT_tot, step*dt)
+        #self.deaccumulate(self.dtu_tot, step*dt)
+        #self.deaccumulate(self.dtv_tot, step*dt)
+        #self.deaccumulate(self.dtT_tot, step*dt)
 
-        self.deaccumulate(self.dtqv_tot, step*dt)
-        self.deaccumulate(self.dtql_tot, step*dt)
-        self.deaccumulate(self.dtqi_tot, step*dt)
-        self.deaccumulate(self.dtqr_tot, step*dt)
-        self.deaccumulate(self.dtqs_tot, step*dt)
-        self.deaccumulate(self.dtqg_tot, step*dt)
+        #self.deaccumulate(self.dtqv_tot, step*dt)
+        #self.deaccumulate(self.dtql_tot, step*dt)
+        #self.deaccumulate(self.dtqi_tot, step*dt)
+        #self.deaccumulate(self.dtqr_tot, step*dt)
+        #self.deaccumulate(self.dtqs_tot, step*dt)
+        #self.deaccumulate(self.dtqg_tot, step*dt)
 
         self.deaccumulate(self.dtqv_dyn, step*dt)
         self.deaccumulate(self.dtql_dyn, step*dt)
@@ -250,7 +250,7 @@ class Read_DDH_files:
         array[1:,:] = (array[1:,:] - array[:-1,:]) / dt
 
 
-    def to_netcdf(self, file_name):
+    def to_netcdf(self, file_name, domain_attrs=None):
 
         def add_variable(file, name, type, dims, ncatts, data):
             v = file.createVariable(name, type, dims, fill_value=nc4.default_fillvals['f4'])
@@ -303,27 +303,27 @@ class Read_DDH_files:
         # Tendencies
         add_variable(f, 'dtT_phy', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Physics temperature tendency'},  self.dtT_phy)
         add_variable(f, 'dtT_dyn', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Dynamics temperature tendency'}, self.dtT_dyn)
-        add_variable(f, 'dtT_tot', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Total temperature tendency'},    self.dtT_tot)
+        #add_variable(f, 'dtT_tot', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Total temperature tendency'},    self.dtT_tot)
 
         add_variable(f, 'dtu_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics zonal wind tendency'},  self.dtu_phy)
         add_variable(f, 'dtu_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics zonal wind tendency'}, self.dtu_dyn)
-        add_variable(f, 'dtu_tot', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Total zonal wind tendency'},    self.dtu_tot)
+        #add_variable(f, 'dtu_tot', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Total zonal wind tendency'},    self.dtu_tot)
 
         add_variable(f, 'dtv_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics meridional wind tendency'},  self.dtv_phy)
         add_variable(f, 'dtv_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics meridional wind tendency'}, self.dtv_dyn)
-        add_variable(f, 'dtv_tot', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Total meridional wind tendency'},    self.dtv_tot)
+        #add_variable(f, 'dtv_tot', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Total meridional wind tendency'},    self.dtv_tot)
 
         add_variable(f, 'dtq_phy', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Physics total specific humidity tendency'},  self.dtq_phy)
         add_variable(f, 'dtq_dyn', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Dynamics total specific humidity tendency'}, self.dtq_dyn)
-        add_variable(f, 'dtq_tot', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Total total specific humidity tendency'},    self.dtq_tot)
+        #add_variable(f, 'dtq_tot', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Total total specific humidity tendency'},    self.dtq_tot)
 
         for qtype,qname in self.qtypes.items():
             add_variable(f, 'dt{}_phy'.format(qtype),  dtype, dim3d,\
                 {'units': 'kg kg-1 s-1', 'long_name': 'Physics specific humidity ({}) tendency'.format(qname)},  getattr(self, 'dt{}_phy'.format(qtype)))
             add_variable(f, 'dt{}_dyn'.format(qtype),  dtype, dim3d,\
                 {'units': 'kg kg-1 s-1', 'long_name': 'Dynamics specific humidity ({}) tendency'.format(qname)}, getattr(self, 'dt{}_dyn'.format(qtype)))
-            add_variable(f, 'dt{}_tot'.format(qtype),  dtype, dim3d,\
-                {'units': 'kg kg-1 s-1', 'long_name': 'Total specific humidity ({}) tendency'.format(qname)},    getattr(self, 'dt{}_tot'.format(qtype)))
+            #add_variable(f, 'dt{}_tot'.format(qtype),  dtype, dim3d,\
+            #    {'units': 'kg kg-1 s-1', 'long_name': 'Total specific humidity ({}) tendency'.format(qname)},    getattr(self, 'dt{}_tot'.format(qtype)))
 
         f.close()
 
@@ -334,9 +334,9 @@ if (__name__ == '__main__'):
 
     pl.close('all')
 
-    dt    = 60      # model time step (s)
-    t_end = 180     # final file to read (-)
-    step  = 10       # interval to read (-)
+    dt      = 60      # model time step (s)
+    t_end   = 180     # final file to read (-)
+    step    = 10      # interval to read (-)
 
     if (True):
         # ---------------------

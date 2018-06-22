@@ -1,25 +1,23 @@
 import numpy as np
+import matplotlib.pyplot as pl
 
-r_earth = 6367.47 * 1000    # Radius earth (m)
+import matplotlib.patches as mpatches
 
-def dx(lonW, lonE, lat):
-    """ Distance between longitudes in spherical coordinates """
-    return r_earth * np.cos(np.deg2rad(lat)) * np.deg2rad(lonE - lonW)
+import cartopy
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
-def dy(latS, latN):
-    """ Distance between latitudes in spherical coordinates """
-    return r_earth * np.deg2rad(latN-latS)
+from spatial_tools import *
 
-def dlon(dx, lat):
-    """ East-west distance in degrees for given dx """
-    return np.rad2deg(dx / (r_earth * np.cos(np.deg2rad(lat))))
-
-def dlat(dy):
-    """ North-south distance in degrees for given dy """
-    return np.rad2deg(dy / r_earth)
-
+pl.close('all')
 
 def create_namelist(locations, sizes):
+    """
+    Create Perl code required by harmonie_namelists.pm
+    For averaging domains, DDH requires either the four
+    corner coordinates, or the NW and SE corners
+    """
+
     i = 1
     for plane, area_size in enumerate(sizes):
 
@@ -48,12 +46,77 @@ def create_namelist(locations, sizes):
 
             i += 1
 
+def plot_locations(locations, size):
+
+    pl.figure()
+
+    # Map projection
+    proj = ccrs.LambertConformal(central_longitude=4.9, central_latitude=51.967)
+
+    # Create single axes object in Lambert projection
+    ax=pl.axes(projection=proj)
+
+    # Draw coast lines, resolution = {'10m','50m','110m'}
+    ax.coastlines(resolution='50m', linewidth=0.8, color='black')
+
+    # Load country geometries and lakes (for the IJselmeer)
+    # from www.naturalearthdata.com and add to axes
+    countries = cfeature.NaturalEarthFeature(
+            category='cultural', name='admin_0_boundary_lines_land', scale='10m', facecolor='none')
+    ax.add_feature(countries, edgecolor='black', linewidth=0.8)
+
+    lakes = cfeature.NaturalEarthFeature(
+            category='physical', name='lakes', scale='10m', facecolor='none')
+    ax.add_feature(lakes, edgecolor='black', linewidth=0.8)
+
+    # Set spatial extent of map, and add grid lines
+    ax.set_extent([2, 7.5, 50.5, 55], ccrs.PlateCarree())
+    #ax.gridlines()
+
+    # Plot some random data
+    for i,loc in enumerate(locations):
+        color = 'C{}'.format(i+1)
+
+        diff_lon = np.abs(dlon(size/2, loc['lat']))
+        diff_lat = np.abs(dlat(size/2))
+
+        ax.add_patch(mpatches.Rectangle(xy=[loc['lon']-diff_lon/2., loc['lat']-diff_lat/2.],
+                                        width=2*diff_lon, height=2*diff_lat,
+                                        edgecolor=color, facecolor=color, alpha=0.6,
+                                        transform=ccrs.PlateCarree(), label=loc['name']))
+    pl.legend()
+
 
 if __name__ == '__main__':
 
-    locations = [dict(name='Cabauw',   lat=51.97, lon=4.90),
-                 dict(name='IJmuiden', lat=52.85, lon=3.44)]
+    if (False):
+        # Check influence averaging domain:
+        locations = [dict(name='Cabauw',   lat=51.97, lon=4.90),
+                     dict(name='IJmuiden', lat=52.85, lon=3.44)]
 
-    sizes = [-1, 10000, 30000]
+        sizes = [-1, 10000, 30000]
 
-    create_namelist(locations, sizes)
+        create_namelist(locations, sizes)
+
+        plot_locations(locations, sizes)
+
+    if (True):
+        locations = [dict(name='IJmuiden',     lat=52.85, lon=3.44),
+                     dict(name='FINO1',        lat=54.01, lon=6.59),
+                     dict(name='OWEZ',         lat=52.61, lon=4.39),
+                     dict(name='Goeree',       lat=51.93, lon=3.67),
+                     dict(name='Europlatform', lat=52.00, lon=3.27),
+                     dict(name='HKZ',          lat=52.30, lon=4.10),
+                     dict(name='Cabauw',       lat=51.97, lon=4.90),
+                     dict(name='Schiphol',     lat=52.31, lon=4.76)]
+
+
+                     #dict(name='Joyce',    lat=50.91, lon=6.41)]
+
+        sizes = [25000]
+
+        #create_namelist(locations, sizes)
+
+        plot_locations(locations, 25000)
+
+

@@ -24,14 +24,14 @@ def convert_cycle(settings):
 
 if __name__ == '__main__':
     # Which period to convert?
-    start = datetime.datetime(year=2010, month=2, day=28, hour=6)
-    end   = datetime.datetime(year=2010, month=2, day=28, hour=15)
+    start = datetime.datetime(year=2010, month=2, day=28, hour=0)
+    end   = datetime.datetime(year=2010, month=2, day=28, hour=21)
 
     # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
     path  = '/nobackup/users/stratum/DOWA/LES_forcing'
 
     # DDH output settings
-    step  = 1       # DDH output interval
+    step  = 10       # DDH output interval
 
     # Number of cycles to convert
     n_cycles = int((end-start).total_seconds() / 3600. / 3.) + 1
