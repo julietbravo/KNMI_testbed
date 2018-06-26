@@ -23,62 +23,70 @@ class Read_DDH_files:
         # Read first DDH file to get some settings
         f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path, step))
 
-        self.nlev = f.attributes['doc']['nlev']  # Number of vertical levels
-        self.ndom = f.attributes['doc']['ndom']  # Number of output domains
-        self.nt   = int(t_end/step)+1            # Number of output time steps
+        self.nlev  = f.attributes['doc']['nlev']  # Number of full vertical levels
+        self.nlevh = self.nlev + 1                # Number of half vertical levels
+        self.ndom  = f.attributes['doc']['ndom']  # Number of output domains
+        self.nt    = int(t_end/step)+1            # Number of output time steps
 
         # Create empty arrays to store the individual DDH data
-        self.time = np.zeros(self.nt)
+        self.time = np.ma.zeros(self.nt)
         self.datetime = []
 
         # Array dimensions
-        dim3d = (self.nt, self.ndom, self.nlev)
-        dim2d = (self.nt, self.ndom)
+        dim3d  = (self.nt, self.ndom, self.nlev)
+        dim3dh = (self.nt, self.ndom, self.nlevh)
+        dim2d  = (self.nt, self.ndom)
 
         # Harmonie's moisture phases
         self.qtypes = {'qv':'vapor', 'ql':'liquid', 'qi':'ice', 'qr':'rain', 'qs':'snow', 'qg':'graupel'}
 
         # Atmospheric quantities
         # ----------------------
-        self.cp   = np.zeros(dim3d)  # Specific heat at const pressure (J kg-1 K-1)
-        self.p    = np.zeros(dim3d)  # Pressure (Pa)
-        self.ph   = np.zeros(dim3d)  # Half level pressure (Pa)
-        self.dp   = np.zeros(dim3d)  # Pressure difference (Pa)
-        self.z    = np.zeros(dim3d)  # Geopotential height (m)
+        self.cp   = np.ma.zeros(dim3d)  # Specific heat at const pressure (J kg-1 K-1)
+        self.p    = np.ma.zeros(dim3d)  # Pressure (Pa)
+        self.dp   = np.ma.zeros(dim3d)  # Pressure difference (Pa)
+        self.z    = np.ma.zeros(dim3d)  # Geopotential height (m)
+        self.ph   = np.ma.zeros(dim3dh) # Half level pressure (Pa)
+        self.zh   = np.ma.zeros(dim3dh) # Half level geopotential height (m)
 
-        self.u    = np.zeros(dim3d)  # u-component wind (m s-1)
-        self.v    = np.zeros(dim3d)  # v-component wind (m s-1)
-        self.T    = np.zeros(dim3d)  # Absolute temperature (K)
+        self.u    = np.ma.zeros(dim3d)  # u-component wind (m s-1)
+        self.v    = np.ma.zeros(dim3d)  # v-component wind (m s-1)
+        self.T    = np.ma.zeros(dim3d)  # Absolute temperature (K)
 
         for q in self.qtypes.keys(): # Specific humidity (kg kg-1)
-            setattr(self, q, np.zeros(dim3d))
+            setattr(self, q, np.ma.zeros(dim3d))
 
         # Surface quantities
         # ----------------------
-        self.H    = np.zeros(dim2d)  # Surface sensible heat flux (W m-2)
-        self.LE   = np.zeros(dim2d)  # Surface latent heat flux (W m-2)
-        self.Tsk  = np.zeros(dim2d)  # Surface temperature (K)
-        self.qsk  = np.zeros(dim2d)  # Surface specific humidity (kg kg-1)
+        self.H    = np.ma.zeros(dim2d)  # Surface sensible heat flux (W m-2)
+        self.LE   = np.ma.zeros(dim2d)  # Surface latent heat flux (W m-2)
+        self.Tsk  = np.ma.zeros(dim2d)  # Surface temperature (K)
+        self.qsk  = np.ma.zeros(dim2d)  # Surface specific humidity (kg kg-1)
 
         # Physics, dynamics and total tendencies
         # Units all in "... s-1"
-        self.dtu_phy = np.zeros(dim3d)
-        self.dtv_phy = np.zeros(dim3d)
-        self.dtT_phy = np.zeros(dim3d)
+        self.dtu_phy = np.ma.zeros(dim3d)
+        self.dtv_phy = np.ma.zeros(dim3d)
+        self.dtT_phy = np.ma.zeros(dim3d)
 
-        self.dtu_dyn = np.zeros(dim3d)
-        self.dtv_dyn = np.zeros(dim3d)
-        self.dtT_dyn = np.zeros(dim3d)
+        self.dtu_dyn = np.ma.zeros(dim3d)
+        self.dtv_dyn = np.ma.zeros(dim3d)
+        self.dtT_dyn = np.ma.zeros(dim3d)
 
-        self.dtu_tot = np.zeros(dim3d)
-        self.dtv_tot = np.zeros(dim3d)
-        self.dtT_tot = np.zeros(dim3d)
+        self.dtu_tot = np.ma.zeros(dim3d)
+        self.dtv_tot = np.ma.zeros(dim3d)
+        self.dtT_tot = np.ma.zeros(dim3d)
+
+        # Radiative quantities
+        self.dtT_rad = np.ma.zeros(dim3d)   # Temperature tendency due to radiation (K s-1)
+        self.lw_rad  = np.ma.zeros(dim3dh)  # Net longwave radiative flux (W m-2)
+        self.sw_rad  = np.ma.zeros(dim3dh)  # Net shortwave radiative flux (W m-2)
 
         # Specific humidity tendencies
         for q in self.qtypes.keys():
-            setattr(self, 'dt{}_tot'.format(q), np.zeros(dim3d))
-            setattr(self, 'dt{}_dyn'.format(q), np.zeros(dim3d))
-            setattr(self, 'dt{}_phy'.format(q), np.zeros(dim3d))
+            setattr(self, 'dt{}_tot'.format(q), np.ma.zeros(dim3d))
+            setattr(self, 'dt{}_dyn'.format(q), np.ma.zeros(dim3d))
+            setattr(self, 'dt{}_phy'.format(q), np.ma.zeros(dim3d))
 
         # Read all files
         for tt in range(step, t_end+1, step):
@@ -98,8 +106,10 @@ class Read_DDH_files:
 
                 self.cp[t-1,:,:] = f.read_variable('VCP0') * ch['grav']
                 self.p [t-1,:,:] = f.read_variable('VPF0') * ch['grav']
-                self.ph[t-1,:,:] = f.read_variable('VPH0') * ch['grav']
                 self.z [t-1,:,:] = f.read_variable('VZF0')
+
+                self.ph[t-1,:,1:] = f.read_variable('VPH0') * ch['grav']
+                self.zh[t-1,:,1:] = f.read_variable('VZH0')
 
                 # Non-accumulated variables
                 self.dp[t-1,:,:] = f.read_variable('VPP0')
@@ -124,8 +134,10 @@ class Read_DDH_files:
 
             self.cp[t,:,:] = f.read_variable('VCP1') * ch['grav']
             self.p [t,:,:] = f.read_variable('VPF1') * ch['grav']
-            self.ph[t,:,:] = f.read_variable('VPH1') * ch['grav']
             self.z [t,:,:] = f.read_variable('VZF1')
+
+            self.ph[t,:,1:] = f.read_variable('VPH1') * ch['grav']
+            self.zh[t,:,1:] = f.read_variable('VZH1')
 
             # Non-accumulated variables
             self.dp[t,:,:] = f.read_variable('VPP1')
@@ -151,15 +163,15 @@ class Read_DDH_files:
             self.dtv_dyn[t,:,:] = f.read_variable('TVVDYN9')
             self.dtT_dyn[t,:,:] = f.read_variable('TCTDYN9')
 
-            #self.dtu_tot[t,:,:] = f.read_variable('TUUTOT9')
-            #self.dtv_tot[t,:,:] = f.read_variable('TVVTOT9')
-            #self.dtT_tot[t,:,:] = f.read_variable('TCTTOT9')
-
             # Specific humidity tendencies
             for q in self.qtypes.keys():
                 getattr(self, 'dt{}_dyn'.format(q))[t,:,:] = f.read_variable('T{}DYN9'.format(q.upper()))
                 getattr(self, 'dt{}_phy'.format(q))[t,:,:] = f.read_variable('T{}PHY9'.format(q.upper()))
-                #getattr(self, 'dt{}_tot'.format(q))[t,:,:] = f.read_variable('T{}TOT9'.format(q.upper()))
+
+            # Radiation
+            self.dtT_rad[t,:,:] = f.read_variable('TCTRADI')
+            self.lw_rad [t,:,:] = f.read_variable('FCTRAYTH')
+            self.sw_rad [t,:,:] = f.read_variable('FCTRAYSO')
 
             # Manually calculate time; DDH can't handle times < 1hour
             self.time[t] = tt/60.
@@ -167,6 +179,12 @@ class Read_DDH_files:
         # From Python list to Numpy array..
         self.datetime    = np.array(self.datetime)
         self.hours_since = np.array([(time-datetime.datetime(2010,1,1)).total_seconds()/3600. for time in self.datetime])
+
+        # Mask top half levels (is not in output DDH)
+        self.ph[:,:,0]     = np.ma.masked
+        self.zh[:,:,0]     = np.ma.masked
+        self.lw_rad[:,:,0] = np.ma.masked
+        self.sw_rad[:,:,0] = np.ma.masked
 
         # De-accumulate the tendencies
         self.deaccumulate(self.dtu_phy, step*dt)
@@ -176,17 +194,6 @@ class Read_DDH_files:
         self.deaccumulate(self.dtu_dyn, step*dt)
         self.deaccumulate(self.dtv_dyn, step*dt)
         self.deaccumulate(self.dtT_dyn, step*dt)
-
-        #self.deaccumulate(self.dtu_tot, step*dt)
-        #self.deaccumulate(self.dtv_tot, step*dt)
-        #self.deaccumulate(self.dtT_tot, step*dt)
-
-        #self.deaccumulate(self.dtqv_tot, step*dt)
-        #self.deaccumulate(self.dtql_tot, step*dt)
-        #self.deaccumulate(self.dtqi_tot, step*dt)
-        #self.deaccumulate(self.dtqr_tot, step*dt)
-        #self.deaccumulate(self.dtqs_tot, step*dt)
-        #self.deaccumulate(self.dtqg_tot, step*dt)
 
         self.deaccumulate(self.dtqv_dyn, step*dt)
         self.deaccumulate(self.dtql_dyn, step*dt)
@@ -201,6 +208,10 @@ class Read_DDH_files:
         self.deaccumulate(self.dtqr_phy, step*dt)
         self.deaccumulate(self.dtqs_phy, step*dt)
         self.deaccumulate(self.dtqg_phy, step*dt)
+
+        self.deaccumulate(self.dtT_rad, step*dt)
+        self.deaccumulate(self.sw_rad,  step*dt)
+        self.deaccumulate(self.lw_rad,  step*dt)
 
         # Sum of moisture and moisture tendencies
         self.q = self.qv + self.ql + self.qi + self.qr + self.qs + self.qg
@@ -271,20 +282,24 @@ class Read_DDH_files:
         # Create dimensions
         f.createDimension('time',   self.nt)
         f.createDimension('z',      self.nlev)
+        f.createDimension('zh',     self.nlevh)
         f.createDimension('domain', self.ndom)
 
         # Dimensions in NetCDF file
-        dim3d = ('time', 'domain', 'z')
-        dim2d = ('time', 'domain')
-        dim1d = ('time')
+        dim3d  = ('time', 'domain', 'z')
+        dim3dh = ('time', 'domain', 'zh')
+        dim2d  = ('time', 'domain')
+        dim1d  = ('time')
 
         # Output data type
         dtype = 'f4'
 
         # Create spatial/time variables
-        add_variable(f, 'time', dtype, dim1d, {'units': 'hours since 2010-01-01 00:00:00', 'long_name': 'time'}, self.hours_since)
-        add_variable(f, 'zg',   dtype, dim3d, {'units': 'm',  'long_name': 'Full level geopotential height'}, self.z)
-        add_variable(f, 'p',    dtype, dim3d, {'units': 'Pa', 'long_name': 'Full level hydrostatic pressure'}, self.p)
+        add_variable(f, 'time', dtype, dim1d,  {'units': 'hours since 2010-01-01 00:00:00', 'long_name': 'time'}, self.hours_since)
+        add_variable(f, 'z',    dtype, dim3d,  {'units': 'm',  'long_name': 'Full level geopotential height'}, self.z)
+        add_variable(f, 'p',    dtype, dim3d,  {'units': 'Pa', 'long_name': 'Full level hydrostatic pressure'}, self.p)
+        add_variable(f, 'zh',   dtype, dim3dh, {'units': 'm',  'long_name': 'Half level geopotential height'}, self.zh)
+        add_variable(f, 'ph',   dtype, dim3dh, {'units': 'Pa', 'long_name': 'Half level hydrostatic pressure'}, self.ph)
 
         # Model variables
         add_variable(f, 'T',    dtype, dim3d, {'units': 'K',       'long_name': 'Absolute temperature'}, self.T)
@@ -292,8 +307,12 @@ class Read_DDH_files:
         add_variable(f, 'v',    dtype, dim3d, {'units': 'm s-1',   'long_name': 'Meridional wind'}, self.v)
         add_variable(f, 'q',    dtype, dim3d, {'units': 'kg kg-1', 'long_name': 'Total specific humidity'}, self.q)
 
+        # Net radiative fluxes
+        add_variable(f, 'sw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net shortwave radiation'}, self.sw_rad)
+        add_variable(f, 'lw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net longwave radiation'}, self.lw_rad)
+
         # Surface variables
-        add_variable(f, 'Tsk',  dtype, dim2d, {'units': 'K', 'long_name': 'Absolute surface temperature'}, self.Tsk)
+        add_variable(f, 'Tsk',  dtype, dim2d, {'units': 'K', 'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
         add_variable(f, 'qsk',  dtype, dim2d, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
         add_variable(f, 'ps',   dtype, dim2d, {'units': 'Pa', 'long_name': 'Surface pressure'}, self.ph[:,:,-1])
 
@@ -304,6 +323,7 @@ class Read_DDH_files:
         add_variable(f, 'dtT_phy', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Physics temperature tendency'},  self.dtT_phy)
         add_variable(f, 'dtT_dyn', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Dynamics temperature tendency'}, self.dtT_dyn)
         #add_variable(f, 'dtT_tot', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Total temperature tendency'},    self.dtT_tot)
+        add_variable(f, 'dtT_rad', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Radiative temperature tendency'}, self.dtT_rad)
 
         add_variable(f, 'dtu_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics zonal wind tendency'},  self.dtu_phy)
         add_variable(f, 'dtu_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics zonal wind tendency'}, self.dtu_dyn)
@@ -348,14 +368,39 @@ if (__name__ == '__main__'):
         cycle = 6
 
         data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
-        data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
-
-        data = Read_DDH_files(data_path, t_end, step)
-        data.to_netcdf('test.nc')
+        #data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
+        data_path = '{}/tests/'.format(data_root)
 
 
+        if "data" not in locals():
+            data = Read_DDH_files(data_path, t_end, step)
+            data.to_netcdf('test.nc')
 
 
+
+    if (True):
+        # Check radiative quantities
+        n = 5
+
+        dzh = data.zh[:,:,:-1] - data.zh[:,:,1:]
+        dzF = (data.lw_rad[:,:,:-1] - data.lw_rad[:,:,1:]) / dzh
+        rho = data.p / (287.05 * data.T)
+        dtT = dzF / (data.cp * rho)
+
+        pl.figure()
+        pl.subplot(131)
+        for t in range(0,data.nt,n):
+            pl.plot(data.dtT_rad[t,0,:]*3600., data.z[t,0,:], label=str(t))
+            pl.plot(dtT[t,0,:]*3600., data.z[t,0,:], '--')
+        pl.legend()
+
+        pl.subplot(132)
+        for t in range(0,data.nt,n):
+            pl.plot(data.lw_rad[t,0,:-1], data.z[t,0,:], label=str(t))
+
+        pl.subplot(133)
+        for t in range(0,data.nt,n):
+            pl.plot(data.sw_rad[t,0,:-1], data.z[t,0,:], label=str(t))
 
 
     if (False):

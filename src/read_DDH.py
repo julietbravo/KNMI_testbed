@@ -69,8 +69,9 @@ class DDH_LFA:
         # Read the attributes
         self.read_attributes()
 
-        self.nlev = self.attributes['doc']['nlev']
-        self.ndom = self.attributes['doc']['ndom']
+        self.nlev  = self.attributes['doc']['nlev']
+        self.nlevh = self.nlev + 1
+        self.ndom  = self.attributes['doc']['ndom']
 
         # Decode the geographic information
 
@@ -124,9 +125,11 @@ class DDH_LFA:
 
         if (reshape):
             if (np.array(cleaned_data).size % self.nlev == 0):
-                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.nlev)).squeeze()
-            if (np.array(cleaned_data).size % self.ndom == 0): 
-                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.ndom)).squeeze()
+                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.nlev )).squeeze()
+            elif (np.array(cleaned_data).size % self.nlevh == 0):
+                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.nlevh)).squeeze()
+            elif (np.array(cleaned_data).size % self.ndom == 0): 
+                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.ndom )).squeeze()
             else:
                 return np.array(cleaned_data, dtype=self.attributes[name]['type'])
         else:
