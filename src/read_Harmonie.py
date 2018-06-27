@@ -271,9 +271,14 @@ class Read_DDH_files:
 
     def to_netcdf(self, file_name, domain_attrs=None):
 
-        def add_variable(file, name, type, dims, ncatts, data):
+        def add_variable(file, name, type, dims, accumulated, ncatts, data):
             v = file.createVariable(name, type, dims, fill_value=nc4.default_fillvals['f4'])
             v.setncatts(ncatts)
+            if accumulated:
+                v.setncattr('type', 'accumulated')
+            else:
+                v.setncattr('type', 'instantaneous')
+
             if dims[-1] in ['level', 'hlevel']:
                 v[:] = data[:,:,::-1]
             else:
@@ -312,50 +317,50 @@ class Read_DDH_files:
         dtype = 'f4'
 
         # Create spatial/time variables
-        add_variable(f, 'time', dtype, dim1d,  {'units': 'hours since 2010-01-01 00:00:00', 'long_name': 'time'}, self.hours_since)
-        add_variable(f, 'z',    dtype, dim3d,  {'units': 'm',  'long_name': 'Full level geopotential height'}, self.z)
-        add_variable(f, 'p',    dtype, dim3d,  {'units': 'Pa', 'long_name': 'Full level hydrostatic pressure'}, self.p)
-        add_variable(f, 'zh',   dtype, dim3dh, {'units': 'm',  'long_name': 'Half level geopotential height'}, self.zh)
-        add_variable(f, 'ph',   dtype, dim3dh, {'units': 'Pa', 'long_name': 'Half level hydrostatic pressure'}, self.ph)
+        add_variable(f, 'time', dtype, dim1d,  False, {'units': 'hours since 2010-01-01 00:00:00', 'long_name': 'time', 'calender': 'standard'}, self.hours_since)
+        add_variable(f, 'z',    dtype, dim3d,  False, {'units': 'm',  'long_name': 'Full level geopotential height'}, self.z)
+        add_variable(f, 'p',    dtype, dim3d,  False, {'units': 'Pa', 'long_name': 'Full level hydrostatic pressure'}, self.p)
+        add_variable(f, 'zh',   dtype, dim3dh, False, {'units': 'm',  'long_name': 'Half level geopotential height'}, self.zh)
+        add_variable(f, 'ph',   dtype, dim3dh, False, {'units': 'Pa', 'long_name': 'Half level hydrostatic pressure'}, self.ph)
 
         # Model variables
-        add_variable(f, 'T',    dtype, dim3d, {'units': 'K',       'long_name': 'Absolute temperature'}, self.T)
-        add_variable(f, 'u',    dtype, dim3d, {'units': 'm s-1',   'long_name': 'Zonal wind'}, self.u)
-        add_variable(f, 'v',    dtype, dim3d, {'units': 'm s-1',   'long_name': 'Meridional wind'}, self.v)
-        add_variable(f, 'q',    dtype, dim3d, {'units': 'kg kg-1', 'long_name': 'Total specific humidity'}, self.q)
+        add_variable(f, 'T',    dtype, dim3d, False, {'units': 'K',       'long_name': 'Absolute temperature'}, self.T)
+        add_variable(f, 'u',    dtype, dim3d, False, {'units': 'm s-1',   'long_name': 'Zonal wind'}, self.u)
+        add_variable(f, 'v',    dtype, dim3d, False, {'units': 'm s-1',   'long_name': 'Meridional wind'}, self.v)
+        add_variable(f, 'q',    dtype, dim3d, False, {'units': 'kg kg-1', 'long_name': 'Total specific humidity'}, self.q)
 
         # Net radiative fluxes
 #        add_variable(f, 'sw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net shortwave radiation'}, self.sw_rad)
 #        add_variable(f, 'lw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net longwave radiation'}, self.lw_rad)
 
         # Surface variables
-        add_variable(f, 'T_s',     dtype, dim2d, {'units': 'K',       'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
-        add_variable(f, 'q_s',     dtype, dim2d, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
-        add_variable(f, 'p_s',     dtype, dim2d, {'units': 'Pa',      'long_name': 'Surface pressure'}, self.ph[:,:,-1])
+        add_variable(f, 'T_s',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
+        add_variable(f, 'q_s',     dtype, dim2d, False, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
+        add_variable(f, 'p_s',     dtype, dim2d, False, {'units': 'Pa',      'long_name': 'Surface pressure'}, self.ph[:,:,-1])
 #        add_variable(f, 'lwin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.swds)
 #        add_variable(f, 'swin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.lwds)
 
         for qtype,qname in self.qtypes.items():
-            add_variable(f, qtype, dtype, dim3d, {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
+            add_variable(f, qtype, dtype, dim3d, False, {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
 
         # Tendencies
-        add_variable(f, 'dtT_phy', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Physics temperature tendency'},  self.dtT_phy)
-        add_variable(f, 'dtT_dyn', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Dynamics temperature tendency'}, self.dtT_dyn)
+        add_variable(f, 'dtT_phy', dtype, dim3d, True, {'units': 'K s-1',  'long_name': 'Physics temperature tendency'},  self.dtT_phy)
+        add_variable(f, 'dtT_dyn', dtype, dim3d, True, {'units': 'K s-1',  'long_name': 'Dynamics temperature tendency'}, self.dtT_dyn)
 #        add_variable(f, 'dtT_rad', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Radiative temperature tendency'}, self.dtT_rad)
 
-        add_variable(f, 'dtu_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics zonal wind tendency'},  self.dtu_phy)
-        add_variable(f, 'dtu_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics zonal wind tendency'}, self.dtu_dyn)
+        add_variable(f, 'dtu_phy', dtype, dim3d, True, {'units': 'm s-2',  'long_name': 'Physics zonal wind tendency'},  self.dtu_phy)
+        add_variable(f, 'dtu_dyn', dtype, dim3d, True, {'units': 'm s-2',  'long_name': 'Dynamics zonal wind tendency'}, self.dtu_dyn)
 
-        add_variable(f, 'dtv_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics meridional wind tendency'},  self.dtv_phy)
-        add_variable(f, 'dtv_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics meridional wind tendency'}, self.dtv_dyn)
+        add_variable(f, 'dtv_phy', dtype, dim3d, True, {'units': 'm s-2',  'long_name': 'Physics meridional wind tendency'},  self.dtv_phy)
+        add_variable(f, 'dtv_dyn', dtype, dim3d, True, {'units': 'm s-2',  'long_name': 'Dynamics meridional wind tendency'}, self.dtv_dyn)
 
-        add_variable(f, 'dtq_phy', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Physics total specific humidity tendency'},  self.dtq_phy)
-        add_variable(f, 'dtq_dyn', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Dynamics total specific humidity tendency'}, self.dtq_dyn)
+        add_variable(f, 'dtq_phy', dtype, dim3d, True, {'units': 'kg kg-1 s-1',  'long_name': 'Physics total specific humidity tendency'},  self.dtq_phy)
+        add_variable(f, 'dtq_dyn', dtype, dim3d, True, {'units': 'kg kg-1 s-1',  'long_name': 'Dynamics total specific humidity tendency'}, self.dtq_dyn)
 
         for qtype,qname in self.qtypes.items():
-            add_variable(f, 'dt{}_phy'.format(qtype),  dtype, dim3d,\
+            add_variable(f, 'dt{}_phy'.format(qtype),  dtype, dim3d, True,\
                 {'units': 'kg kg-1 s-1', 'long_name': 'Physics specific humidity ({}) tendency'.format(qname)},  getattr(self, 'dt{}_phy'.format(qtype)))
-            add_variable(f, 'dt{}_dyn'.format(qtype),  dtype, dim3d,\
+            add_variable(f, 'dt{}_dyn'.format(qtype),  dtype, dim3d, True,\
                 {'units': 'kg kg-1 s-1', 'long_name': 'Dynamics specific humidity ({}) tendency'.format(qname)}, getattr(self, 'dt{}_dyn'.format(qtype)))
 
         f.close()
