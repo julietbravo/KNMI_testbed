@@ -188,8 +188,8 @@ class Read_DDH_files:
         # Mask top half levels (is not in output DDH)
         self.ph[:,:,0]     = np.ma.masked
         self.zh[:,:,0]     = np.ma.masked
-        self.lw_rad[:,:,0] = np.ma.masked
-        self.sw_rad[:,:,0] = np.ma.masked
+#        self.lw_rad[:,:,0] = np.ma.masked
+#        self.sw_rad[:,:,0] = np.ma.masked
 
         # De-accumulate the tendencies
         self.deaccumulate(self.dtu_phy, step*dt)
@@ -297,13 +297,15 @@ class Read_DDH_files:
 
         # Create dimensions
         f.createDimension('time',   self.nt)
-        f.createDimension('z',      self.nlev)
-        f.createDimension('zh',     self.nlevh)
+        f.createDimension('level',  self.nlev)
+        f.createDimension('hlevel', self.nlevh)
+        #f.createDimension('z',      self.nlev)
+        #f.createDimension('zh',     self.nlevh)
         f.createDimension('domain', self.ndom)
 
         # Dimensions in NetCDF file
-        dim3d  = ('time', 'domain', 'z')
-        dim3dh = ('time', 'domain', 'zh')
+        dim3d  = ('time', 'domain', 'level')
+        dim3dh = ('time', 'domain', 'hlevel')
         dim2d  = ('time', 'domain')
         dim1d  = ('time')
 
