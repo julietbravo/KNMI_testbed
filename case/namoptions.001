@@ -2,19 +2,21 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 39600
-trestart = 3600
+runtime = 41400
+trestart = 10800
 dtmax = 10
 ladaptive = .true.
 irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
+nprocx=6
+nprocy=6
 /
 
 &DOMAIN
-itot = 64
-jtot = 64
+itot = 120
+jtot = 120
 kmax = 160
 
 xsize = 6400.
@@ -40,8 +42,8 @@ igrw_damp = 3       ! 3 = nudge (damping) to mean profile
 wtsurf =  0.1
 wqsurf =  0.1e-3
 isurf = 2           ! 2 = Ts, 4 = thl+qt flux, calculate u*
-z0mav = 0.035
-z0hav = 0.035
+z0mav = 0.05
+z0hav = 0.01
 /
 
 &DYNAMICS
@@ -52,7 +54,7 @@ iadv_mom = 2
 iadv_tke = 2
 iadv_thl = 2
 iadv_qt  = 2
-iadv_sv  = 2
+iadv_sv  = 52
 /
 
 &SUBGRID

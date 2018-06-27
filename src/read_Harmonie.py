@@ -401,26 +401,14 @@ if (__name__ == '__main__'):
 
         for cycle in range(6,16,3):
 
-            data_root = '/nobackup/users/stratum/DOWA/LES_forcing'
+            #data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
+            data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
             data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
 
             #if 'data' not in locals():
             data = Read_DDH_files(data_path, t_end, step)
             data.to_netcdf('{0:}/LES_forcings_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.format(data_root, year, month, day, cycle))
 
-
-        #pl.figure()
-        #pl.subplot(221)
-        #pl.plot(data.time, data.H)
-
-        #pl.subplot(222)
-        #pl.plot(data.time, data.LE)
-
-        #pl.subplot(223)
-        #pl.plot(data.time, data.Tsk)
-
-        #pl.subplot(224)
-        #pl.plot(data.time, data.qsk)
 
 
     if (False):

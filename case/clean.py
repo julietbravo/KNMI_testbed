@@ -9,7 +9,7 @@ def looks_like_python(name):
     else:
         return False
 
-keep = ['namoptions.001', 'dales4']
+keep = ['namoptions.001', 'dales4', 'run.PBS']
 
 files = glob.glob('*')
 
