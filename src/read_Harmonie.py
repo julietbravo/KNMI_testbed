@@ -26,7 +26,7 @@ class Read_DDH_files:
         self.nlev  = f.attributes['doc']['nlev']  # Number of full vertical levels
         self.nlevh = self.nlev + 1                # Number of half vertical levels
         self.ndom  = f.attributes['doc']['ndom']  # Number of output domains
-        self.nt    = int(t_end/step)+1            # Number of output time steps
+        self.nt    = int(t_end/step)              # Number of output time steps
 
         # Create empty arrays to store the individual DDH data
         self.time = np.ma.zeros(self.nt)
@@ -92,11 +92,12 @@ class Read_DDH_files:
 
         # Read all files
         for tt in range(step, t_end+1, step):
-            t = int(tt/step)
+            t = int(tt/step)-1
 
             if not quiet:
                 print('Reading DDH file #{0:3d} (index {1:<3d})'.format(tt,t))
 
+            """
             if tt == step:
                 # Exception for t==0, the instantaneous variables are
                 # hidden in the first output file (t=1)
@@ -129,6 +130,7 @@ class Read_DDH_files:
                 self.qsk[t-1,:]  = f.read_variable('VQSK0')
 
                 # There are no tendencies for t == 0...!
+            """
             #else:
             f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,tt))
 
@@ -221,7 +223,6 @@ class Read_DDH_files:
 #        self.deaccumulate(self.swds, step*dt)
 #        self.deaccumulate(self.lwds, step*dt)
 
-
         # Sum of moisture and moisture tendencies
         self.q = self.qv + self.ql + self.qi + self.qr + self.qs + self.qg
 
@@ -259,16 +260,14 @@ class Read_DDH_files:
         #self.dtth_tot_T  = self.exneri * self.dtT_tot
         #self.dtth_tot_pi = self.T * dtexneri
 
-
     def calc_tendency(self, array, dt):
         tend = np.zeros_like(array)
         tend[1:,:] = (array[1:,:] - array[:-1,:]) / dt
         return tend
 
-
     def deaccumulate(self, array, dt):
+        array[0,:]  = array[0,:] / dt
         array[1:,:] = (array[1:,:] - array[:-1,:]) / dt
-
 
     def to_netcdf(self, file_name, domain_attrs=None):
 
@@ -380,8 +379,8 @@ if (__name__ == '__main__'):
     day   = 28
     cycle = 12
 
-    #data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
-    data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
+    data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
+    #data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
     data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
 
     data = Read_DDH_files(data_path, t_end, step)
