@@ -57,7 +57,7 @@ class DDH_LFA:
         file_path : path to DDH/LFA file
     """
 
-    def __init__(self, file_path, levels=65):
+    def __init__(self, file_path):
         # Check if file actually exists
         if not os.path.exists(file_path):
             sys.exit('File {} does not exists...'.format(file_path))
@@ -65,11 +65,15 @@ class DDH_LFA:
         # Save path to file and file name
         self.file_path = file_path
         self.file_name = file_path.split('/')[-1]
-        self.levels    = levels
 
         # Read the attributes
         self.read_attributes()
 
+        self.nlev  = self.attributes['doc']['nlev']
+        self.nlevh = self.nlev + 1
+        self.ndom  = self.attributes['doc']['ndom']
+
+        # Decode the geographic information
 
     def read_attributes(self):
         # Read `lfalaf` file dump
@@ -96,8 +100,8 @@ class DDH_LFA:
 
                 # For `DOCFICHIER` and `DATE`, decode message
                 if (name == 'DATE'):
-                    date  = self.read_variable(name, reshape=False)
-                    t_min = int(self.file_name.split('+')[-1])
+                    date       = self.read_variable(name, reshape=False)
+                    t_min      = int(self.file_name.split('+')[-1])
                     start_date = datetime.datetime(year=date[0], month=date[1], day=date[2], hour=date[3])
                     valid_date = datetime.datetime(year=date[0], month=date[1], day=date[2], hour=date[3]) + datetime.timedelta(minutes=t_min)
 
@@ -105,7 +109,7 @@ class DDH_LFA:
 
                 elif (name == 'DOCFICHIER'):
                     data  = self.read_variable(name, reshape=False)
-                    self.attributes['doc'] = {'step': data[4], 'nlev': data[5]}
+                    self.attributes['doc'] = {'step': data[4], 'nlev': data[5], 'ndom': data[14]}
 
 
     def read_variable(self, name, reshape=True):
@@ -119,13 +123,15 @@ class DDH_LFA:
         # Remove empty elements
         cleaned_data = list(filter(None,data))
 
-        # Return data as Numpy array of correct data type. `filter(None,data)` removes empty lines
-        ncol = int(self.attributes[name]['length'] / self.levels)
-
-        if len(cleaned_data) == 1:
-            return np.array(cleaned_data, dtype=self.attributes[name]['type'])[0]
-        elif (ncol%1 == 0 and reshape):
-            return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(int(ncol),-1).squeeze()
+        if (reshape):
+            if (np.array(cleaned_data).size % self.nlev == 0):
+                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.nlev )).squeeze()
+            elif (np.array(cleaned_data).size % self.nlevh == 0):
+                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.nlevh)).squeeze()
+            elif (np.array(cleaned_data).size % self.ndom == 0): 
+                return np.array(cleaned_data, dtype=self.attributes[name]['type']).reshape(-1, int(self.ndom )).squeeze()
+            else:
+                return np.array(cleaned_data, dtype=self.attributes[name]['type'])
         else:
             return np.array(cleaned_data, dtype=self.attributes[name]['type'])
 
@@ -133,6 +139,7 @@ class DDH_LFA:
 if __name__ == '__main__':
     # Only executed if script is called directly, for testing..
 
-    data = '/Users/bart/meteo/data/Harmonie_DDH/20100228_00_ws/06/DHFDLHARM+0016'
+    data = '/nobackup/users/stratum/DOWA/LES_forcing/2010/02/28/06/DHFDLHARM+0001'
     lfa  = DDH_LFA(data)
     v    = lfa.read_variable('VUU0')
+    H    = lfa.read_variable('VSHF0')

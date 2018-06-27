@@ -301,7 +301,7 @@ if __name__ == '__main__':
 
     pl.close('all')
 
-    if True:
+    if False:
         """
         Demo of the different vertical grids
         """
@@ -349,7 +349,7 @@ if __name__ == '__main__':
         data = odict({'z':z, 'thl':th, 'qt':qt, 'u':u, 'v':v, 'tke':tke})
         write_profiles('prof.inp.001', data, docstring='Example of initial DALES profiles')
 
-    if True:
+    if False:
         """
         Write the time dependent surface variables,
         and large scale forcings.
