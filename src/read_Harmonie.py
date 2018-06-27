@@ -62,8 +62,8 @@ class Read_DDH_files:
         self.LE   = np.ma.zeros(dim2d)  # Surface latent heat flux (W m-2)
         self.Tsk  = np.ma.zeros(dim2d)  # Surface temperature (K)
         self.qsk  = np.ma.zeros(dim2d)  # Surface specific humidity (kg kg-1)
-        self.swds = np.ma.zeros(dim2d)  # Surface incoming shortwave radiation (W m-2)
-        self.lwds = np.ma.zeros(dim2d)  # Surface incoming longwave radiation (W m-2)
+#        self.swds = np.ma.zeros(dim2d)  # Surface incoming shortwave radiation (W m-2)
+#        self.lwds = np.ma.zeros(dim2d)  # Surface incoming longwave radiation (W m-2)
 
         # Physics, dynamics and total tendencies
         # Units all in "... s-1"
@@ -80,9 +80,9 @@ class Read_DDH_files:
         self.dtT_tot = np.ma.zeros(dim3d)
 
         # Radiative quantities
-        self.dtT_rad = np.ma.zeros(dim3d)   # Temperature tendency due to radiation (K s-1)
-        self.lw_rad  = np.ma.zeros(dim3dh)  # Net longwave radiative flux (W m-2)
-        self.sw_rad  = np.ma.zeros(dim3dh)  # Net shortwave radiative flux (W m-2)
+#        self.dtT_rad = np.ma.zeros(dim3d)   # Temperature tendency due to radiation (K s-1)
+#        self.lw_rad  = np.ma.zeros(dim3dh)  # Net longwave radiative flux (W m-2)
+#        self.sw_rad  = np.ma.zeros(dim3dh)  # Net shortwave radiative flux (W m-2)
 
         # Specific humidity tendencies
         for q in self.qtypes.keys():
@@ -156,8 +156,8 @@ class Read_DDH_files:
             self.Tsk[t,:]  = f.read_variable('VTSK1')
             self.qsk[t,:]  = f.read_variable('VQSK1')
 
-            self.swds[t,:] = f.read_variable('FSWDODS')
-            self.lwds[t,:] = f.read_variable('FLWDTHS')
+#            self.swds[t,:] = f.read_variable('FSWDODS')
+#            self.lwds[t,:] = f.read_variable('FLWDTHS')
 
             # Accumulated tendencies/variables/..
             self.dtu_phy[t,:,:] = f.read_variable('TUUPHY9')
@@ -174,9 +174,9 @@ class Read_DDH_files:
                 getattr(self, 'dt{}_phy'.format(q))[t,:,:] = f.read_variable('T{}PHY9'.format(q.upper()))
 
             # Radiation
-            self.dtT_rad[t,:,:] = f.read_variable('TCTRADI')
-            self.lw_rad [t,:,:] = f.read_variable('FCTRAYTH')
-            self.sw_rad [t,:,:] = f.read_variable('FCTRAYSO')
+#            self.dtT_rad[t,:,:] = f.read_variable('TCTRADI')
+#            self.lw_rad [t,:,:] = f.read_variable('FCTRAYTH')
+#            self.sw_rad [t,:,:] = f.read_variable('FCTRAYSO')
 
             # Manually calculate time; DDH can't handle times < 1hour
             self.time[t] = tt/60.
@@ -214,12 +214,12 @@ class Read_DDH_files:
         self.deaccumulate(self.dtqs_phy, step*dt)
         self.deaccumulate(self.dtqg_phy, step*dt)
 
-        self.deaccumulate(self.dtT_rad, step*dt)
-        self.deaccumulate(self.sw_rad,  step*dt)
-        self.deaccumulate(self.lw_rad,  step*dt)
-
-        self.deaccumulate(self.swds, step*dt)
-        self.deaccumulate(self.lwds, step*dt)
+#        self.deaccumulate(self.dtT_rad, step*dt)
+#        self.deaccumulate(self.sw_rad,  step*dt)
+#        self.deaccumulate(self.lw_rad,  step*dt)
+#
+#        self.deaccumulate(self.swds, step*dt)
+#        self.deaccumulate(self.lwds, step*dt)
 
 
         # Sum of moisture and moisture tendencies
@@ -324,15 +324,15 @@ class Read_DDH_files:
         add_variable(f, 'q',    dtype, dim3d, {'units': 'kg kg-1', 'long_name': 'Total specific humidity'}, self.q)
 
         # Net radiative fluxes
-        add_variable(f, 'sw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net shortwave radiation'}, self.sw_rad)
-        add_variable(f, 'lw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net longwave radiation'}, self.lw_rad)
+#        add_variable(f, 'sw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net shortwave radiation'}, self.sw_rad)
+#        add_variable(f, 'lw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net longwave radiation'}, self.lw_rad)
 
         # Surface variables
         add_variable(f, 'T_s',     dtype, dim2d, {'units': 'K',       'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
         add_variable(f, 'q_s',     dtype, dim2d, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
         add_variable(f, 'p_s',     dtype, dim2d, {'units': 'Pa',      'long_name': 'Surface pressure'}, self.ph[:,:,-1])
-        add_variable(f, 'lwin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.swds)
-        add_variable(f, 'swin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.lwds)
+#        add_variable(f, 'lwin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.swds)
+#        add_variable(f, 'swin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.lwds)
 
         for qtype,qname in self.qtypes.items():
             add_variable(f, qtype, dtype, dim3d, {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
@@ -340,7 +340,7 @@ class Read_DDH_files:
         # Tendencies
         add_variable(f, 'dtT_phy', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Physics temperature tendency'},  self.dtT_phy)
         add_variable(f, 'dtT_dyn', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Dynamics temperature tendency'}, self.dtT_dyn)
-        add_variable(f, 'dtT_rad', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Radiative temperature tendency'}, self.dtT_rad)
+#        add_variable(f, 'dtT_rad', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Radiative temperature tendency'}, self.dtT_rad)
 
         add_variable(f, 'dtu_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics zonal wind tendency'},  self.dtu_phy)
         add_variable(f, 'dtu_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics zonal wind tendency'}, self.dtu_dyn)
