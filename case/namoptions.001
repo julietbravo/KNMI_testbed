@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 41400
+runtime = 21600
 trestart = 10800
 dtmax = 10
 ladaptive = .true.
@@ -10,17 +10,17 @@ irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-nprocx=6
-nprocy=6
+nprocx=2
+nprocy=2
 /
 
 &DOMAIN
-itot = 120
-jtot = 120
+itot = 32
+jtot = 32
 kmax = 160
 
-xsize = 6400.
-ysize = 6400.
+xsize = 3200.
+ysize = 3200.
 
 xlat = 51.967
 xlon = 4.
@@ -68,7 +68,7 @@ ce2 = 0.51
 /
 
 &NAMMICROPHYSICS
-imicro = 5          ! 2 = warm, 5=simpleice 
+imicro = 2          ! 2 = warm, 5=simpleice 
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
 Nc_0 = 200e6        ! cloud droplet conventration
 /

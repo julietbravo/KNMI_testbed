@@ -175,7 +175,7 @@ def write_forcings(file_name, timedep_sfc, timedep_atm, docstring=''):
 
     # Write surface variables
     f.write('{0:^15s} {1:^15s} {2:^15s} {3:^15s} {4:^15s} {5:^15s}\n'\
-        .format('time', 'wthl_s', 'wqt_s', 'thl_s', 'qt_s', 'p_s'))
+        .format('time', 'wthl_s', 'wqt_s', 'T_s', 'qt_s', 'p_s'))
     f.write('{0:^15s} {1:^15s} {2:^15s} {3:^15s} {4:^15s} {5:^15s}\n'\
         .format('(s)', '(K m s-1)', '(kg kg-1 m s-1)', '(K)', '(kg kg-1)', '(Pa)'))
 
@@ -188,13 +188,13 @@ def write_forcings(file_name, timedep_sfc, timedep_atm, docstring=''):
         time  = _get_or_default(timedep_sfc, 'time',  nt, 0)
         wthls = _get_or_default(timedep_sfc, 'wthl_s',nt, 0)
         wqts  = _get_or_default(timedep_sfc, 'wqt_s', nt, 0)
-        thls  = _get_or_default(timedep_sfc, 'thl_s', nt, 0)
+        Ts    = _get_or_default(timedep_sfc, 'T_s',   nt, 0)
         qts   = _get_or_default(timedep_sfc, 'qt_s',  nt, 0)
         ps    = _get_or_default(timedep_sfc, 'p_s',   nt, 0)
 
         for t in range(nt):
             f.write('{0:+1.8E} {1:+1.8E} {2:+1.8E} {3:+1.8E} {4:+1.8E} {5:+1.8E}\n'\
-                .format(time[t], wthls[t], wqts[t], thls[t], qts[t], ps[t]))
+                .format(time[t], wthls[t], wqts[t], Ts[t], qts[t], ps[t]))
 
     if timedep_atm is not None:
         time = timedep_atm['time']

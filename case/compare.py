@@ -92,7 +92,7 @@ def integrate_tend(u, v, dtu, dtv):
 
 if __name__ == '__main__':
 
-    z = 10.     # Height to compare (m)
+    z = 200.     # Height to compare (m)
 
     # Fixed colors per model/obs type
     ch = 'C3'   # Harmonie
@@ -107,8 +107,8 @@ if __name__ == '__main__':
 
         # Read Cabauw observations
         # ========================
-        #pwd  = '/nobackup/users/stratum/Cabauw'
-        pwd  = '/Users/bart/meteo/data/Cabauw'
+        pwd  = '/nobackup/users/stratum/Cabauw'
+        #pwd  = '/Users/bart/meteo/data/Cabauw'
         cb   = xr.open_dataset('{}/cesar_tower_meteo_lc1_t10_v1.0_201002.nc'.format(pwd))
         k_cb = np.abs(cb.z.values-z).argmin()
 
@@ -122,8 +122,8 @@ if __name__ == '__main__':
             'central_lon' : 4.927,
             'area_size'   : 2,
             'case_name'   : 'cabauw',
-            #'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
-            'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
+            'ERA5_path'   : '/nobackup/users/stratum/ERA5/LS2D/',
+            #'ERA5_path'   : '/Users/bart/meteo/data/ERA5/LS2D/',
             'start_date'  : datetime.datetime(year=2010, month=2, day=28, hour=0),
             'end_date'    : datetime.datetime(year=2010, month=2, day=28, hour=23)
             }
@@ -145,6 +145,7 @@ if __name__ == '__main__':
 
         # Harmonie data & tendencies
         # ==========================
+        """
         #pwd   = '/nobackup/users/stratum/DOWA/LES_forcing/'
         pwd   = '/Users/bart/meteo/data/Harmonie_DDH/'
         files = glob.glob('{}LES_forcings_20100228*'.format(pwd))
@@ -170,11 +171,12 @@ if __name__ == '__main__':
 
         hm_dtq_dyn = interp(hm.dtq_dyn.values, hm.zg.values[0,:], z)
         hm_dtq_phy = interp(hm.dtq_phy.values, hm.zg.values[0,:], z)
+        """
 
         # DALES runs
         # ==========
-        da   = xr.open_dataset('profiles.force10min.nc')
-        t0   = datetime.datetime(2010, 2, 28, 6)
+        da   = xr.open_dataset('profiles.001.nc')
+        t0   = datetime.datetime(2010, 2, 28, 11, 55)
         time = [format_h_since(s/3600., t0) for s in da.time]
 
         da_u = interp(da.u.values, da.zt.values, z)
@@ -296,7 +298,7 @@ if __name__ == '__main__':
         pl.title('2010-02-28, Cabauw', loc='left')
         pl.plot(cb.time,     wind_to_components(cb.F, cb.D)[0][:,k_cb], '.', color='k', label='Cabauw', markersize=4)
         pl.plot(e5.datetime, e5_u, label='ERA5', dashes=[2,1], color=ce)
-        pl.plot(hm.time,     hm_u, label='Harmonie', color=ch)
+        #pl.plot(hm.time,     hm_u, label='Harmonie', color=ch)
         pl.plot(time,        da_u, label='DALES', color=cd)
         format_ax()
         pl.legend(numpoints=3)
@@ -307,7 +309,7 @@ if __name__ == '__main__':
         pl.subplot(122)
         pl.plot(cb.time,     wind_to_components(cb.F, cb.D)[1][:,k_cb], '.', color='k', label='Cabauw', markersize=4)
         pl.plot(e5.datetime, e5_v, label='ERA5', dashes=[2,1], color=ce)
-        pl.plot(hm.time,     hm_v, color=ch)
+        #pl.plot(hm.time,     hm_v, color=ch)
         pl.plot(time,        da_v, color=cd)
         format_ax()
         pl.xlim(xlim)
