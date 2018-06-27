@@ -62,6 +62,8 @@ class Read_DDH_files:
         self.LE   = np.ma.zeros(dim2d)  # Surface latent heat flux (W m-2)
         self.Tsk  = np.ma.zeros(dim2d)  # Surface temperature (K)
         self.qsk  = np.ma.zeros(dim2d)  # Surface specific humidity (kg kg-1)
+        self.swds = np.ma.zeros(dim2d)  # Surface incoming shortwave radiation (W m-2)
+        self.lwds = np.ma.zeros(dim2d)  # Surface incoming longwave radiation (W m-2)
 
         # Physics, dynamics and total tendencies
         # Units all in "... s-1"
@@ -154,6 +156,9 @@ class Read_DDH_files:
             self.Tsk[t,:]  = f.read_variable('VTSK1')
             self.qsk[t,:]  = f.read_variable('VQSK1')
 
+            self.swds[t,:] = f.read_variable('FSWDODS')
+            self.lwds[t,:] = f.read_variable('FLWDTHS')
+
             # Accumulated tendencies/variables/..
             self.dtu_phy[t,:,:] = f.read_variable('TUUPHY9')
             self.dtv_phy[t,:,:] = f.read_variable('TVVPHY9')
@@ -212,6 +217,10 @@ class Read_DDH_files:
         self.deaccumulate(self.dtT_rad, step*dt)
         self.deaccumulate(self.sw_rad,  step*dt)
         self.deaccumulate(self.lw_rad,  step*dt)
+
+        self.deaccumulate(self.swds, step*dt)
+        self.deaccumulate(self.lwds, step*dt)
+
 
         # Sum of moisture and moisture tendencies
         self.q = self.qv + self.ql + self.qi + self.qr + self.qs + self.qg
@@ -275,9 +284,16 @@ class Read_DDH_files:
         f = nc4.Dataset(file_name, 'w')
 
         # Set some global attributes
-        f.setncattr('title', 'Large-scale forcings LES')
-        f.setncattr('institution', 'KNMI')
-        f.setncattr('source', 'Harmonie 40h1.2tg2 DOWA reanalysis')
+        f.setncattr('Conventions', "CF-1.4")
+        f.setncattr('institute_id', "KNMI")
+        f.setncattr('model_id', "harmonie-40h1.2.tg2")
+        f.setncattr('domain', "NETHERLANDS")
+        f.setncattr('driving_model_id', "ERA5")
+        f.setncattr('experiment_id', "DOWA_40h12tg2_fERA5")
+        f.setncattr('title', "Dutch Offshore Wind Atlas (DOWA) - initial & boundary conditions for LES")
+        f.setncattr('project_id', "DOWA")
+        f.setncattr('institution', "Royal Netherlands Meteorological Institute, De Bilt, The Netherlands")
+        f.setncattr('data_contact', "Bart van Stratum, R&D Weather & Climate Models, KNMI (bart.van.stratum@knmi.nl)")
 
         # Create dimensions
         f.createDimension('time',   self.nt)
@@ -312,9 +328,11 @@ class Read_DDH_files:
         add_variable(f, 'lw_net', dtype, dim3dh, {'units': 'W m-2', 'long_name': 'Net longwave radiation'}, self.lw_rad)
 
         # Surface variables
-        add_variable(f, 'Tsk',  dtype, dim2d, {'units': 'K', 'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
-        add_variable(f, 'qsk',  dtype, dim2d, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
-        add_variable(f, 'ps',   dtype, dim2d, {'units': 'Pa', 'long_name': 'Surface pressure'}, self.ph[:,:,-1])
+        add_variable(f, 'T_s',     dtype, dim2d, {'units': 'K',       'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
+        add_variable(f, 'q_s',     dtype, dim2d, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
+        add_variable(f, 'p_s',     dtype, dim2d, {'units': 'Pa',      'long_name': 'Surface pressure'}, self.ph[:,:,-1])
+        add_variable(f, 'lwin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.swds)
+        add_variable(f, 'swin_s',  dtype, dim2d, {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.lwds)
 
         for qtype,qname in self.qtypes.items():
             add_variable(f, qtype, dtype, dim3d, {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
@@ -322,28 +340,22 @@ class Read_DDH_files:
         # Tendencies
         add_variable(f, 'dtT_phy', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Physics temperature tendency'},  self.dtT_phy)
         add_variable(f, 'dtT_dyn', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Dynamics temperature tendency'}, self.dtT_dyn)
-        #add_variable(f, 'dtT_tot', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Total temperature tendency'},    self.dtT_tot)
         add_variable(f, 'dtT_rad', dtype, dim3d, {'units': 'K s-1',  'long_name': 'Radiative temperature tendency'}, self.dtT_rad)
 
         add_variable(f, 'dtu_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics zonal wind tendency'},  self.dtu_phy)
         add_variable(f, 'dtu_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics zonal wind tendency'}, self.dtu_dyn)
-        #add_variable(f, 'dtu_tot', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Total zonal wind tendency'},    self.dtu_tot)
 
         add_variable(f, 'dtv_phy', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Physics meridional wind tendency'},  self.dtv_phy)
         add_variable(f, 'dtv_dyn', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Dynamics meridional wind tendency'}, self.dtv_dyn)
-        #add_variable(f, 'dtv_tot', dtype, dim3d, {'units': 'm s-2',  'long_name': 'Total meridional wind tendency'},    self.dtv_tot)
 
         add_variable(f, 'dtq_phy', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Physics total specific humidity tendency'},  self.dtq_phy)
         add_variable(f, 'dtq_dyn', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Dynamics total specific humidity tendency'}, self.dtq_dyn)
-        #add_variable(f, 'dtq_tot', dtype, dim3d, {'units': 'kg kg-1 s-1',  'long_name': 'Total total specific humidity tendency'},    self.dtq_tot)
 
         for qtype,qname in self.qtypes.items():
             add_variable(f, 'dt{}_phy'.format(qtype),  dtype, dim3d,\
                 {'units': 'kg kg-1 s-1', 'long_name': 'Physics specific humidity ({}) tendency'.format(qname)},  getattr(self, 'dt{}_phy'.format(qtype)))
             add_variable(f, 'dt{}_dyn'.format(qtype),  dtype, dim3d,\
                 {'units': 'kg kg-1 s-1', 'long_name': 'Dynamics specific humidity ({}) tendency'.format(qname)}, getattr(self, 'dt{}_dyn'.format(qtype)))
-            #add_variable(f, 'dt{}_tot'.format(qtype),  dtype, dim3d,\
-            #    {'units': 'kg kg-1 s-1', 'long_name': 'Total specific humidity ({}) tendency'.format(qname)},    getattr(self, 'dt{}_tot'.format(qtype)))
 
         f.close()
 
@@ -383,15 +395,16 @@ if (__name__ == '__main__'):
         n = 5
 
         dzh = data.zh[:,:,:-1] - data.zh[:,:,1:]
-        dzF = (data.lw_rad[:,:,:-1] - data.lw_rad[:,:,1:]) / dzh
+        dzFl = (data.lw_rad[:,:,:-1] - data.lw_rad[:,:,1:]) / dzh
+        dzFs = (data.sw_rad[:,:,:-1] - data.sw_rad[:,:,1:]) / dzh
         rho = data.p / (287.05 * data.T)
-        dtT = dzF / (data.cp * rho)
+        dtT = (dzFl + dzFs) / (data.cp * rho)
 
         pl.figure()
         pl.subplot(131)
         for t in range(0,data.nt,n):
             pl.plot(data.dtT_rad[t,0,:]*3600., data.z[t,0,:], label=str(t))
-            pl.plot(dtT[t,0,:]*3600., data.z[t,0,:], '--')
+            pl.plot(dtT[t,0,:]*3600., data.z[t,0,:], 'x')
         pl.legend()
 
         pl.subplot(132)
@@ -401,6 +414,12 @@ if (__name__ == '__main__'):
         pl.subplot(133)
         for t in range(0,data.nt,n):
             pl.plot(data.sw_rad[t,0,:-1], data.z[t,0,:], label=str(t))
+
+        pl.figure()
+        pl.plot(data.datetime, data.swds1[:,0], label='swds1')
+        pl.plot(data.datetime, data.swds2[:,0], label='swds2')
+        pl.plot(data.datetime, data.lwds[:,0],  label='lwds')
+        pl.legend()
 
 
     if (False):
