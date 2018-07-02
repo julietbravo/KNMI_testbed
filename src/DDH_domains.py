@@ -57,7 +57,7 @@ def plot_locations(locations, size):
     ax=pl.axes(projection=proj)
 
     # Draw coast lines, resolution = {'10m','50m','110m'}
-    ax.coastlines(resolution='50m', linewidth=0.8, color='black')
+    ax.coastlines(resolution='10m', linewidth=0.8, color='black')
 
     # Load country geometries and lakes (for the IJselmeer)
     # from www.naturalearthdata.com and add to axes
@@ -75,52 +75,59 @@ def plot_locations(locations, size):
 
     # Plot some random data
     for i,loc in enumerate(locations):
-        color = 'C{}'.format((i+1)%10)
-
         diff_lon = np.abs(dlon(size/2, loc['lat']))
         diff_lat = np.abs(dlat(size/2))
 
         label='{} ({}N, {}E)'.format(loc['name'], loc['lat'], loc['lon'])
 
-        ax.add_patch(mpatches.Rectangle(xy=[loc['lon']-diff_lon/2., loc['lat']-diff_lat/2.],
-                                        width=2*diff_lon, height=2*diff_lat,
-                                        edgecolor=color, facecolor=color, alpha=0.6,
+        ax.add_patch(mpatches.Rectangle(xy=[loc['lon']-diff_lon, loc['lat']-diff_lat],
+                                        width=2*diff_lon, height=2*diff_lat, ls=loc['ls'],
+                                        edgecolor=loc['c'], facecolor=loc['c'], alpha=loc['a'],
                                         transform=ccrs.PlateCarree(), label=label))
     pl.legend(fontsize=9, loc='upper left')
 
 
 if __name__ == '__main__':
 
-    if (False):
+    if (True):
         # Check influence averaging domain:
-        locations = [dict(name='Cabauw',   lat=51.97, lon=4.90),
-                     dict(name='IJmuiden', lat=52.85, lon=3.44)]
+        #locations = [dict(name='Cabauw',   lat=51.97, lon=4.90),
+        #             dict(name='IJmuiden', lat=52.85, lon=3.44)]
+        locations = [dict(name='FINO1',        lat=54.01, lon=6.59, c='C1', a=0.9, ls='solid'),
+                     dict(name='Goeree',       lat=51.93, lon=3.67, c='C2', a=0.9, ls='solid'),
+                     dict(name='Europlatform', lat=52.00, lon=3.27, c='C3', a=0.9, ls='solid'),
+                     dict(name='K13',          lat=53.22, lon=3.22, c='C4', a=0.9, ls='solid'),
+                     dict(name='HKZ',          lat=52.30, lon=4.10, c='C5', a=0.9, ls='solid'),
+                     dict(name='P11B',         lat=52.36, lon=3.34, c='C6', a=0.9, ls='solid'),
+                     dict(name='F3-FB-1',      lat=54.85, lon=4.70, c='C7', a=0.9, ls='solid'),
+                     dict(name='Cabauw',       lat=51.97, lon=4.90, c='C1', a=0.5, ls='dotted'),
+                     dict(name='Loobos',       lat=52.17, lon=5.74, c='C2', a=0.5, ls='dotted'),
+                     dict(name='Lutjewad',     lat=53.40, lon=6.35, c='C3', a=0.5, ls='dotted'),
+                     dict(name='Schiphol',     lat=52.31, lon=4.76, c='C4', a=0.5, ls='dotted'),
+                     dict(name='Rotterdam',    lat=51.91, lon=4.47, c='C5', a=0.5, ls='dotted')]
 
         sizes = [-1, 10000, 30000]
 
         create_namelist(locations, sizes)
 
-        plot_locations(locations, sizes)
-
     if (True):
-        locations = [dict(name='FINO1',        lat=54.01, lon=6.59),
-                     dict(name='Goeree',       lat=51.93, lon=3.67),
-                     dict(name='Europlatform', lat=52.00, lon=3.27),
-                     dict(name='K13',          lat=53.22, lon=3.22),
-                     dict(name='HKZ',          lat=52.30, lon=4.10),
-                     dict(name='P11B',         lat=52.36, lon=3.34),
-                     dict(name='F3-FB-1',      lat=54.85, lon=4.70),
-                     dict(name='Cabauw',       lat=51.97, lon=4.90),
-                     dict(name='Schiphol',     lat=52.31, lon=4.76),
-                     dict(name='Loobos',       lat=52.17, lon=5.74),
-                     dict(name='HoekvHolland', lat=51.98, lon=4.10),
-                     dict(name='Lutjewad',     lat=53.40, lon=6.35)]
-
+        locations = [dict(name='FINO1',        lat=54.01, lon=6.59, c='C1', a=0.9, ls='solid'),
+                     dict(name='Goeree',       lat=51.93, lon=3.67, c='C2', a=0.9, ls='solid'),
+                     dict(name='Europlatform', lat=52.00, lon=3.27, c='C3', a=0.9, ls='solid'),
+                     dict(name='K13',          lat=53.22, lon=3.22, c='C4', a=0.9, ls='solid'),
+                     dict(name='HKZ',          lat=52.30, lon=4.10, c='C5', a=0.9, ls='solid'),
+                     dict(name='P11B',         lat=52.36, lon=3.34, c='C6', a=0.9, ls='solid'),
+                     dict(name='F3-FB-1',      lat=54.85, lon=4.70, c='C7', a=0.9, ls='solid'),
+                     dict(name='Cabauw',       lat=51.97, lon=4.90, c='C1', a=0.5, ls='dotted'),
+                     dict(name='Loobos',       lat=52.17, lon=5.74, c='C2', a=0.5, ls='dotted'),
+                     dict(name='Lutjewad',     lat=53.40, lon=6.35, c='C3', a=0.5, ls='dotted'),
+                     dict(name='Schiphol',     lat=52.31, lon=4.76, c='C4', a=0.5, ls='dotted'),
+                     dict(name='Rotterdam',    lat=51.91, lon=4.47, c='C5', a=0.5, ls='dotted')]
 
         sizes = [25000]
 
         #create_namelist(locations, sizes)
 
-        plot_locations(locations, 25000)
+        plot_locations(locations, 30000)
 
 
