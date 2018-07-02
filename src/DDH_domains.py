@@ -70,21 +70,23 @@ def plot_locations(locations, size):
     ax.add_feature(lakes, edgecolor='black', linewidth=0.8)
 
     # Set spatial extent of map, and add grid lines
-    ax.set_extent([2, 7.5, 50.5, 55], ccrs.PlateCarree())
+    ax.set_extent([1, 7.5, 50.5, 55.2], ccrs.PlateCarree())
     #ax.gridlines()
 
     # Plot some random data
     for i,loc in enumerate(locations):
-        color = 'C{}'.format(i+1)
+        color = 'C{}'.format((i+1)%10)
 
         diff_lon = np.abs(dlon(size/2, loc['lat']))
         diff_lat = np.abs(dlat(size/2))
 
+        label='{} ({}N, {}E)'.format(loc['name'], loc['lat'], loc['lon'])
+
         ax.add_patch(mpatches.Rectangle(xy=[loc['lon']-diff_lon/2., loc['lat']-diff_lat/2.],
                                         width=2*diff_lon, height=2*diff_lat,
                                         edgecolor=color, facecolor=color, alpha=0.6,
-                                        transform=ccrs.PlateCarree(), label=loc['name']))
-    pl.legend()
+                                        transform=ccrs.PlateCarree(), label=label))
+    pl.legend(fontsize=9, loc='upper left')
 
 
 if __name__ == '__main__':
@@ -101,17 +103,19 @@ if __name__ == '__main__':
         plot_locations(locations, sizes)
 
     if (True):
-        locations = [dict(name='IJmuiden',     lat=52.85, lon=3.44),
-                     dict(name='FINO1',        lat=54.01, lon=6.59),
-                     dict(name='OWEZ',         lat=52.61, lon=4.39),
+        locations = [dict(name='FINO1',        lat=54.01, lon=6.59),
                      dict(name='Goeree',       lat=51.93, lon=3.67),
                      dict(name='Europlatform', lat=52.00, lon=3.27),
+                     dict(name='K13',          lat=53.22, lon=3.22),
                      dict(name='HKZ',          lat=52.30, lon=4.10),
+                     dict(name='P11B',         lat=52.36, lon=3.34),
+                     dict(name='F3-FB-1',      lat=54.85, lon=4.70),
                      dict(name='Cabauw',       lat=51.97, lon=4.90),
-                     dict(name='Schiphol',     lat=52.31, lon=4.76)]
+                     dict(name='Schiphol',     lat=52.31, lon=4.76),
+                     dict(name='Loobos',       lat=52.17, lon=5.74),
+                     dict(name='HoekvHolland', lat=51.98, lon=4.10),
+                     dict(name='Lutjewad',     lat=53.40, lon=6.35)]
 
-
-                     #dict(name='Joyce',    lat=50.91, lon=6.41)]
 
         sizes = [25000]
 
