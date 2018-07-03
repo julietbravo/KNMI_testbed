@@ -153,13 +153,12 @@ class Read_DDH_files:
             for q in self.qtypes.keys():
                 getattr(self, q)[t,:,:] = f.read_variable('V{}1'.format(q.upper())) / self.dp[t,:,:]
 
-            self.H[t,:]    = f.read_variable('VSHF1')
-            self.LE[t,:]   = f.read_variable('VLHF1')
+            self.H[t,:]    = f.read_variable('FSHF')
+            self.LE[t,:]   = f.read_variable('FLHF')
             self.Tsk[t,:]  = f.read_variable('VTSK1')
             self.qsk[t,:]  = f.read_variable('VQSK1')
-
-#            self.swds[t,:] = f.read_variable('FSWDODS')
-#            self.lwds[t,:] = f.read_variable('FLWDTHS')
+            self.swds[t,:] = f.read_variable('FSWDODS')
+            self.lwds[t,:] = f.read_variable('FLWDTHS')
 
             # Accumulated tendencies/variables/..
             self.dtu_phy[t,:,:] = f.read_variable('TUUPHY9')
@@ -176,9 +175,9 @@ class Read_DDH_files:
                 getattr(self, 'dt{}_phy'.format(q))[t,:,:] = f.read_variable('T{}PHY9'.format(q.upper()))
 
             # Radiation
-#            self.dtT_rad[t,:,:] = f.read_variable('TCTRADI')
-#            self.lw_rad [t,:,:] = f.read_variable('FCTRAYTH')
-#            self.sw_rad [t,:,:] = f.read_variable('FCTRAYSO')
+            self.dtT_rad[t,:,:] = f.read_variable('TCTRADI')
+            self.lw_rad [t,:,:] = f.read_variable('FCTRAYTH')
+            self.sw_rad [t,:,:] = f.read_variable('FCTRAYSO')
 
             # Manually calculate time; DDH can't handle times < 1hour
             self.time[t] = tt/60.
@@ -190,8 +189,8 @@ class Read_DDH_files:
         # Mask top half levels (is not in output DDH)
         self.ph[:,:,0]     = np.ma.masked
         self.zh[:,:,0]     = np.ma.masked
-#        self.lw_rad[:,:,0] = np.ma.masked
-#        self.sw_rad[:,:,0] = np.ma.masked
+        self.lw_rad[:,:,0] = np.ma.masked
+        self.sw_rad[:,:,0] = np.ma.masked
 
         # De-accumulate the tendencies
         self.deaccumulate(self.dtu_phy, step*dt)
@@ -216,12 +215,14 @@ class Read_DDH_files:
         self.deaccumulate(self.dtqs_phy, step*dt)
         self.deaccumulate(self.dtqg_phy, step*dt)
 
-#        self.deaccumulate(self.dtT_rad, step*dt)
-#        self.deaccumulate(self.sw_rad,  step*dt)
-#        self.deaccumulate(self.lw_rad,  step*dt)
-#
-#        self.deaccumulate(self.swds, step*dt)
-#        self.deaccumulate(self.lwds, step*dt)
+        self.deaccumulate(self.dtT_rad, step*dt)
+        self.deaccumulate(self.sw_rad,  step*dt)
+        self.deaccumulate(self.lw_rad,  step*dt)
+
+        self.deaccumulate(self.H,    step*dt)
+        self.deaccumulate(self.LE,   step*dt)
+        self.deaccumulate(self.swds, step*dt)
+        self.deaccumulate(self.lwds, step*dt)
 
         # Sum of moisture and moisture tendencies
         self.q = self.qv + self.ql + self.qi + self.qr + self.qs + self.qg
@@ -266,8 +267,8 @@ class Read_DDH_files:
         return tend
 
     def deaccumulate(self, array, dt):
-        array[0,:]  = array[0,:] / dt
         array[1:,:] = (array[1:,:] - array[:-1,:]) / dt
+        array[0,:]  = array[0,:] / dt
 
     def to_netcdf(self, file_name, domain_attrs=None):
 
@@ -332,11 +333,13 @@ class Read_DDH_files:
         add_variable(f, 'lw_net', dtype, dim3dh, True, {'units': 'W m-2', 'long_name': 'Net longwave radiation'}, self.lw_rad)
 
         # Surface variables
+        add_variable(f, 'H',       dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface sensible heat flux'}, self.H)
+        add_variable(f, 'LE',      dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface latent heat flux'}, self.LE)
         add_variable(f, 'T_s',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
         add_variable(f, 'q_s',     dtype, dim2d, False, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
         add_variable(f, 'p_s',     dtype, dim2d, False, {'units': 'Pa',      'long_name': 'Surface pressure'}, self.ph[:,:,-1])
-        add_variable(f, 'lwin_s',  dtype, dim2d, True, {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.swds)
-        add_variable(f, 'swin_s',  dtype, dim2d, True, {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.lwds)
+        add_variable(f, 'lwin_s',  dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.swds)
+        add_variable(f, 'swin_s',  dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.lwds)
 
         # Soil variables
         # Dummy....
@@ -391,8 +394,8 @@ if (__name__ == '__main__'):
     day   = 28
     cycle = 12
 
-    data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
-    #data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
+    #data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
+    data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
     data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
 
     data = Read_DDH_files(data_path, t_end, step)

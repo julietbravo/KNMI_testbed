@@ -28,7 +28,8 @@ if __name__ == '__main__':
     end   = datetime.datetime(year=2010, month=2, day=28, hour=21)
 
     # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
-    path  = '/nobackup/users/stratum/DOWA/LES_forcing'
+    #path = '/nobackup/users/stratum/DOWA/LES_forcing'
+    path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
 
     # DDH output settings
     step  = 10       # DDH output interval

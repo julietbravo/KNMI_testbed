@@ -8,9 +8,9 @@ def mkdir(path):
     if not os.path.exists(path):
         os.mkdir(path)
 
-data_root = '/nobackup/users/stratum/DOWA/LES_forcing/'
+data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
 
-files = glob.glob('{}/tars/*.tar.gz'.format(data_root))
+files = glob.glob('{}/*.tar.gz'.format(data_root))
 files.sort()
 
 for file in files:
