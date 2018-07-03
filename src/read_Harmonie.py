@@ -8,6 +8,7 @@ import datetime
 import netCDF4 as nc4
 
 import read_DDH as ddh
+import DDH_domains as ddom
 
 # Constants, stored in dict, not to mix up Harmonie (ch) & DALES (cd) constants
 # Harmonie constants are from arpifs/setup/sucst.F90
@@ -270,7 +271,7 @@ class Read_DDH_files:
         array[1:,:] = (array[1:,:] - array[:-1,:]) / dt
         array[0,:]  = array[0,:] / dt
 
-    def to_netcdf(self, file_name, domain_attrs=None):
+    def to_netcdf(self, file_name, add_domain_info=False):
 
         def add_variable(file, name, type, dims, accumulated, ncatts, data):
             v = file.createVariable(name, type, dims, fill_value=nc4.default_fillvals['f4'])
@@ -311,9 +312,25 @@ class Read_DDH_files:
         dim3dh = ('time', 'domain', 'levelh')
         dim2d  = ('time', 'domain')
         dim1d  = ('time')
+        dimdom = ('domain')
 
         # Output data type
         dtype = 'f4'
+
+        # Domain information
+        if add_domain_info:
+            domains, sizes = ddom.get_DOWA_domains()
+            info = ddom.get_domain_info(domains, sizes)
+
+            name        = f.createVariable('name',        str,  ('domain')) #; name[:] = info['name']
+            central_lat = f.createVariable('central_lat', 'f4', ('domain')); central_lat[:] = info['cent_lat']
+            central_lon = f.createVariable('central_lon', 'f4', ('domain')); central_lon[:] = info['cent_lon']
+            west_lon    = f.createVariable('west_lon',    'f4', ('domain')); west_lon[:]    = info['west_lon']
+            east_lon    = f.createVariable('east_lon',    'f4', ('domain')); east_lon[:]    = info['east_lon']
+            north_lat   = f.createVariable('north_lat',   'f4', ('domain')); north_lat[:]   = info['north_lat']
+            south_lat   = f.createVariable('south_lat',   'f4', ('domain')); south_lat[:]   = info['south_lat']
+            for i in range(self.ndom):
+                name[i] = info['name'][i]
 
         # Create spatial/time variables
         add_variable(f, 'time', dtype, dim1d,  False, {'units': 'hours since 2010-01-01 00:00:00', 'long_name': 'time', 'calender': 'standard'}, self.hours_since)
@@ -399,4 +416,4 @@ if (__name__ == '__main__'):
     data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
 
     data = Read_DDH_files(data_path, t_end, step)
-    data.to_netcdf('example.nc')
+    data.to_netcdf('example.nc', add_domain_info=True)

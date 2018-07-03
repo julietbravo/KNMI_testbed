@@ -46,6 +46,58 @@ def create_namelist(locations, sizes):
 
             i += 1
 
+
+def get_DOWA_domains():
+    # Pretty much hardcoded for the specific DOWA setup...................
+    domains = [dict(name='FINO1',        lat=54.01, lon=6.59, c='C1', a=0.9, ls='solid'),
+               dict(name='Goeree',       lat=51.93, lon=3.67, c='C2', a=0.9, ls='solid'),
+               dict(name='Europlatform', lat=52.00, lon=3.27, c='C3', a=0.9, ls='solid'),
+               dict(name='K13',          lat=53.22, lon=3.22, c='C4', a=0.9, ls='solid'),
+               dict(name='HKZ',          lat=52.30, lon=4.10, c='C5', a=0.9, ls='solid'),
+               dict(name='P11B',         lat=52.36, lon=3.34, c='C6', a=0.9, ls='solid'),
+               dict(name='F3-FB-1',      lat=54.85, lon=4.70, c='C7', a=0.9, ls='solid'),
+               dict(name='Cabauw',       lat=51.97, lon=4.90, c='C1', a=0.5, ls='dotted'),
+               dict(name='Loobos',       lat=52.17, lon=5.74, c='C2', a=0.5, ls='dotted'),
+               dict(name='Lutjewad',     lat=53.40, lon=6.35, c='C3', a=0.5, ls='dotted'),
+               dict(name='Schiphol',     lat=52.31, lon=4.76, c='C4', a=0.5, ls='dotted'),
+               dict(name='Rotterdam',    lat=51.91, lon=4.47, c='C5', a=0.5, ls='dotted')]
+
+    sizes = [-1, 10000, 30000]
+
+    return domains, sizes
+
+
+def get_domain_info(domains, sizes):
+
+    out = dict(name=[], cent_lat=[], cent_lon=[],\
+               east_lon=[], west_lon=[], north_lat=[], south_lat=[])
+
+    for plane, area_size in enumerate(sizes):
+        for loc in domains:
+            if area_size == -1:
+                # Single column
+                out['name'     ].append( '{0:}_column'.format(loc['name']) )
+                out['cent_lat' ].append( loc['lat'] )
+                out['cent_lon' ].append( loc['lon'] )
+                out['east_lon' ].append( None )
+                out['west_lon' ].append( None )
+                out['north_lat'].append( None )
+                out['south_lat'].append( None )
+            else:
+                diff_lon = dlon(area_size/2, loc['lat'])
+                diff_lat = dlat(area_size/2)
+
+                out['name'     ].append( '{0:}_{1:.0f}km'.format(loc['name'], area_size/1000.) )
+                out['cent_lat' ].append( loc['lat'] )
+                out['cent_lon' ].append( loc['lon'] )
+                out['east_lon' ].append( loc['lon']+diff_lon )
+                out['west_lon' ].append( loc['lon']-diff_lon )
+                out['north_lat'].append( loc['lat']+diff_lat )
+                out['south_lat'].append( loc['lat']-diff_lat )
+
+    return out
+
+
 def plot_locations(locations, size):
 
     pl.figure()
@@ -87,47 +139,20 @@ def plot_locations(locations, size):
     pl.legend(fontsize=9, loc='upper left')
 
 
+
+
 if __name__ == '__main__':
 
-    if (True):
-        # Check influence averaging domain:
-        #locations = [dict(name='Cabauw',   lat=51.97, lon=4.90),
-        #             dict(name='IJmuiden', lat=52.85, lon=3.44)]
-        locations = [dict(name='FINO1',        lat=54.01, lon=6.59, c='C1', a=0.9, ls='solid'),
-                     dict(name='Goeree',       lat=51.93, lon=3.67, c='C2', a=0.9, ls='solid'),
-                     dict(name='Europlatform', lat=52.00, lon=3.27, c='C3', a=0.9, ls='solid'),
-                     dict(name='K13',          lat=53.22, lon=3.22, c='C4', a=0.9, ls='solid'),
-                     dict(name='HKZ',          lat=52.30, lon=4.10, c='C5', a=0.9, ls='solid'),
-                     dict(name='P11B',         lat=52.36, lon=3.34, c='C6', a=0.9, ls='solid'),
-                     dict(name='F3-FB-1',      lat=54.85, lon=4.70, c='C7', a=0.9, ls='solid'),
-                     dict(name='Cabauw',       lat=51.97, lon=4.90, c='C1', a=0.5, ls='dotted'),
-                     dict(name='Loobos',       lat=52.17, lon=5.74, c='C2', a=0.5, ls='dotted'),
-                     dict(name='Lutjewad',     lat=53.40, lon=6.35, c='C3', a=0.5, ls='dotted'),
-                     dict(name='Schiphol',     lat=52.31, lon=4.76, c='C4', a=0.5, ls='dotted'),
-                     dict(name='Rotterdam',    lat=51.91, lon=4.47, c='C5', a=0.5, ls='dotted')]
-
-        sizes = [-1, 10000, 30000]
-
-        create_namelist(locations, sizes)
+    domains, sizes = get_DOWA_domains()
 
     if (True):
-        locations = [dict(name='FINO1',        lat=54.01, lon=6.59, c='C1', a=0.9, ls='solid'),
-                     dict(name='Goeree',       lat=51.93, lon=3.67, c='C2', a=0.9, ls='solid'),
-                     dict(name='Europlatform', lat=52.00, lon=3.27, c='C3', a=0.9, ls='solid'),
-                     dict(name='K13',          lat=53.22, lon=3.22, c='C4', a=0.9, ls='solid'),
-                     dict(name='HKZ',          lat=52.30, lon=4.10, c='C5', a=0.9, ls='solid'),
-                     dict(name='P11B',         lat=52.36, lon=3.34, c='C6', a=0.9, ls='solid'),
-                     dict(name='F3-FB-1',      lat=54.85, lon=4.70, c='C7', a=0.9, ls='solid'),
-                     dict(name='Cabauw',       lat=51.97, lon=4.90, c='C1', a=0.5, ls='dotted'),
-                     dict(name='Loobos',       lat=52.17, lon=5.74, c='C2', a=0.5, ls='dotted'),
-                     dict(name='Lutjewad',     lat=53.40, lon=6.35, c='C3', a=0.5, ls='dotted'),
-                     dict(name='Schiphol',     lat=52.31, lon=4.76, c='C4', a=0.5, ls='dotted'),
-                     dict(name='Rotterdam',    lat=51.91, lon=4.47, c='C5', a=0.5, ls='dotted')]
+        # Get info for NetCDF files
+        info = get_domain_info(domains, sizes)
 
-        sizes = [25000]
+    if (False):
+        # Create Harmonie namelist
+        create_namelist(domains, sizes)
 
-        #create_namelist(locations, sizes)
-
-        plot_locations(locations, 30000)
-
-
+    if (False):
+        # Plot domains on map
+        plot_domains(domains, 30000)
