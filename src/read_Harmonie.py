@@ -355,8 +355,8 @@ class Read_DDH_files:
         add_variable(f, 'T_s',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Absolute (sea) surface temperature'}, self.Tsk)
         add_variable(f, 'q_s',     dtype, dim2d, False, {'units': 'kg kg-1', 'long_name': 'Surface specific humidity'}, self.qsk)
         add_variable(f, 'p_s',     dtype, dim2d, False, {'units': 'Pa',      'long_name': 'Surface pressure'}, self.ph[:,:,-1])
-        add_variable(f, 'lwin_s',  dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.swds)
-        add_variable(f, 'swin_s',  dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.lwds)
+        add_variable(f, 'lwin_s',  dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface shortwave incoming radiation'}, self.lwds)
+        add_variable(f, 'swin_s',  dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.swds)
 
         # Soil variables
         # Dummy....
@@ -412,8 +412,9 @@ if (__name__ == '__main__'):
     cycle = 12
 
     #data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
-    data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
-    data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
+    #data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
+    #data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
+    data_path = '/home/ms/nl/nkbs/tmp/'
 
     data = Read_DDH_files(data_path, t_end, step)
-    data.to_netcdf('example.nc', add_domain_info=True)
+    data.to_netcdf('example.nc', add_domain_info=False)
