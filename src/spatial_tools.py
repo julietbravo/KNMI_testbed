@@ -19,7 +19,7 @@ def dlat(dy):
     return np.rad2deg(dy / r_earth)
 
 
-def find_nearest_latlon(lats, lons, goal_lat, goal_lon):
+def find_nearest_latlon(lats, lons, goal_lat, goal_lon, silent=False):
     """
     Find nearest latitude/longitude in 2D lat/lon grid
     """
@@ -29,8 +29,9 @@ def find_nearest_latlon(lats, lons, goal_lat, goal_lon):
     dist   = (dist_x**2. + dist_y**2)**0.5
 
     j,i = np.unravel_index(dist.argmin(), dist.shape)
-
-    print('Requested lat/lon = {0:.2f}/{1:.2f}, using {2:.2f}/{3:.2f}, distance = {4:.2f} km (i,j={5:},{6:})'\
-        .format(goal_lat, goal_lon, lats[j,i], lons[j,i], dist.min()/1000., j, i))
+    
+    if not silent:
+        print('Requested lat/lon = {0:.2f}/{1:.2f}, using {2:.2f}/{3:.2f}, distance = {4:.2f} km (i,j={5:},{6:})'\
+            .format(goal_lat, goal_lon, lats[j,i], lons[j,i], dist.min()/1000., j, i))
 
     return j,i

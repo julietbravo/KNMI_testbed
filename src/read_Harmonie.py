@@ -6,23 +6,32 @@ Bart van Stratum (KNMI)
 import numpy as np
 import datetime
 import netCDF4 as nc4
+import xarray as xr
 
 import read_DDH as ddh
 import DDH_domains as ddom
+import spatial_tools as st
+import read_soil as rs
 
 # Constants, stored in dict, not to mix up Harmonie (ch) & DALES (cd) constants
 # Harmonie constants are from arpifs/setup/sucst.F90
 ch = dict(grav=9.80665, T0=273.16, Rd=287.06)
 cd = dict(p0=1.e5, Rd=287.04, cp=1004.)
 
+
 class Read_DDH_files:
-    def __init__(self, path, t_end, step, dt=60, quiet=False):
+    def __init__(self, path, date, t_end, step, add_soil=False, dt=60, quiet=False):
         """
         Read / process all DDH files
         """
 
+        base_path = path    # Path of base of directory structure
+
+        # Path to DDH files
+        path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}'.format(path, date.year, date.month, date.day, date.hour)
+
         # Read first DDH file to get some settings
-        f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path, step))
+        f = ddh.DDH_LFA('{0:}/DHFDLHARM+{1:04d}'.format(path, step))
 
         self.nlev  = f.attributes['doc']['nlev']  # Number of full vertical levels
         self.nlevh = self.nlev + 1                # Number of half vertical levels
@@ -91,6 +100,13 @@ class Read_DDH_files:
             setattr(self, 'dt{}_dyn'.format(q), np.ma.zeros(dim3d))
             setattr(self, 'dt{}_phy'.format(q), np.ma.zeros(dim3d))
 
+        # Soil properties
+        self.tg1 = np.ma.zeros(dim2d)
+        self.tg2 = np.ma.zeros(dim2d)
+        self.wg1 = np.ma.zeros(dim2d)
+        self.wg2 = np.ma.zeros(dim2d)
+        self.wg3 = np.ma.zeros(dim2d)
+
         # Read all files
         for tt in range(step, t_end+1, step):
             t = int(tt/step)-1
@@ -98,42 +114,7 @@ class Read_DDH_files:
             if not quiet:
                 print('Reading DDH file #{0:3d} (index {1:<3d})'.format(tt,t))
 
-            """
-            if tt == step:
-                # Exception for t==0, the instantaneous variables are
-                # hidden in the first output file (t=1)
-
-                f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path, step))
-
-                # Subtract one minute..
-                self.datetime.append(f.attributes['datetime']['forecast_date']-datetime.timedelta(minutes=step))
-
-                self.cp[t-1,:,:] = f.read_variable('VCP0') * ch['grav']
-                self.p [t-1,:,:] = f.read_variable('VPF0') * ch['grav']
-                self.z [t-1,:,:] = f.read_variable('VZF0')
-
-                self.ph[t-1,:,1:] = f.read_variable('VPH0') * ch['grav']
-                self.zh[t-1,:,1:] = f.read_variable('VZH0')
-
-                # Non-accumulated variables
-                self.dp[t-1,:,:] = f.read_variable('VPP0')
-
-                self.u [t-1,:,:] = f.read_variable('VUU0') / self.dp[t-1,:,:]
-                self.v [t-1,:,:] = f.read_variable('VVV0') / self.dp[t-1,:,:]
-                self.T [t-1,:,:] = f.read_variable('VCT0') / self.dp[t-1,:,:]/self.cp[t-1,:,:]
-
-                for q in self.qtypes.keys():
-                    getattr(self, q)[t-1,:,:] = f.read_variable('V{}0'.format(q.upper())) / self.dp[t-1,:,:]
-
-                self.H[t-1,:]    = f.read_variable('VSHF0')
-                self.LE[t-1,:]   = f.read_variable('VLHF0')
-                self.Tsk[t-1,:]  = f.read_variable('VTSK0')
-                self.qsk[t-1,:]  = f.read_variable('VQSK0')
-
-                # There are no tendencies for t == 0...!
-            """
-            #else:
-            f = ddh.DDH_LFA('{0:}DHFDLHARM+{1:04d}'.format(path,tt))
+            f = ddh.DDH_LFA('{0:}/DHFDLHARM+{1:04d}'.format(path,tt))
 
             self.datetime.append(f.attributes['datetime']['forecast_date'])
 
@@ -252,15 +233,23 @@ class Read_DDH_files:
         self.dtth_off = self.calc_tendency(self.th, step*dt)
         self.dtq_off  = self.calc_tendency(self.q , step*dt)
 
-        # Check...: potential temperature budget
-        #dtexneri  = self.calc_tendency(1./self.exner, step*dt)
+        # Read soil properties
+        if (add_soil):
+            domains, sizes = ddom.get_DOWA_domains()
+            info = ddom.get_domain_info(domains, sizes)
+            soil = rs.Read_soil(base_path, date, self.datetime, info)
 
-        #self.dtth_phy = self.dtT_phy / self.exneri      # INCOMPLETE
-        #self.dtth_dyn = self.dtT_dyn / self.exneri      # INCOMPLETE
-        #self.dtth_tot = self.dtT_tot / self.exneri + self.T * dtexneri
-
-        #self.dtth_tot_T  = self.exneri * self.dtT_tot
-        #self.dtth_tot_pi = self.T * dtexneri
+            self.tg1[:,:] = soil.tg1
+            self.tg2[:,:] = soil.tg2
+            self.wg1[:,:] = soil.wsa1
+            self.wg2[:,:] = soil.wsa2
+            self.wg3[:,:] = soil.wsa3
+        else:
+            self.tg1[:,:] = np.ma.masked
+            self.tg2[:,:] = np.ma.masked
+            self.wg1[:,:] = np.ma.masked
+            self.wg2[:,:] = np.ma.masked
+            self.wg3[:,:] = np.ma.masked
 
     def calc_tendency(self, array, dt):
         tend = np.zeros_like(array)
@@ -318,7 +307,7 @@ class Read_DDH_files:
         dtype = 'f4'
 
         # Domain information
-        if add_domain_info:
+        if (add_domain_info):
             domains, sizes = ddom.get_DOWA_domains()
             info = ddom.get_domain_info(domains, sizes)
 
@@ -360,12 +349,11 @@ class Read_DDH_files:
 
         # Soil variables
         # Dummy....
-        dummy = np.zeros_like(self.Tsk)
-        add_variable(f, 'Tg1',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Top soil layer temperature'}, dummy)
-        add_variable(f, 'Tg2',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Bulk soil layer temperature'}, dummy)
-        add_variable(f, 'wg1',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Top soil layer moisture content'}, dummy)
-        add_variable(f, 'wg2',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bulk soil layer moisture content'}, dummy)
-        add_variable(f, 'wg3',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bottom soil layer moisture content'}, dummy)
+        add_variable(f, 'Tg1',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Top soil layer temperature'}, self.tg1)
+        add_variable(f, 'Tg2',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Bulk soil layer temperature'}, self.tg2)
+        add_variable(f, 'wg1',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Top soil layer moisture content'}, self.wg1)
+        add_variable(f, 'wg2',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bulk soil layer moisture content'}, self.wg2)
+        add_variable(f, 'wg3',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bottom soil layer moisture content'}, self.wg3)
 
         for qtype,qname in self.qtypes.items():
             add_variable(f, qtype, dtype, dim3d, False, {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
@@ -406,15 +394,12 @@ if (__name__ == '__main__'):
     # ---------------------
     # Convert DDH to NetCDF
     # ---------------------
-    year  = 2010
-    month = 2
-    day   = 28
-    cycle = 12
+    date = datetime.datetime(2016, 12, 1, 0)
 
     #data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
-    #data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
-    #data_path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(data_root, year, month, day, cycle)
-    data_path = '/home/ms/nl/nkbs/tmp/'
+    data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
 
-    data = Read_DDH_files(data_path, t_end, step)
-    data.to_netcdf('example.nc', add_domain_info=False)
+    # Read DDH files and convert to NetCDF
+    if 'data' not in locals():
+        data = Read_DDH_files(data_root, date, t_end, step, add_soil=True)
+        data.to_netcdf('example.nc', add_domain_info=True)

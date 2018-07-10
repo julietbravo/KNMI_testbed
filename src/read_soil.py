@@ -1,5 +1,8 @@
 import numpy as np
 import netCDF4 as nc4
+import datetime
+
+import spatial_tools as st
 
 class Read_soil:
     def __init__(self, path, date, ddh_times, domain_info, t0_netCDF=datetime.datetime(2015,1,1)):
@@ -59,9 +62,9 @@ class Read_soil:
                     for iloc in range(len(domain_info['name'])):
 
                         if domain_info['east_lon'][iloc] is None:     # Single column
-                            j,i = st.find_nearest_latlon(lats, lons, domain_info['cent_lat'][iloc], domain_info['cent_lon'][iloc])
+                            j,i = st.find_nearest_latlon(lats, lons, domain_info['cent_lat'][iloc], domain_info['cent_lon'][iloc], silent=True)
                             var_tmp[t_dh, iloc] = data[j,i]
                         else:                                         # Area mean
-                            mask = ((lats <= info['north_lat'][iloc]) & (lats >= info['south_lat'][iloc]) &\
-                                    (lons <= info['east_lon' ][iloc]) & (lons >= info['west_lon' ][iloc]))
+                            mask = ((lats <= domain_info['north_lat'][iloc]) & (lats >= domain_info['south_lat'][iloc]) &\
+                                    (lons <= domain_info['east_lon' ][iloc]) & (lons >= domain_info['west_lon' ][iloc]))
                             var_tmp[t_dh, iloc] = data[mask].mean()
