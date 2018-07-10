@@ -11,21 +11,18 @@ def convert_cycle(settings):
 
     print('Converting {}'.format(date))
 
-    # Path to the DDH files:
-    data_root = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/'.format(path, date.year, date.month, date.day, date.hour)
-
     # Output NetCDF file:
     out_file = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/LES_forcing_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.format(path, date.year, date.month, date.day, date.hour)
 
     # Read DDH files, and convert to NetCDF
-    data = Read_DDH_files(data_root, 180, step, quiet=True)
+    data = Read_DDH_files(path, date, 180, step, quiet=True)
     data.to_netcdf(out_file)
 
 
 if __name__ == '__main__':
     # Which period to convert?
-    start = datetime.datetime(year=2010, month=2, day=28, hour=0)
-    end   = datetime.datetime(year=2010, month=2, day=28, hour=21)
+    start = datetime.datetime(year=2016, month=12, day=1, hour=0)
+    end   = datetime.datetime(year=2016, month=12, day=2, hour=0)
 
     # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
     #path = '/nobackup/users/stratum/DOWA/LES_forcing'
@@ -35,7 +32,7 @@ if __name__ == '__main__':
     step  = 10       # DDH output interval
 
     # Number of cycles to convert
-    n_cycles = int((end-start).total_seconds() / 3600. / 3.) + 1
+    n_cycles = int((end-start).total_seconds() / 3600. / 3.)
 
     # Create list of cycles to convert
     queue = []
