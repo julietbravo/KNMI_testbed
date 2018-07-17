@@ -1,12 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as pl
 import xarray as xr
 from collections import OrderedDict as odict
-
-from datetime import datetime
-import sys
-import os
-import glob
+import datetime
 
 # tools.py contains most routines which create/write
 # the LES initial conditions, large-scale forcings, ...
@@ -16,8 +11,8 @@ from tools import *
 iloc = 0+12
 
 # Start and endtime of experiment:
-start = datetime(year=2016, month=12, day=1, hour=6)
-end   = datetime(year=2016, month=12, day=1, hour=18)
+start = datetime.datetime(year=2016, month=12, day=1, hour=6)
+end   = datetime.datetime(year=2016, month=12, day=1, hour=18)
 
 # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
 #path  = '/nobackup/users/stratum/DOWA/LES_forcing'
