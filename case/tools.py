@@ -26,14 +26,24 @@ def get_file_list(path, starttime, endtime):
     n_cycles = int((endtime-starttime).total_seconds() / 3600. / 3.) + 1
 
     # Create list of cycles to convert
-    files = []
+    files   = []
+    success = True
     for t in range(n_cycles):
-        date = starttime + t * datetime.timedelta(hours=3)
+        date    = starttime + t * datetime.timedelta(hours=3)
         in_file = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/LES_forcing_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.\
             format(path, date.year, date.month, date.day, date.hour)
+
         files.append(in_file)
 
-    return files
+        # Check if file actually exists..
+        if not os.path.exists(in_file):
+            print('ERROR: Can not find input file {}'.format(in_file))
+            success = False
+
+    if not success:
+        raise RuntimeError('One or more required files could not be found...')
+    else:
+        return files
 
 
 def get_start_end_indices(start, end, time):
