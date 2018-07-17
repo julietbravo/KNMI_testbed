@@ -1,8 +1,3 @@
-"""
-  Some Python tools for handling DALES
-  Bart van Stratum (KNMI)
-"""
-
 import numpy as np
 import netCDF4 as nc4
 import matplotlib.pyplot as pl
