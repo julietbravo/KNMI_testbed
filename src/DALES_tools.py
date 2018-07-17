@@ -293,6 +293,21 @@ class Grid_linear_stretched(Grid):
         self.zsize = zh[-1]
 
 
+def interpz(z_input, z_output, variable):
+    """
+    Interpolate (linear) `variable` from input grid (`z_input`) to output grid (`z_output`)
+    """
+    return np.interp(z_output, z_input, variable)
+
+def interpz_time(z_input, z_output, variable):
+    """
+    Interpolate time varying `variable` from input grid (`z_input`) to output grid (`z_output`)
+    """
+    data = np.zeros((variable.shape[0], z_output.size))
+    for t in range(variable.shape[0]):
+        data[t,:] = interp_z(z_input[t,:], z_output, variable[t,:])
+    return data
+
 
 if __name__ == '__main__':
     #

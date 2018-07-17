@@ -16,7 +16,7 @@ def convert_cycle(settings):
 
     # Read DDH files, and convert to NetCDF
     data = Read_DDH_files(path, date, 180, step, quiet=True)
-    data.to_netcdf(out_file)
+    data.to_netcdf(out_file, add_domain_info=True)
 
 
 if __name__ == '__main__':
@@ -26,7 +26,8 @@ if __name__ == '__main__':
 
     # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
     #path = '/nobackup/users/stratum/DOWA/LES_forcing'
-    path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+    #path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+    path = '/Users/bart/meteo/data/Harmonie_DDH/'
 
     # DDH output settings
     step  = 10       # DDH output interval
