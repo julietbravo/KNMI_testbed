@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 300
+runtime = 3600
 trestart = 10800
 dtmax = 10
 ladaptive = .true.
@@ -17,7 +17,7 @@ nprocy=1
 &DOMAIN
 itot = 16
 jtot = 16
-kmax = 160
+kmax = 80
 
 xsize = 3200.
 ysize = 3200.
@@ -42,8 +42,8 @@ igrw_damp = 3       ! 3 = nudge (damping) to mean profile
 wtsurf =  0.1
 wqsurf =  0.1e-3
 isurf = 2           ! 2 = Ts, 4 = thl+qt flux, calculate u*
-z0mav = 0.05
-z0hav = 0.01
+z0mav = 0.001
+z0hav = 0.001
 /
 
 &DYNAMICS
@@ -86,7 +86,7 @@ dtav = 300
 /
 
 &NAMCHECKSIM
-tcheck = 10
+tcheck = 300
 /
 
 &NAMNETCDFSTATS

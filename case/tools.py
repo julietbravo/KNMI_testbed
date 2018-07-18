@@ -106,7 +106,7 @@ def create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring):
     write_profiles('scalar.inp.001', output, grid.kmax, docstring)
 
 
-def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring):
+def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, harmonie_rad=False):
     """
     Create all the (partially time dependent) large scale forcings
     """
@@ -134,6 +134,11 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring):
     dtqv   = interpz_time( nc_data['z'][t0:t1+1, iloc, :], grid.z, nc_data['dtqv_dyn'][t0:t1+1, iloc, :] )
     dtql   = interpz_time( nc_data['z'][t0:t1+1, iloc, :], grid.z, nc_data['dtql_dyn'][t0:t1+1, iloc, :] )
     zero_a = np.zeros_like(dtT)
+
+    if harmonie_rad:
+        # Add the radiative temperature tendency from Harmonie
+        print('Adding radiative temperature tendency Harmonie!')
+        dtT += interpz_time( nc_data['z'][t0:t1+1, iloc, :], grid.z, nc_data['dtT_rad' ][t0:t1+1, iloc, :] )
 
     # Conversions atmospheric forcings
     p_tmp  = interpz_time(nc_data['z'][t0:t1+1, iloc, :], grid.z, nc_data['p'][t0:t1+1, iloc, :])

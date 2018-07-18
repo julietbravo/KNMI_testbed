@@ -30,14 +30,15 @@ domain    = nc_data.name[0][iloc].values
 docstring = '{}: {} to {}'.format(domain, start, end)
 
 # Create stretched vertical grid for LES
-grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=130)
+#grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=130)
+grid = Grid_stretched(kmax=80, dz0=30, nloc1=40, nbuf1=10, dz1=200)    # debug
 #grid.plot()
 
 # Create and write the initial vertical profiles (prof.inp)
 create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring)
 
 # Create and write the surface and atmospheric forcings (ls_flux.inp, ls_fluxsv.inp, lscale.inp)
-create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring)
+create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, harmonie_rad=True)
 
 # Write the nudging profiles (nudge.inp)
 create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring)
