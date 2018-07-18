@@ -76,7 +76,7 @@ def interpz_time(z_input, z_output, variable):
     return data
 
 
-def create_initial_profiles(nc_data, grid, t0, t1, iloc):
+def create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring):
     """
     Interpolate Harmonie data onto LES grid,
     and create the `prof.inp` and `scalar.inp` files
@@ -98,15 +98,15 @@ def create_initial_profiles(nc_data, grid, t0, t1, iloc):
     # Write to prof.inp.001
     output = odict([('z (m)', grid.z), ('thl (K)', thetal), ('qt (kg kg-1)', qt), \
                     ('u (m s-1)', u), ('v (m s-1)', v), ('tke (m2 s-2)', tke)])
-    write_profiles('prof.inp.001', output, grid.kmax, '')
+    write_profiles('prof.inp.001', output, grid.kmax, docstring)
 
     # Initial scalar profiles (for microphysics) are zero
     zero = np.zeros(grid.kmax)
     output = odict([('z (m)', grid.z), ('qr (kg kg-1)', zero), ('nr (kg kg-1)', zero)])
-    write_profiles('scalar.inp.001', output, grid.kmax, '')
+    write_profiles('scalar.inp.001', output, grid.kmax, docstring)
 
 
-def create_ls_forcings(nc_data, grid, t0, t1, iloc):
+def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring):
     """
     Create all the (partially time dependent) large scale forcings
     """
@@ -153,19 +153,19 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc):
                         ('p_s', ps), ('T_s', Ts), ('qt_s', qs)])
     output_ls  = odict([('time', time_sec_ls), ('z', grid.z), ('ug', zero_a), ('vg', zero_a), \
                         ('dqtdt', dtqv), ('dthldt', dtthl), ('dudt', dtu), ('dvdt', dtv)])
-    write_forcings('ls_flux.inp.001', output_sfc, output_ls, '')
+    write_forcings('ls_flux.inp.001', output_sfc, output_ls, docstring)
 
     # Dummy forcings for the microphysics scalars
-    write_dummy_forcings('ls_fluxsv.inp.001', 2, grid.z)
+    write_dummy_forcings('ls_fluxsv.inp.001', 2, grid.z, docstring)
 
     # Also create non-time dependent file (lscale.inp), required by DALES (why?)
     zero = np.zeros_like(grid.z)
     output_ls  = odict([('height', grid.z), ('ug', zero), ('vg', zero), ('wfls', zero), \
                         ('dqtdxls', zero), ('dqtdyls', zero), ('dqtdtls', zero), ('dthldt', zero)])
-    write_profiles('lscale.inp.001', output_ls, grid.kmax, '')
+    write_profiles('lscale.inp.001', output_ls, grid.kmax, docstring)
 
 
-def create_nudging_profiles(nc_data, grid, t0, t1, iloc):
+def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring):
     """
     Create the nudging profiles
     """
@@ -194,4 +194,4 @@ def create_nudging_profiles(nc_data, grid, t0, t1, iloc):
     output = odict([('z (m)', grid.z), ('factor (-)', nudgefac), ('u (m s-1)', u), ('v (m s-1)', v),\
                     ('w (m s-1)', zero), ('thl (K)', thetal), ('qt (kg kg-1)', qt)])
 
-    write_time_profiles('nudge.inp.001', time_sec, output, grid.kmax, '')
+    write_time_profiles('nudge.inp.001', time_sec, output, grid.kmax, docstring)

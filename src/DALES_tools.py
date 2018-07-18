@@ -152,7 +152,7 @@ def write_time_profiles(file_name, time, variables, nlev, docstring=''):
     f.close()
 
 
-def write_dummy_forcings(file_name, n_scalars, z):
+def write_dummy_forcings(file_name, n_scalars, z, docstring):
     """
     Write dummy forcings
     """
@@ -161,7 +161,11 @@ def write_dummy_forcings(file_name, n_scalars, z):
 
     f = open(file_name, 'w')
 
-    f.write('\n\n')
+    # Write header (description file)
+    if docstring is '':
+        f.write('DALES\n\n')
+    else:
+        f.write('{}\n\n'.format(docstring))
 
     # Surface fluxes (zero)
     f.write('{0:^15s} '.format('time'))
