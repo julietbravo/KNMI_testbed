@@ -41,7 +41,7 @@ igrw_damp = 3       ! 3 = nudge (damping) to mean profile
 &NAMSURFACE
 wtsurf =  0.1
 wqsurf =  0.1e-3
-isurf = 2           ! 2 = Ts, 4 = thl+qt flux, calculate u*
+isurf = 2           ! 2 = Ts + q=qsat(Ts), 4 = thl+qt flux, calculate u*
 z0mav = 0.001
 z0hav = 0.001
 /

@@ -1,7 +1,7 @@
 import datetime
 import multiprocessing
 
-from read_Harmonie import *
+from read_and_convert_DDH import *
 
 def convert_cycle(settings):
     # Settings are passed in a dictionary to allow parallel processing
@@ -21,8 +21,8 @@ def convert_cycle(settings):
 
 if __name__ == '__main__':
     # Which period to convert?
-    start = datetime.datetime(year=2016, month=12, day=1, hour=0)
-    end   = datetime.datetime(year=2016, month=12, day=2, hour=0)
+    start = datetime.datetime(year=2017, month=1, day=2, hour=15)
+    end   = datetime.datetime(year=2017, month=1, day=2, hour=18)
 
     # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
     #path = '/nobackup/users/stratum/DOWA/LES_forcing'
