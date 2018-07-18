@@ -98,12 +98,12 @@ def create_initial_profiles(nc_data, grid, t0, t1, iloc):
     # Write to prof.inp.001
     output = odict([('z (m)', grid.z), ('thl (K)', thetal), ('qt (kg kg-1)', qt), \
                     ('u (m s-1)', u), ('v (m s-1)', v), ('tke (m2 s-2)', tke)])
-    write_profiles('prof.inp.001', output, '')
+    write_profiles('prof.inp.001', output, grid.kmax, '')
 
     # Initial scalar profiles (for microphysics) are zero
     zero = np.zeros(grid.kmax)
     output = odict([('z (m)', grid.z), ('qr (kg kg-1)', zero), ('nr (kg kg-1)', zero)])
-    write_profiles('scalar.inp.001', output, '')
+    write_profiles('scalar.inp.001', output, grid.kmax, '')
 
 
 def create_ls_forcings(nc_data, grid, t0, t1, iloc):
@@ -162,7 +162,7 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc):
     zero = np.zeros_like(grid.z)
     output_ls  = odict([('height', grid.z), ('ug', zero), ('vg', zero), ('wfls', zero), \
                         ('dqtdxls', zero), ('dqtdyls', zero), ('dqtdtls', zero), ('dthldt', zero)])
-    write_profiles('lscale.inp.001', output_ls, '')
+    write_profiles('lscale.inp.001', output_ls, grid.kmax, '')
 
 
 def create_nudging_profiles(nc_data, grid, t0, t1, iloc):
@@ -178,9 +178,12 @@ def create_nudging_profiles(nc_data, grid, t0, t1, iloc):
     u  = interpz_time( nc_data['z'][t0:t1, iloc, :], grid.z, nc_data['u' ][t0:t1, iloc, :] )
     v  = interpz_time( nc_data['z'][t0:t1, iloc, :], grid.z, nc_data['v' ][t0:t1, iloc, :] )
     p  = interpz_time( nc_data['z'][t0:t1, iloc, :], grid.z, nc_data['p' ][t0:t1, iloc, :] )
-    qv = interpz_time( nc_data['z'][t0:t1, iloc, :], grid.z, nc_data['qv'][t0:t1, iloc, :] )
+    qt = interpz_time( nc_data['z'][t0:t1, iloc, :], grid.z, nc_data['q' ][t0:t1, iloc, :] )
     ql = interpz_time( nc_data['z'][t0:t1, iloc, :], grid.z, nc_data['ql'][t0:t1, iloc, :] )
-    zero_a = np.zeros_like(T)
+    zero = np.zeros_like(T)
+        
+    # Nudging factor (0-1) with height; is multiplied with nudging time from namelist
+    nudgefac = np.ones_like(T)
 
     # Conversions from Harmonie -> DALES
     exner  = (p / constants['p0'])**(constants['rd']/constants['cp'])
@@ -188,4 +191,7 @@ def create_nudging_profiles(nc_data, grid, t0, t1, iloc):
     thetal = theta - constants['lv'] / (constants['cp'] * exner) * ql
 
     # Write to nudge.inp
-    # ... to do tomorrow ...
+    output = odict([('z (m)', grid.z), ('factor (-)', nudgefac), ('u (m s-1)', u), ('v (m s-1)', v),\
+                    ('w (m s-1)', zero), ('thl (K)', thetal), ('qt (kg kg-1)', qt)])
+
+    write_time_profiles('nudge.inp.001', time_sec, output, grid.kmax, '')
