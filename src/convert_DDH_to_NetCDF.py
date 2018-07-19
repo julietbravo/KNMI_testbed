@@ -1,7 +1,7 @@
 import datetime
 import multiprocessing
 
-from read_Harmonie import *
+from read_and_convert_DDH import *
 
 def convert_cycle(settings):
     # Settings are passed in a dictionary to allow parallel processing
@@ -16,17 +16,18 @@ def convert_cycle(settings):
 
     # Read DDH files, and convert to NetCDF
     data = Read_DDH_files(path, date, 180, step, quiet=True)
-    data.to_netcdf(out_file)
+    data.to_netcdf(out_file, add_domain_info=True)
 
 
 if __name__ == '__main__':
     # Which period to convert?
-    start = datetime.datetime(year=2016, month=12, day=1, hour=0)
-    end   = datetime.datetime(year=2016, month=12, day=2, hour=0)
+    start = datetime.datetime(year=2017, month=1, day=2, hour=15)
+    end   = datetime.datetime(year=2017, month=1, day=2, hour=18)
 
     # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
     #path = '/nobackup/users/stratum/DOWA/LES_forcing'
-    path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+    #path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+    path = '/Users/bart/meteo/data/Harmonie_DDH/'
 
     # DDH output settings
     step  = 10       # DDH output interval

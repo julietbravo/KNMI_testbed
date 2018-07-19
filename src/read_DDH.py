@@ -114,7 +114,7 @@ class DDH_LFA:
 
     def read_variable(self, name, reshape=True):
         if (name not in self.attributes.keys()):
-            print('Variable \"{}\" does not exist in \"{}\".'.format(name, self.file_name))
+            print('Variable \"{}\" does not exist in \"{}\".'.format(name, self.file_path))
             return None
 
         # Call `lfac` to get the data from one single variable:

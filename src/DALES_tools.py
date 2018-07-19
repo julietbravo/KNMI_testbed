@@ -1,8 +1,3 @@
-"""
-  Some Python tools for handling DALES
-  Bart van Stratum (KNMI)
-"""
-
 import numpy as np
 import netCDF4 as nc4
 import matplotlib.pyplot as pl
@@ -88,7 +83,7 @@ class Read_namelist:
 # Function to write the DALES input
 # ---------------------------
 
-def write_profiles(file_name, variables, docstring=''):
+def write_profiles(file_name, variables, nlev, docstring=''):
     """
     Write the prof.inp.xxx input profiles for DALES
     """
@@ -99,7 +94,7 @@ def write_profiles(file_name, variables, docstring=''):
 
     # Write header (description file)
     if docstring is '':
-        f.write('DALES large-scale forcings\n')
+        f.write('DALES\n')
     else:
         f.write('{}\n'.format(docstring))
 
@@ -107,9 +102,6 @@ def write_profiles(file_name, variables, docstring=''):
     for var in variables.keys():
         f.write('{0:^17s} '.format(var))
     f.write('\n')
-
-    # Number of vertical levels
-    nlev = list(variables.items())[0][1].size   # yikes
 
     # Write data
     for k in range(nlev):
@@ -120,7 +112,47 @@ def write_profiles(file_name, variables, docstring=''):
     f.close()
 
 
-def write_dummy_forcings(file_name, n_scalars, z):
+def write_time_profiles(file_name, time, variables, nlev, docstring=''):
+    """
+    Write time varying input profiles for DALES
+    """
+
+    print('Saving {}'.format(file_name))
+
+    f = open(file_name, 'w')
+
+    # Write header (description file)
+    if docstring is '':
+        f.write('DALES\n')
+    else:
+        f.write('{}\n'.format(docstring))
+
+    # Write time dependent profiles
+    for t in range(time.size):
+
+        f.write('\n')
+
+        # Write header (column names)
+        for var in variables.keys():
+            f.write('{0:^17s} '.format(var))
+        f.write('\n')
+
+        # Write time
+        f.write('# {0:1.8E}\n'.format(time[t]))
+
+        # Write data
+        for k in range(nlev):
+            for var in variables.keys():
+                if len(variables[var].shape) == 1:
+                    f.write('{0:+1.10E} '.format(variables[var][k]))
+                else:
+                    f.write('{0:+1.10E} '.format(variables[var][t,k]))
+            f.write('\n')
+
+    f.close()
+
+
+def write_dummy_forcings(file_name, n_scalars, z, docstring):
     """
     Write dummy forcings
     """
@@ -129,7 +161,11 @@ def write_dummy_forcings(file_name, n_scalars, z):
 
     f = open(file_name, 'w')
 
-    f.write('\n\n')
+    # Write header (description file)
+    if docstring is '':
+        f.write('DALES\n\n')
+    else:
+        f.write('{}\n\n'.format(docstring))
 
     # Surface fluxes (zero)
     f.write('{0:^15s} '.format('time'))
@@ -293,6 +329,21 @@ class Grid_linear_stretched(Grid):
         self.zsize = zh[-1]
 
 
+def interpz(z_input, z_output, variable):
+    """
+    Interpolate (linear) `variable` from input grid (`z_input`) to output grid (`z_output`)
+    """
+    return np.interp(z_output, z_input, variable)
+
+def interpz_time(z_input, z_output, variable):
+    """
+    Interpolate time varying `variable` from input grid (`z_input`) to output grid (`z_output`)
+    """
+    data = np.zeros((variable.shape[0], z_output.size))
+    for t in range(variable.shape[0]):
+        data[t,:] = interp_z(z_input[t,:], z_output, variable[t,:])
+    return data
+
 
 if __name__ == '__main__':
     #
@@ -346,7 +397,7 @@ if __name__ == '__main__':
         v   = np.ones(nlev) * 2
         tke = np.ones(nlev) * 2
 
-        data = odict({'z':z, 'thl':th, 'qt':qt, 'u':u, 'v':v, 'tke':tke})
+        data = odict([('z', z), ('thl', th), ('qt', qt), ('u', u), ('v', v), ('tke',tke)])
         write_profiles('prof.inp.001', data, docstring='Example of initial DALES profiles')
 
     if False:
@@ -361,83 +412,31 @@ if __name__ == '__main__':
 
         time     = np.arange(0,7200.01,300)
         thls     = np.ones(time.size)*300
-        data_sfc = odict({'time': time, 'thl_s':thls})
+        data_sfc = odict([('time', time), ('thl_s', thls)])
 
         time_ls  = np.arange(0,7200.01, 1800)
         ug       = np.ones((time_ls.size, nlev))*5
         vg       = np.ones((time_ls.size, nlev))*-5
-        data_ls  = odict({'time':time_ls, 'z':z, 'u_g':ug, 'v_g':vg})
+        data_ls  = odict([('time', time_ls), ('z', z), ('u_g', ug), ('v_g', vg)])
 
         write_forcings('ls_flux.inp.001', data_sfc, data_ls, 'Example of DALES forcings')
 
+    if True:
+        """
+        Write the time dependent profiles (e.g. nudging),
+        """
 
+        nlev  = 32
+        zsize = 3200
+        dz    = zsize/nlev
+        z     = np.arange(0.5*dz, zsize, dz)
+        time  = np.arange(0,7200.01,1800)
 
+        var1 = np.arange(time.size*nlev).reshape(time.size,-1)
+        var2 = np.arange(time.size*nlev).reshape(time.size,-1)+1
+        var3 = np.arange(time.size*nlev).reshape(time.size,-1)+2
 
+        data = odict([('z (m)', z), ('var1', var1), ('var2', var2), ('var3', var3)])
 
+        write_time_profiles('nudge.inp.001', time, data, nlev) 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#class Netcdf_input:
-#    def __init__(self, file_name, nlev):
-#
-#        # Create new file
-#        self.f = nc4.Dataset(file_name, 'w')
-#
-#        # Create default dimensions
-#        self.f.createDimension('z_f', nlev)    # full level height (m)
-#        self.f.createDimension('z_h', nlev+1)  # half level height (m)
-#        self.f.createDimension('t_s', None)    # time surface (s)
-#        self.f.createDimension('t_a', None)    # time atmosphere (s)
-#
-#    def set_global_attribute(self, name, value):
-#        self.f.setncattr(name, value)
-#
-#    def add_variable(self, data, dtype, dims, attrs):
-#        # Create new variable
-#        var = self.f.createVariable(attrs['name'], dtype, dims)
-#
-#        # Set the NetCDF variable attributes (if present)
-#        if attrs is not None:
-#            var.setncatts(attrs)
-#
-#        # Write the data
-#        var[:] = data
-#
-#    def close(self):
-#        self.f.close()
-#
-#f = Netcdf_input('input.nc', 64)
-#f.set_global_attribute('title', 'DALES initial and time dependent input data')
-#f.set_global_attribute('institution', 'KNMI')
-#f.set_global_attribute('source', 'Harmonie 40h1.2tg2 DOWA reanalysis')
-#
-#z = np.arange(25,3200,50)
-#attrs = {'name': 'zf', 'standard_name':'full_level_height', 'units':'m'}
-#f.add_variable(z, np.double, ('z_f'), attrs)
-#
-#time = np.arange(0,7200.01,1800)
-#attrs = {'name': 't_a', 'standard_name':'time_atmosphere', 'units':'s'}
-#f.add_variable(time, np.double, ('t_a'), attrs)
-#
-#thl = np.ones((5,64))*300
-#attrs = {'name': 'thl', 'standard_name':'liquid_water_potential_temperature', 'units':'K'}
-#f.add_variable(thl, np.double, ('t_a','z_f'), attrs)
-#
-#f.close()
