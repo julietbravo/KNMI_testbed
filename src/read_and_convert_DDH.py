@@ -26,6 +26,7 @@ class Read_DDH_files:
         """
 
         base_path = path    # Path of base of directory structure
+        self.add_soil = add_soil
 
         # Path to DDH files
         path = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}'.format(path, date.year, date.month, date.day, date.hour)
@@ -101,11 +102,12 @@ class Read_DDH_files:
             setattr(self, 'dt{}_phy'.format(q), np.ma.zeros(dim3d))
 
         # Soil properties
-        self.tg1 = np.ma.zeros(dim2d)
-        self.tg2 = np.ma.zeros(dim2d)
-        self.wg1 = np.ma.zeros(dim2d)
-        self.wg2 = np.ma.zeros(dim2d)
-        self.wg3 = np.ma.zeros(dim2d)
+        if add_soil:
+            self.tg1 = np.ma.zeros(dim2d)
+            self.tg2 = np.ma.zeros(dim2d)
+            self.wg1 = np.ma.zeros(dim2d)
+            self.wg2 = np.ma.zeros(dim2d)
+            self.wg3 = np.ma.zeros(dim2d)
 
         # Read all files
         for tt in range(step, t_end+1, step):
@@ -234,7 +236,7 @@ class Read_DDH_files:
         self.dtq_off  = self.calc_tendency(self.q , step*dt)
 
         # Read soil properties
-        if (add_soil):
+        if add_soil:
             domains, sizes = ddom.get_DOWA_domains()
             info = ddom.get_domain_info(domains, sizes)
             soil = rs.Read_soil(base_path, date, self.datetime, info)
@@ -244,12 +246,6 @@ class Read_DDH_files:
             self.wg1[:,:] = soil.wsa1
             self.wg2[:,:] = soil.wsa2
             self.wg3[:,:] = soil.wsa3
-        else:
-            self.tg1[:,:] = np.ma.masked
-            self.tg2[:,:] = np.ma.masked
-            self.wg1[:,:] = np.ma.masked
-            self.wg2[:,:] = np.ma.masked
-            self.wg3[:,:] = np.ma.masked
 
     def calc_tendency(self, array, dt):
         tend = np.zeros_like(array)
@@ -348,12 +344,12 @@ class Read_DDH_files:
         add_variable(f, 'swin_s',  dtype, dim2d, True,  {'units': 'W m-2',   'long_name': 'Surface longwave incoming radiation'}, self.swds)
 
         # Soil variables
-        # Dummy....
-        add_variable(f, 'Tg1',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Top soil layer temperature'}, self.tg1)
-        add_variable(f, 'Tg2',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Bulk soil layer temperature'}, self.tg2)
-        add_variable(f, 'wg1',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Top soil layer moisture content'}, self.wg1)
-        add_variable(f, 'wg2',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bulk soil layer moisture content'}, self.wg2)
-        add_variable(f, 'wg3',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bottom soil layer moisture content'}, self.wg3)
+        if self.add_soil:
+            add_variable(f, 'Tg1',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Top soil layer temperature'}, self.tg1)
+            add_variable(f, 'Tg2',     dtype, dim2d, False, {'units': 'K',       'long_name': 'Bulk soil layer temperature'}, self.tg2)
+            add_variable(f, 'wg1',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Top soil layer moisture content'}, self.wg1)
+            add_variable(f, 'wg2',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bulk soil layer moisture content'}, self.wg2)
+            add_variable(f, 'wg3',     dtype, dim2d, False, {'units': 'm3 m-3',  'long_name': 'Bottom soil layer moisture content'}, self.wg3)
 
         for qtype,qname in self.qtypes.items():
             add_variable(f, qtype, dtype, dim3d, False, {'units': 'kg kg-1', 'long_name': 'Specific humidity ({})'.format(qname)}, getattr(self, qtype))
@@ -394,12 +390,12 @@ if (__name__ == '__main__'):
     # ---------------------
     # Convert DDH to NetCDF
     # ---------------------
-    date = datetime.datetime(2016, 12, 1, 0)
+    date = datetime.datetime(2017, 1, 1, 0)
 
     #data_root = '/nobackup/users/stratum/DOWA/LES_forcing'     # KNMI desktop
     data_root = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'          # ECMWF
 
     # Read DDH files and convert to NetCDF
     if 'data' not in locals():
-        data = Read_DDH_files(data_root, date, t_end, step, add_soil=True)
+        data = Read_DDH_files(data_root, date, t_end, step, add_soil=False)
         data.to_netcdf('example.nc', add_domain_info=True)
