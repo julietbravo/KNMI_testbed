@@ -11,12 +11,13 @@ from tools import *
 iloc = 0+12
 
 # Start and endtime of experiment:
-start = datetime.datetime(year=2016, month=12, day=1, hour=6)
-end   = datetime.datetime(year=2016, month=12, day=1, hour=18)
+start = datetime.datetime(year=2017, month=1, day=1, hour=3)
+end   = datetime.datetime(year=2017, month=1, day=3, hour=0)
 
 # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
 #path  = '/nobackup/users/stratum/DOWA/LES_forcing'
-path  = '/Users/bart/meteo/data/Harmonie_DDH/'
+#path  = '/Users/bart/meteo/data/Harmonie_DDH/'
+path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
 nc_files = get_file_list(path, start, end)
@@ -30,8 +31,8 @@ domain    = nc_data.name[0][iloc].values
 docstring = '{}: {} to {}'.format(domain, start, end)
 
 # Create stretched vertical grid for LES
-#grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=130)
-grid = Grid_stretched(kmax=80, dz0=30, nloc1=40, nbuf1=10, dz1=200)    # debug
+grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=130)
+#grid = Grid_stretched(kmax=80, dz0=30, nloc1=40, nbuf1=10, dz1=200)    # debug
 #grid.plot()
 
 # Create and write the initial vertical profiles (prof.inp)
