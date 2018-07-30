@@ -1,7 +1,11 @@
-import numpy as np
-import netCDF4 as nc4
-import matplotlib.pyplot as pl
 from collections import OrderedDict as odict
+
+import matplotlib.pyplot as pl
+import netCDF4 as nc4
+import numpy as np
+
+import shutil
+import re
 
 # ---------------------------
 # "Private" help functions
@@ -77,6 +81,27 @@ class Read_namelist:
     def __repr__(self):
         return 'Available groups in {}:\n{}'.format(self.namelist_file, ', '.join(self.groups.keys()))
 
+
+def replace_namelist_value(namelist, variable, new_value, group=None):
+    # Backup namelist
+    shutil.copy(namelist, '{}.bak'.format(namelist))
+
+    # Read the entire namelist to memory
+    with open(namelist, 'r') as source:
+        lines = source.readlines()
+
+    # Loop over lines, and replace matches
+    curr_group = None
+    with open(namelist, 'w') as source:
+        for line in lines:
+            lstrip = line.strip()
+            if len(lstrip) > 0 and lstrip[0] == '&':
+                curr_group = lstrip[1:].lower()
+
+            if group is None or curr_group == group.lower():
+                source.write(re.sub(r'({}).*'.format(variable), r'\1 = {}'.format(new_value), line))
+            else:
+                source.write(line)
 
 
 # ---------------------------
