@@ -76,7 +76,7 @@ def interpz_time(z_input, z_output, variable):
     return data
 
 
-def create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring):
+def create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr=1):
     """
     Interpolate Harmonie data onto LES grid,
     and create the `prof.inp` and `scalar.inp` files
@@ -98,15 +98,15 @@ def create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring):
     # Write to prof.inp.001
     output = odict([('z (m)', grid.z), ('thl (K)', thetal), ('qt (kg kg-1)', qt), \
                     ('u (m s-1)', u), ('v (m s-1)', v), ('tke (m2 s-2)', tke)])
-    write_profiles('prof.inp.001', output, grid.kmax, docstring)
+    write_profiles('prof.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
 
     # Initial scalar profiles (for microphysics) are zero
     zero = np.zeros(grid.kmax)
     output = odict([('z (m)', grid.z), ('qr (kg kg-1)', zero), ('nr (kg kg-1)', zero)])
-    write_profiles('scalar.inp.001', output, grid.kmax, docstring)
+    write_profiles('scalar.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
 
 
-def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, harmonie_rad=False):
+def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, expnr, harmonie_rad=False):
     """
     Create all the (partially time dependent) large scale forcings
     """
@@ -158,19 +158,19 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, harmonie_rad=Fals
                         ('p_s', ps), ('T_s', Ts), ('qt_s', qs)])
     output_ls  = odict([('time', time_sec_ls), ('z', grid.z), ('ug', zero_a), ('vg', zero_a), \
                         ('dqtdt', dtqv), ('dthldt', dtthl), ('dudt', dtu), ('dvdt', dtv)])
-    write_forcings('ls_flux.inp.001', output_sfc, output_ls, docstring)
+    write_forcings('ls_flux.inp.{0:03d}'.format(expnr), output_sfc, output_ls, docstring)
 
     # Dummy forcings for the microphysics scalars
-    write_dummy_forcings('ls_fluxsv.inp.001', 2, grid.z, docstring)
+    write_dummy_forcings('ls_fluxsv.inp.{0:03d}'.format(expnr), 2, grid.z, docstring)
 
     # Also create non-time dependent file (lscale.inp), required by DALES (why?)
     zero = np.zeros_like(grid.z)
     output_ls  = odict([('height', grid.z), ('ug', zero), ('vg', zero), ('wfls', zero), \
                         ('dqtdxls', zero), ('dqtdyls', zero), ('dqtdtls', zero), ('dthldt', zero)])
-    write_profiles('lscale.inp.001', output_ls, grid.kmax, docstring)
+    write_profiles('lscale.inp.{0:03d}'.format(expnr), output_ls, grid.kmax, docstring)
 
 
-def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring):
+def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr=1):
     """
     Create the nudging profiles
     """
@@ -199,4 +199,25 @@ def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring):
     output = odict([('z (m)', grid.z), ('factor (-)', nudgefac), ('u (m s-1)', u), ('v (m s-1)', v),\
                     ('w (m s-1)', zero), ('thl (K)', thetal), ('qt (kg kg-1)', qt)])
 
-    write_time_profiles('nudge.inp.001', time_sec, output, grid.kmax, docstring)
+    write_time_profiles('nudge.inp.{0:03d}'.format(expnr), time_sec, output, grid.kmax, docstring)
+
+
+def create_backrad(nc_data, t0, iloc, expnr=1):
+    """
+    Create the background profiles for RRTMG
+    """
+
+    print('Saving backrad.inp.{0:03d}.nc'.format(expnr))
+        
+    nc_file = nc4.Dataset('backrad.inp.{0:03d}.nc'.format(expnr), 'w')
+    dims = nc_file.createDimension('lev', nc_data.dims['level'])
+    
+    p = nc_file.createVariable('lev', 'f4', ('lev'))
+    T = nc_file.createVariable('T',   'f4', ('lev'))
+    q = nc_file.createVariable('q',   'f4', ('lev'))
+    
+    p[:] = nc_data['p'][t0, iloc, :]
+    T[:] = nc_data['T'][t0, iloc, :]
+    q[:] = nc_data['q'][t0, iloc, :]
+    
+    nc_file.close()

@@ -2,8 +2,8 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 3600
-trestart = 10800
+runtime = 10800
+trestart = 999999
 dtmax = 10
 ladaptive = .true.
 irandom = 1
@@ -15,12 +15,12 @@ nprocy=1
 /
 
 &DOMAIN
-itot = 16
-jtot = 16
-kmax = 80
+itot = 8
+jtot = 8
+kmax = 100
 
-xsize = 3200.
-ysize = 3200.
+xsize = 800.
+ysize = 800.
 
 xlat = 51.970001220703125
 xlon = 4.900000095367432
@@ -36,17 +36,38 @@ lcoriol = .false.
 ltimedep = .true.
 iradiation = 4      ! 4 = RRTMG
 igrw_damp = 3       ! 3 = nudge (damping) to mean profile
-timerad = 10        ! Interval (sec) of radiation calls
+timerad = 30        ! Interval (sec) of radiation calls
 /
 
 &NAMSURFACE
-wtsurf =  0.1
-wqsurf =  0.1e-3
-isurf = 2           ! 2 = Ts + q=qsat(Ts), 4 = thl+qt flux, calculate u*
-z0mav = 0.001
-z0hav = 0.001
-albedoav = 0.24     ! Fig 4.9 MvT
+isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
+l_vg  = .true.
+z0mav = 4e-2
+z0hav = 6.25e-6
+Cskinav = 0
+lambdaskinav = 10
+rootfav = 0.40 0.30 0.30 0.00 
+albedoav = 0.27
+Qnetav = 5
+cvegav = 1
+Wlav = 0
+rsminav = 100
+rssoilminav = 50
+LAIav = 2
+gDav = 0
+tsoildeepav = 284.00
+tsoilav = 277.0060 277.9071 278.7807 281.3903
+phiwav = 0.5280 0.5280 0.5280 0.5280
+gammasat = 0.52e-6
+nvg = 1.10
+Lvg = -5.90
+alphavg = 1.95
+phir = 0.01
+phi = 0.590
+phiwp = 0.320
+phifc = 0.528
 /
+
 
 &DYNAMICS
 cu =  0.
@@ -88,7 +109,7 @@ dtav = 300
 /
 
 &NAMCHECKSIM
-tcheck = 30
+tcheck = 120
 /
 
 &NAMNETCDFSTATS
@@ -99,34 +120,40 @@ lsync = .true.
 &NAMTIMESTAT
 ltimestat = .true.
 lascii = .false.
-dtav = 1
+dtav = 120
 /
 
 &NAMGENSTAT
 lstat  = .true.
 lascii = .false.
-dtav   = 60
-timeav = 60
+dtav   = 120
+timeav = 120
 /
 
 &NAMBUDGET
 lbudget = .false.
 lascii  = .false.
-dtav    = 60.
-timeav  = 60.
+dtav    = 120.
+timeav  = 120.
 /
 
 &NAMSTATTEND
 ltend  = .true.
 lascii = .false.
-dtav   = 60
+dtav   = 120
 /
 
 &NAMRADSTAT
 lstat = .true.
 lascii = .false.
-dtav   = 60
-timeav = 60.
+dtav   = 120
+timeav = 120.
+/
+
+&NAMLSMSTAT
+lstat = .true.
+dtav = 120
+timeav = 120.
 /
 
 &NAMSAMPLING
@@ -135,8 +162,8 @@ lsampco    = .false.
 lsampup    = .false.
 lsampbuup  = .false.
 lsampcldup = .false.
-dtav   = 60
-timeav = 60.
+dtav   = 120
+timeav = 120.
 /
 
 &NAMFIELDDUMP
@@ -148,4 +175,10 @@ ldiracc = .true.
 &NAMCROSSSECTION
 lcross = .false.
 dtav = 300
+/
+
+&NAMLSMCROSSSECTION
+lcross = .false.
+dtav = 120
+crossheight = 1
 /
