@@ -17,6 +17,9 @@ from tools import *
 expnr = 1
 
 # Location (domain) in NetCDF file
+# 0=FINO1, 1=Goeree, 2=EPL, 3=K13, 4=HKZ, 5=P11B, 6=F3FB1
+# 7=Cabauw, 8=Loobos, 9=Lutjewad, 10=Schiphol, 11=Rotterdam
+# +12 = 10x10km, +24 = 30x30 km
 iloc = 7+12
 
 # Start and endtime of experiment:
