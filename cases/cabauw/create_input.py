@@ -20,8 +20,8 @@ expnr = 1
 iloc = 7+12
 
 # Start and endtime of experiment:
-start = datetime.datetime(year=2017, month=3, day=1, hour=6)
-end   = datetime.datetime(year=2017, month=3, day=1, hour=18)
+start = datetime.datetime(year=2017, month=3, day=27, hour=12)
+end   = datetime.datetime(year=2017, month=3, day=28, hour=21)
 
 # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
 #path  = '/nobackup/users/stratum/DOWA/LES_forcing'

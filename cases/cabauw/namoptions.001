@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 10800
+runtime = 64800
 trestart = 999999
 dtmax = 10
 ladaptive = .true.
@@ -24,8 +24,8 @@ ysize = 800.
 
 xlat = 51.970001220703125
 xlon = 4.900000095367432
-xday = 60
-xtime = 6
+xday = 86
+xtime = 12
 /
 
 &PHYSICS
@@ -41,33 +41,45 @@ timerad = 30        ! Interval (sec) of radiation calls
 
 &NAMSURFACE
 isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
-l_vg  = .true.
-z0mav = 4e-2
-z0hav = 6.25e-6
+l_vg  = .true.      ! Van Genuchten parameterisation
+z0mav = 0.05        ! Fig. 4.8 MvT
+z0hav = 0.001   ! z0m / 6.4e3, Eq. 4.2 MvT
 Cskinav = 0
-lambdaskinav = 10
-rootfav = 0.40 0.30 0.30 0.00 
-albedoav = 0.27
-Qnetav = 5
-cvegav = 1
-Wlav = 0
+lambdaskinav = 8    ! Fig. 4.11 MvT; night
+Qnetav = 5          ! Why needed?!
+Wlav = 0            ! Water on leaves
 rsminav = 100
 rssoilminav = 50
-LAIav = 2
+LAIav = 2.5         ! Fig. 4.6 MvT
+cvegav = 1
+albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
-tsoildeepav = 284.00
-tsoilav = 277.0060 277.9071 278.7807 281.3903
-phiwav = 0.5280 0.5280 0.5280 0.5280
-gammasat = 0.52e-6
-nvg = 1.10
-Lvg = -5.90
-alphavg = 1.95
-phir = 0.01
-phi = 0.590
-phiwp = 0.320
-phifc = 0.528
-/
+tsoildeepav = 279.36118
+!tsoilav = 279.92297 282.30188 280.73914 279.36118      ! ERA5
+tsoilav = 280.8 280.7 280.6 279.36118       ! Cabauw obs tuned
+phiwav = 0.34093195 0.3536464 0.38237214 0.37701386
+rootfav = 0.40 0.30 0.30 0.00
 
+! ECMWF fine (Table 3.1 MvT)
+gammasat = 2.87e-6
+nvg = 1.10
+Lvg = -1.977
+alphavg = 3.67
+phir = 0.01
+phi = 0.520
+phiwp = 0.279
+phifc = 0.448
+
+! B11 (Wösten) top 16cm (Table 3.1 MvT)
+!gammasat = 0.52e-6
+!nvg = 1.11
+!Lvg = -5.90
+!alphavg = 1.95
+!phir = 0.01
+!phi = 0.590
+!phiwp = 0.320
+!phifc = 0.528
+/
 
 &DYNAMICS
 cu =  0.
@@ -99,6 +111,10 @@ ce2 = 0.51
 imicro = 2          ! 2 = warm, 5=simpleice 
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
 Nc_0 = 200e6        ! cloud droplet conventration
+/
+
+&NAMRADIATION
+lCnstAlbedo = .true.
 /
 
 &NAMBULKMICROSTAT
@@ -179,6 +195,6 @@ dtav = 300
 
 &NAMLSMCROSSSECTION
 lcross = .false.
-dtav = 120
+dtav = 10
 crossheight = 1
 /
