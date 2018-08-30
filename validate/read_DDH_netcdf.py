@@ -2,7 +2,7 @@ import xarray as xr
 import datetime
 import os
 
-def read_DDH_netcdf(start, end, path):
+def read_DDH_netcdf(start, end, path, include_variables=None):
     """
     Read all converted DDH files in NetCDF format,
     from `start` to `end` date
@@ -25,14 +25,32 @@ def read_DDH_netcdf(start, end, path):
         else:
             print('Can not find {}!! Skipping..'.format(f))
 
+    if include_variables is not None:
+        # Exclude all variables which are not in `include_variables..`
+        # xarray should really have an option for this..........
+        tmp = xr.open_dataset(files[0])
+        all_variables = tmp.variables.keys()
+
+        exclude = []
+        for var in all_variables:
+            if var not in include_variables:
+                exclude.append(var)
+
+        nc = xr.open_mfdataset(files, drop_variables=exclude, concat_dim='time', autoclose=True)
+    else:
+        nc = xr.open_mfdataset(files, autoclose=True)
+
     # Read data with xarray
-    return xr.open_mfdataset(files)
+    return nc
 
 if __name__ == '__main__':
 
-    path = '/Users/bart/meteo/data/Harmonie_DDH/'
+    #path = '/Users/bart/meteo/data/Harmonie_DDH/'
+    path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
 
-    start = datetime.datetime(year=2017, month=1, day=1,  hour=0)
-    end   = datetime.datetime(year=2017, month=1, day=14, hour=21)
+    start = datetime.datetime(year=2017, month=1, day=1, hour=0)
+    end   = datetime.datetime(year=2017, month=1, day=2, hour=0)
 
+    variables = ['z', 'u']
+    nc = read_DDH_netcdf(start, end, path, variables)
     nc = read_DDH_netcdf(start, end, path)
