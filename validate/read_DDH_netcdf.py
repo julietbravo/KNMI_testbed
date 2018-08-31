@@ -25,6 +25,8 @@ def read_DDH_netcdf(start, end, path, include_variables=None):
         else:
             print('Can not find {}!! Skipping..'.format(f))
 
+    print('Reading {} DDH NetCDF files...'.format(len(files)))
+
     if include_variables is not None:
         # Exclude all variables which are not in `include_variables..`
         # xarray should really have an option for this..........
@@ -46,10 +48,11 @@ def read_DDH_netcdf(start, end, path, include_variables=None):
 if __name__ == '__main__':
 
     #path = '/Users/bart/meteo/data/Harmonie_DDH/'
-    path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+    #path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+    path = '/nobackup/users/stratum/DOWA/LES_forcing/'
 
     start = datetime.datetime(year=2017, month=1, day=1, hour=0)
-    end   = datetime.datetime(year=2017, month=1, day=2, hour=0)
+    end   = datetime.datetime(year=2017, month=1, day=5, hour=0)
 
     variables = ['z', 'u']
     nc = read_DDH_netcdf(start, end, path, variables)
