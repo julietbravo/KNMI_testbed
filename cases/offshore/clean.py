@@ -9,14 +9,12 @@ def looks_like_python(name):
     else:
         return False
 
-keep = ['namoptions.001', 'dales4', 'run.PBS']
+keep = ['namoptions.001', 'dales4', 'run.PBS', 'rrtmg_sw.nc', 'rrtmg_lw.nc']
 
 files = glob.glob('*')
 
 for f in files:
-    if (f in keep or looks_like_python(f)):
-        pass
-    else:
+    if not (f in keep or looks_like_python(f)):
         try:
             os.remove(f)
         except:
