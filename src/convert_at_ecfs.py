@@ -10,6 +10,9 @@ import pickle
 
 from read_and_convert_DDH import *
 
+# execute('module load ecfs')
+ecfs_bin = '/usr/local/apps/ecfs/2.2.4/bin'
+
 def mkdir(path):
     if not os.path.exists(path):
         os.mkdir(path)
@@ -35,7 +38,7 @@ def execute(task):
 
 def archive_ecfs(filename, date):
     ecfs_path = 'ec:/nkbs/DOWA_LES_forcings/{0:04d}/{1:02d}/{2:02d}/{3:02d}/'.format(date.year, date.month, date.day, date.hour)
-    return execute('ecp -p {} {}'.format(filename, ecfs_path))
+    return execute('{}/ecp -p {} {}'.format(ecfs_bin, filename, ecfs_path))
 
 if __name__ == '__main__':
 
@@ -81,12 +84,19 @@ if __name__ == '__main__':
 
         print('Processing DDH {} : '.format(index), end='')
 
-        if execute('els {} >& /dev/null'.format(ecfs_file)):
+        if os.path.exists(tmp_file):
+            # Set download to finised
+            df.loc[index, 'copied_DDH'] = True
+            # Unpack
+            execute('tar -xzvf {0}/{1} -C {2} >& /dev/null'.format(tmp_dir, file_name, tmp_dir))
+            print('found local...')
+
+        elif execute('{}/els {} >& /dev/null'.format(ecfs_bin, ecfs_file)):
             # File exists on ECFS! Create local directory (if it doesn't exists)
             create_cycle_dir(tmp_path, index)
 
             # Copy DDH tar file to tmp
-            if execute('ecp {0} {1}'.format(ecfs_file, tmp_dir)):
+            if execute('{0}/ecp {1} {2}'.format(ecfs_bin, ecfs_file, tmp_dir)):
                 # Copy was success! Unpack...
                 # DONT USE PYTHONS UNTAR!!
                 #tar = tarfile.open('{0}/{1}'.format(tmp_dir, file_name))
