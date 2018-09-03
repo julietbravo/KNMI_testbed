@@ -17,7 +17,7 @@ nprocy=1
 &DOMAIN
 itot = 32
 jtot = 32
-kmax = 80
+kmax = 160
 
 xsize = 3200.
 ysize = 3200.

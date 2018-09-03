@@ -96,17 +96,25 @@ def create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr=1):
     thetal = theta - constants['lv'] / (constants['cp'] * exner) * ql
 
     # Write to prof.inp.001
-    output = odict([('z (m)', grid.z), ('thl (K)', thetal), ('qt (kg kg-1)', qt), \
-                    ('u (m s-1)', u), ('v (m s-1)', v), ('tke (m2 s-2)', tke)])
+    output = odict([('z (m)',        grid.z),
+                    ('thl (K)',      thetal),
+                    ('qt (kg kg-1)', qt),
+                    ('u (m s-1)',    u),
+                    ('v (m s-1)',    v),
+                    ('tke (m2 s-2)', tke)])
+
     write_profiles('prof.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
 
     # Initial scalar profiles (for microphysics) are zero
     zero = np.zeros(grid.kmax)
-    output = odict([('z (m)', grid.z), ('qr (kg kg-1)', zero), ('nr (kg kg-1)', zero)])
+    output = odict([('z (m)',        grid.z),
+                    ('qr (kg kg-1)', zero),
+                    ('nr (kg kg-1)', zero)])
+
     write_profiles('scalar.inp.{0:03d}'.format(expnr), output, grid.kmax, docstring)
 
 
-def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, expnr, harmonie_rad=False):
+def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, interval=1, expnr=1, harmonie_rad=False):
     """
     Create all the (partially time dependent) large scale forcings
     """
@@ -154,10 +162,22 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, expnr, harmonie_r
     dtql [0, :] = 0.5*(dtql [0, :] + dtql [1, :])
 
     # Write to ls_flux.inp
-    output_sfc = odict([('time', time_sec), ('wthl_s', zero_s), ('wqt_s', zero_s), \
-                        ('p_s', ps), ('T_s', Ts), ('qt_s', qs)])
-    output_ls  = odict([('time', time_sec_ls), ('z', grid.z), ('ug', zero_a), ('vg', zero_a), \
-                        ('dqtdt', dtqv), ('dthldt', dtthl), ('dudt', dtu), ('dvdt', dtv)])
+    output_sfc = odict([('time',   time_sec[::interval]),
+                        ('wthl_s', zero_s  [::interval]), 
+                        ('wqt_s',  zero_s  [::interval]),
+                        ('p_s',    ps      [::interval]),
+                        ('T_s',    Ts      [::interval]),
+                        ('qt_s',   qs      [::interval])])
+
+    output_ls  = odict([('time',   time_sec_ls[::interval]),
+                        ('z',      grid.z     [::interval]),
+                        ('ug',     zero_a     [::interval,:]),
+                        ('vg',     zero_a     [::interval,:]),
+                        ('dqtdt',  dtqv       [::interval,:]),
+                        ('dthldt', dtthl      [::interval,:]),
+                        ('dudt',   dtu        [::interval,:]),
+                        ('dvdt',   dtv        [::interval,:])])
+
     write_forcings('ls_flux.inp.{0:03d}'.format(expnr), output_sfc, output_ls, docstring)
 
     # Dummy forcings for the microphysics scalars
@@ -170,7 +190,7 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, expnr, harmonie_r
     write_profiles('lscale.inp.{0:03d}'.format(expnr), output_ls, grid.kmax, docstring)
 
 
-def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr=1):
+def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, interval=1, expnr=1):
     """
     Create the nudging profiles
     """
@@ -196,10 +216,15 @@ def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr=1):
     thetal = theta - constants['lv'] / (constants['cp'] * exner) * ql
 
     # Write to nudge.inp
-    output = odict([('z (m)', grid.z), ('factor (-)', nudgefac), ('u (m s-1)', u), ('v (m s-1)', v),\
-                    ('w (m s-1)', zero), ('thl (K)', thetal), ('qt (kg kg-1)', qt)])
+    output = odict([('z (m)',        grid.z), 
+                    ('factor (-)',   nudgefac[::interval,:]), 
+                    ('u (m s-1)',    u       [::interval,:]),
+                    ('v (m s-1)',    v       [::interval,:]),
+                    ('w (m s-1)',    zero    [::interval,:]), 
+                    ('thl (K)',      thetal  [::interval,:]),
+                    ('qt (kg kg-1)', qt      [::interval,:])])
 
-    write_time_profiles('nudge.inp.{0:03d}'.format(expnr), time_sec, output, grid.kmax, docstring)
+    write_time_profiles('nudge.inp.{0:03d}'.format(expnr), time_sec[::interval], output, grid.kmax, docstring)
 
 
 def create_backrad(nc_data, t0, iloc, expnr=1):
