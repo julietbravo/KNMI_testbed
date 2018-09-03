@@ -15,17 +15,17 @@ nprocy=1
 /
 
 &DOMAIN
-itot = 16
-jtot = 16
+itot = 32
+jtot = 32
 kmax = 80
 
 xsize = 3200.
 ysize = 3200.
 
-xlat = 51.967
-xlon = 4.
-xday = 0.
-xtime = 0.
+xlat = 54.0099983215332
+xlon = 6.590000152587891
+xday = 86
+xtime = 3
 /
 
 &PHYSICS
@@ -34,7 +34,7 @@ thls = 300.00       ! Surface thl
 lmoist = .true.
 lcoriol = .false.
 ltimedep = .true.
-iradiation = 0      ! 4 = RRTMG
+iradiation = 4      ! 4 = RRTMG
 igrw_damp = 3       ! 3 = nudge (damping) to mean profile
 /
 
@@ -73,7 +73,7 @@ ce2 = 0.51
 /
 
 &NAMMICROPHYSICS
-imicro = 0          ! 2 = warm, 5=simpleice 
+imicro = 2          ! 2 = warm, 5=simpleice 
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
 Nc_0 = 200e6        ! cloud droplet conventration
 /
@@ -83,6 +83,10 @@ lmicrostat = .false.
 lascii = .false.
 timeav = 300
 dtav = 300
+/
+
+&NAMRADIATION
+lCnstAlbedo = .true.
 /
 
 &NAMCHECKSIM
