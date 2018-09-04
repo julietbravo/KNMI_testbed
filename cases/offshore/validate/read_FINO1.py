@@ -25,7 +25,7 @@ def read_FINO1(path, start=None, end=None):
         # Read data with Pandas
         tmp = pd.read_table('{}/FINO1_{}_20160101_20171231.dat'.format(path, var),\
                 delim_whitespace=True, usecols=[0,1,2], names=header, skiprows=6,\
-                parse_dates={'datetime' : ['date','time']})
+                parse_dates={'datetime' : ['date','time']}, na_values=[-999])
         tmp.set_index('datetime', inplace=True)
 
         # Create or merge data frames
@@ -33,6 +33,9 @@ def read_FINO1(path, start=None, end=None):
             df = tmp
         else:
             df = df.merge(tmp, how='outer', left_index=True, right_index=True)
+
+        if start is not None and end is not None:
+            df = df.loc[start:end]
 
     return df
 
