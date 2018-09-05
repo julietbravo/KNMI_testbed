@@ -1,10 +1,15 @@
 import matplotlib.pyplot as pl
+import matplotlib.dates as mdates
+
 import xarray as xr
+import pandas as pd
 import numpy as np
 import datetime
 
 # Custom script to read the FINO1 ASCII files as a Pandas dataframe
 from read_FINO1 import read_FINO1
+# Custom script to read Harmonie NetCDF LEs forcings
+from read_DDH_netcdf import read_DDH_netcdf
 
 pl.close('all')
 
@@ -27,15 +32,31 @@ def interpz(z1, z2, zg, v1, v2):
     f1 = 1 - f2
     return f1*v1 + f2*v2
 
+class Statistics:
+    def __init__(self, obs, model, scale=1):
+        self.mean_diff = (model - obs).mean() * scale
+        self.max_diff  = (model - obs).max() * scale
+        self.rmse      = np.sqrt(((model - obs)**2).mean()) * scale
+
+# Data axis formatting...
+def format_date():
+    days     = mdates.DayLocator()
+    days_fmt = mdates.DateFormatter('%d %b')
+
+    ax = pl.gca()
+    ax.xaxis.set_major_locator(days)
+    ax.xaxis.set_major_formatter(days_fmt)
+
 
 if __name__ == '__main__':
 
     start = datetime.datetime(year=2017, month=6, day=11, hour=0)
-    end   = datetime.datetime(year=2017, month=6, day=13, hour=0)
+    end   = datetime.datetime(year=2017, month=6, day=18, hour=0)
 
+    # Read the FINO1 observations
     if 'f1' not in locals():
-        # Read the FINO1 observations
-        path = '/nobackup/users/stratum/FINO1_obs/'
+        #path = '/nobackup/users/stratum/FINO1_obs/'
+        path = '/Users/bart/meteo/data/offshore_wind/FINO1/'
         f1   = read_FINO1(path, start, end)
 
         # Fix units.....
@@ -60,62 +81,102 @@ if __name__ == '__main__':
         for z in [33, 40, 50, 60, 70, 80, 90]:
             f1['u_{}'.format(z)], f1['v_{}'.format(z)] = components(f1['U_{}'.format(z)], f1['Udir_{}'.format(z)])
 
-
+    # Read the LES experiments
     if 'd1' not in locals():
-        # Read the LES experiments
         d1   = xr.open_dataset('profiles.001.nc')
-        d1_time = [start + datetime.timedelta(seconds=time) for time in d1.time.values]
+        d1_time = [start + datetime.timedelta(seconds=int(time)) for time in d1.time.values]
 
         d1['Ta'] = d1['thl'] * (d1['presh'] / 1e5)**(287.05/1004.)
 
         d1t   = xr.open_dataset('tmser.001.nc')
-        d1t_time = [start + datetime.timedelta(seconds=time) for time in d1t.time.values]
+        d1t_time = [start + datetime.timedelta(seconds=int(time)) for time in d1t.time.values]
+
+    # Read the Harmonie LES forcings
+    if 'h1' not in locals():
+        path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+        h1 = read_DDH_netcdf(start, end, path)
+        iloc = 0
+
+    if 'df' not in locals():
+        # Put main model variables in FINO1 data frame
+        data_les = {'LES_u_90': d1['u'][:,4], 'LES_v_90': d1['v'][:,4], 'LES_T_90': d1['Ta'][:,4], 'LES_q_90': d1['qt'][:,4]}
+        df_les = pd.DataFrame(data_les, index=d1_time)
+
+        data_ham = {'HAM_u_90': h1['u'][:,iloc,3], 'HAM_v_90': h1['v'][:,iloc,3], 'HAM_T_90': h1['T'][:,iloc,3], 'HAM_q_90': h1['q'][:,iloc,3]}
+        df_ham = pd.DataFrame(data_ham, index=h1.time)
+        df_ham.index = df_ham.index.round('min')
+
+        # Merge them, and drop missing records (e.g. LES has 5min output while Harmonie has 10min...)
+        df = pd.concat([f1, df_les, df_ham], axis=1, join='inner')
+
+    # Statistics!
+    if True:
+        u_90_LES = Statistics(df['u_90'], df['LES_u_90'])
+        u_90_HAM = Statistics(df['u_90'], df['HAM_u_90'])
+
+        v_90_LES = Statistics(df['v_90'], df['LES_v_90'])
+        v_90_HAM = Statistics(df['v_90'], df['HAM_v_90'])
+
+        T_90_LES = Statistics(df['T_90'], df['LES_T_90'])
+        T_90_HAM = Statistics(df['T_90'], df['HAM_T_90'])
+
+        q_90_LES = Statistics(df['q_90'], df['LES_q_90'], scale=1000)
+        q_90_HAM = Statistics(df['q_90'], df['HAM_q_90'], scale=1000)
 
 
 
-    pl.figure()
-    ax=pl.subplot(111)
-    pl.plot(f1.index, f1['Udir_90'])
-    lim = ax.get_xlim()
-    pl.fill_between(lim, [235, 235], [285, 285], color='g', alpha=0.3)
-    pl.fill_between(lim, [0, 0],     [180, 180], color='r', alpha=0.3)
-    pl.ylim(0,360)
-    pl.xlim(lim)
 
-
-    pl.figure()
-
-    pl.subplot(221)
-    pl.plot(f1.index, f1['u_90'], 'o', color='k', markersize=3)
-    pl.plot(d1_time, d1['u'][:,4], 'k-')
-
-    pl.subplot(222)
-    pl.plot(f1.index, f1['v_90'], 'o', color='k', markersize=3)
-    pl.plot(d1_time, d1['v'][:,4], 'k-')
-
-    pl.subplot(223)
-    pl.plot(f1.index, f1['T_90'], 'o', color='k', markersize=3)
-    pl.plot(d1_time, d1['Ta'][:,4], 'k-')
-
-    pl.subplot(224)
-    pl.plot(f1.index, f1['q_90'], 'o', color='k', markersize=3)
-    pl.plot(d1_time, d1['qt'][:,4], 'k-')
+    if False:
+        pl.figure()
+        ax=pl.subplot(111)
+        pl.plot(f1.index, f1['Udir_90'])
+        lim = ax.get_xlim()
+        pl.fill_between(lim, [235, 235], [285, 285], color='g', alpha=0.3)
+        pl.fill_between(lim, [0, 0],     [180, 180], color='r', alpha=0.3)
+        pl.ylim(0,360)
+        pl.xlim(lim)
 
 
 
+    if True:
+        pl.figure(figsize=(10,7))
 
+        pl.subplot(221)
+        pl.title('z = 90 m', loc='left')
+        pl.plot(f1.index, f1['u_90'], 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.plot(d1_time, d1['u'][:,4], 'k-',       label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(u_90_LES.mean_diff, u_90_LES.rmse))
+        pl.plot(h1.time, h1['u'][:,iloc,3], 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(u_90_HAM.mean_diff, u_90_HAM.rmse))
+        format_date()
+        pl.legend()
+        pl.ylabel('u (m s-1)')
+        pl.xlabel('date')
 
+        pl.subplot(222)
+        pl.plot(f1.index, f1['v_90'], 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.plot(d1_time, d1['v'][:,4], 'k-',       label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(v_90_LES.mean_diff, v_90_LES.rmse))
+        pl.plot(h1.time, h1['v'][:,iloc,3], 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(v_90_HAM.mean_diff, v_90_HAM.rmse))
+        format_date()
+        pl.legend()
+        pl.ylabel('v (m s-1)')
+        pl.xlabel('date')
 
-#pl.subplot(132)
-#pl.plot(f1.index, f1['T_30']+273.15, 'o', color='k')
-#pl.plot(d1_time, d1['Ta'][:,1], 'k-')
-#
-#pl.plot(f1.index, f1['T_100']+273.15, 'o', color='r')
-#pl.plot(d1_time, d1['Ta'][:,4], 'r-')
+        pl.subplot(223)
+        pl.plot(f1.index, f1['T_90'], 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.plot(d1_time, d1['Ta'][:,4], 'k-',      label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(T_90_LES.mean_diff, T_90_LES.rmse))
+        pl.plot(h1.time, h1['T'][:,iloc,3], 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(T_90_HAM.mean_diff, T_90_HAM.rmse))
+        format_date()
+        pl.legend()
+        pl.ylabel('T (K)')
+        pl.xlabel('date')
 
-#pl.subplot(133)
-#pl.plot(f1.index, f1['Q_33'], 'o', color='k')
-#pl.plot(d1_time, d1['qt'][:,1], 'k-')
+        pl.subplot(224)
+        pl.plot(f1.index, f1['q_90']*1e3, 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.plot(d1_time, d1['qt'][:,4]*1e3, 'k-',      label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(q_90_LES.mean_diff, q_90_LES.rmse))
+        pl.plot(h1.time, h1['q'][:,iloc,3]*1e3, 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(q_90_HAM.mean_diff, q_90_HAM.rmse))
+        format_date()
+        pl.legend()
+        pl.ylabel('q (g kg-1)')
+        pl.xlabel('date')
 
-#pl.plot(f1.index, f1['Q_90']+273.15, 'o', color='r')
-#pl.plot(d1_time, d1['qt'][:,4], 'r-')
+        pl.tight_layout()
+
