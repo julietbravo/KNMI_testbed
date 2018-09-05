@@ -17,15 +17,16 @@ expnr = 1
 iloc = 0+12
 
 # Start and endtime of experiment:
-start = datetime.datetime(year=2017, month=3, day=27, hour=3)
-end   = datetime.datetime(year=2017, month=3, day=27, hour=12)
+start = datetime.datetime(year=2017, month=6, day=11, hour=0)
+end   = datetime.datetime(year=2017, month=6, day=18, hour=0)
 
 # Interval of atmospheric forcings (factors of 10 min)
-interval = 3
+interval = 1
 
 # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
-path  = '/nobackup/users/stratum/DOWA/LES_forcing'
+#path  = '/nobackup/users/stratum/DOWA/LES_forcing'
 #path  = '/Users/bart/meteo/data/Harmonie_DDH/'
+path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
 nc_files = get_file_list(path, start, end)
@@ -51,7 +52,7 @@ grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=130)
 create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)
 
 # Create and write the surface and atmospheric forcings (ls_flux.inp, ls_fluxsv.inp, lscale.inp)
-create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, interval, expnr, harmonie_rad=False)
+create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, interval, expnr, harmonie_rad=True)
 
 # Write the nudging profiles (nudge.inp)
 create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, interval, expnr)

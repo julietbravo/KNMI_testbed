@@ -2,30 +2,30 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 3600
-trestart = 10800
+runtime = 604800
+trestart = 86400
 dtmax = 10
 ladaptive = .true.
 irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-nprocx=1
-nprocy=1
+nprocx=12
+nprocy=12
 /
 
 &DOMAIN
-itot = 32
-jtot = 32
+itot = 72
+jtot = 72
 kmax = 160
 
 xsize = 3200.
 ysize = 3200.
 
-xlat = 54.0099983215332
-xlon = 6.590000152587891
-xday = 86
-xtime = 3
+xlat = 54.0099983215
+xlon = 6.59000015259
+xday = 162
+xtime = 0
 /
 
 &PHYSICS
@@ -34,7 +34,7 @@ thls = 300.00       ! Surface thl
 lmoist = .true.
 lcoriol = .false.
 ltimedep = .true.
-iradiation = 4      ! 4 = RRTMG
+iradiation = 0      ! 4 = RRTMG
 igrw_damp = 3       ! 3 = nudge (damping) to mean profile
 /
 
@@ -42,8 +42,9 @@ igrw_damp = 3       ! 3 = nudge (damping) to mean profile
 wtsurf =  0.1
 wqsurf =  0.1e-3
 isurf = 2           ! 2 = Ts + q=qsat(Ts), 4 = thl+qt flux, calculate u*
-z0mav = 0.001
-z0hav = 0.001
+z0mav = 0.0002
+z0hav = 0.0002
+albedoav = 0.06
 /
 
 &DYNAMICS
@@ -73,13 +74,13 @@ ce2 = 0.51
 /
 
 &NAMMICROPHYSICS
-imicro = 2          ! 2 = warm, 5=simpleice 
+imicro = 2          ! 2 = warm, 5=simpleice
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
 Nc_0 = 200e6        ! cloud droplet conventration
 /
 
 &NAMBULKMICROSTAT
-lmicrostat = .false.
+lmicrostat = .true.
 lascii = .false.
 timeav = 300
 dtav = 300
@@ -95,32 +96,40 @@ tcheck = 300
 
 &NAMNETCDFSTATS
 lnetcdf = .true.
+lsync = .true.
 /
 
 &NAMTIMESTAT
 ltimestat = .true.
 lascii = .false.
-dtav = 120
+dtav = 300
 /
 
 &NAMGENSTAT
 lstat  = .true.
 lascii = .false.
-dtav   = 120
-timeav = 120
+dtav   = 300
+timeav = 300
 /
 
 &NAMBUDGET
 lbudget = .false.
 lascii  = .false.
-dtav = 120.
-timeav = 120.
+dtav = 300.
+timeav = 300.
+/
+
+&NAMRADSTAT
+lstat = .true.
+lascii = .false.
+dtav   = 300
+timeav = 300.
 /
 
 &NAMSTATTEND
 ltend  = .true.
 lascii = .false.
-dtav = 120
+dtav = 300
 /
 
 &NAMSAMPLING
@@ -129,8 +138,8 @@ lsampco    = .false.
 lsampup    = .false.
 lsampbuup  = .false.
 lsampcldup = .false.
-dtav = 120
-timeav = 120.
+dtav = 300
+timeav = 300.
 /
 
 &NAMFIELDDUMP
