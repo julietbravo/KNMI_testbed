@@ -190,7 +190,7 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, interval=1, expnr
     write_profiles('lscale.inp.{0:03d}'.format(expnr), output_ls, grid.kmax, docstring)
 
 
-def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, interval=1, expnr=1):
+def create_nudging_profiles(nc_data, grid, nudgefactor, t0, t1, iloc, docstring, interval=1, expnr=1):
     """
     Create the nudging profiles
     """
@@ -208,7 +208,8 @@ def create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, interval=1, 
     zero = np.zeros_like(T)
 
     # Nudging factor (0-1) with height; is multiplied with nudging time from namelist
-    nudgefac = np.ones_like(T)
+    nudgefac = np.zeros_like(T)
+    nudgefac[:,:] = nudgefactor
 
     # Conversions from Harmonie -> DALES
     exner  = (p / constants['p0'])**(constants['rd']/constants['cp'])

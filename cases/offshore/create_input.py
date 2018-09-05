@@ -1,6 +1,7 @@
 import numpy as np
 import xarray as xr
 from collections import OrderedDict as odict
+from scipy.special import erf
 import datetime
 
 # tools.py contains most routines which create/write
@@ -25,7 +26,7 @@ interval = 1
 
 # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
 #path  = '/nobackup/users/stratum/DOWA/LES_forcing'
-#path  = '/Users/bart/meteo/data/Harmonie_DDH/'
+#path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
 path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
@@ -55,7 +56,12 @@ create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)
 create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, interval, expnr, harmonie_rad=True)
 
 # Write the nudging profiles (nudge.inp)
-create_nudging_profiles(nc_data, grid, t0, t1, iloc, docstring, interval, expnr)
+z0_nudge = 1500         # Starting height of nudging (m)
+dz_nudge = 2000         # Transition thickness
+f0_nudge = 0.25         # Nudging near surface
+d_nudge  = 1-f0_nudge
+nudgefac = (erf((grid.z-z0_nudge)/(0.25*dz_nudge))+1) * d_nudge/2 + f0_nudge  # Nudge factor (0-1)
+create_nudging_profiles(nc_data, grid, nudgefac, t0, t1, iloc, docstring, interval, expnr)
 
 # Create NetCDF file with reference profiles for RRTMG
 create_backrad(nc_data, t0, iloc, expnr)
