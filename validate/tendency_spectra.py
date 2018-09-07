@@ -13,7 +13,7 @@ def abs_velocity(u, v):
 
 class Power_spectrum:
     def __init__(self, array, sampling_freq):
-        
+
         # Calculate the power spectrum (units = un**2, with `un` the units of `array`)
         self.k, self.pxx  = periodogram(array, fs=sampling_freq, scaling='spectrum', axis=0)
 

@@ -55,8 +55,8 @@ if __name__ == '__main__':
 
     # Read the FINO1 observations
     if 'f1' not in locals():
-        #path = '/nobackup/users/stratum/FINO1_obs/'
-        path = '/Users/bart/meteo/data/offshore_wind/FINO1/'
+        path = '/nobackup/users/stratum/FINO1_obs/'
+        #path = '/Users/bart/meteo/data/offshore_wind/FINO1/'
         f1   = read_FINO1(path, start, end)
 
         # Fix units.....
@@ -92,10 +92,19 @@ if __name__ == '__main__':
         d1t   = xr.open_dataset('tmser.001.nc')
         d1t_time = [start + datetime.timedelta(seconds=int(time)) for time in d1t.time.values]
 
+        d2   = xr.open_dataset('profiles.002.nc')
+        d2_time = [start + datetime.timedelta(seconds=int(time)) for time in d2.time.values]
+
+        d2['Ta'] = d2['thl'] * (d2['presh'] / 1e5)**(287.05/1004.)
+
+        d2t   = xr.open_dataset('tmser.002.nc')
+        d2t_time = [start + datetime.timedelta(seconds=int(time)) for time in d2t.time.values]
+
 
     # Read the Harmonie LES forcings
     if 'h1' not in locals():
-        path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+        path = '/nobackup/users/stratum/DOWA/LES_forcing/'
+        #path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
         h1 = read_DDH_netcdf(start, end, path)
         iloc = 0
 
@@ -157,33 +166,37 @@ if __name__ == '__main__':
         pl.figure(figsize=(11,7))
 
         pl.subplot(221)
-        pl.title('z = 90 m', loc='left')
-        pl.plot(f1.index, f1['u_90'], 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.title('z = 90 m: ', loc='left')
+        pl.plot(f1.index, f1['u_90'], '+', color='r', markersize=2, label='FINO1 obs')
         pl.plot(d1_time, d1['u'][:,4], 'k-',       label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(u_90_LES.mean_diff, u_90_LES.rmse))
+        #pl.plot(d2_time, d2['u'][:,4], 'k--')
         pl.plot(h1.time, h1['u'][:,iloc,3], 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(u_90_HAM.mean_diff, u_90_HAM.rmse))
         format_date()
         pl.legend(fontsize='small')
         pl.ylabel('u (m s-1)')
 
         pl.subplot(222)
-        pl.plot(f1.index, f1['v_90'], 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.plot(f1.index, f1['v_90'], 'x', color='r', markersize=2, label='FINO1 obs')
         pl.plot(d1_time, d1['v'][:,4], 'k-',       label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(v_90_LES.mean_diff, v_90_LES.rmse))
+        #pl.plot(d2_time, d2['v'][:,4], 'k--')
         pl.plot(h1.time, h1['v'][:,iloc,3], 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(v_90_HAM.mean_diff, v_90_HAM.rmse))
         format_date()
         pl.legend(fontsize='small')
         pl.ylabel('v (m s-1)')
 
         pl.subplot(223)
-        pl.plot(f1.index, f1['T_90'], 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.plot(f1.index, f1['T_90'], 'x', color='r', markersize=2, label='FINO1 obs')
         pl.plot(d1_time, d1['Ta'][:,4], 'k-',      label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(T_90_LES.mean_diff, T_90_LES.rmse))
+        #pl.plot(d2_time, d2['Ta'][:,4], 'k--')
         pl.plot(h1.time, h1['T'][:,iloc,3], 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(T_90_HAM.mean_diff, T_90_HAM.rmse))
         format_date()
         pl.legend(fontsize='small')
         pl.ylabel('T (K)')
 
         pl.subplot(224)
-        pl.plot(f1.index, f1['q_90']*1e3, 'o', color='r', markersize=1, label='FINO1 obs')
+        pl.plot(f1.index, f1['q_90']*1e3, 'x', color='r', markersize=2, label='FINO1 obs')
         pl.plot(d1_time, d1['qt'][:,4]*1e3, 'k-',      label='LES: mean diff={0:.2f}, rmse={1:.2f}'.format(q_90_LES.mean_diff, q_90_LES.rmse))
+        #pl.plot(d2_time, d2['qt'][:,4]*1e3, 'k--')
         pl.plot(h1.time, h1['q'][:,iloc,3]*1e3, 'b--', label='HAM: mean diff={0:.2f}, rmse={1:.2f}'.format(q_90_HAM.mean_diff, q_90_HAM.rmse))
         format_date()
         pl.legend(fontsize='small')
