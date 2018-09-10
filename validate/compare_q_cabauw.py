@@ -6,27 +6,27 @@ import datetime
 
 pl.close('all')
 
-def esat(T):
+def calc_esat(T):
     return 0.611e3 * np.exp(17.2694 * (T - 273.16) / (T - 35.86))
 
-def qsat(T,p):
-    return 0.622 * esat(T) / p
+def calc_qsat(T,p):
+    return 0.622 * calc_esat(T) / p
 
-def rmse(v1, v2):
+def calc_rmse(v1, v2):
     return np.sqrt(((v1 - v2)**2).mean())
+
+
 
 def read_DOWA(i,j):
     # Path to the DOWA timeseries on Berts KNMI-pc
     path = '/net/mosuracmo/nobackup_2/users/ulft/DOWA/DOWA_40h12tg2_fERA5/timeseries/'
 
     # Read data with xarray
-    ds = xr.open_dataset('{0:}/DOWA_40h12tg2_fERA5_NETHERLANDS.NL_ix{1:03d}_iy{2:03d}_2008010100-2018010100_v1.0.nc'.format(path, i, j))
-
-    # Set invalid (runs is not yet completed...) values to nan
-
+    #ds = xr.open_dataset('{0:}/DOWA_40h12tg2_fERA5_NETHERLANDS.NL_ix{1:03d}_iy{2:03d}_2008010100-2018010100_v1.0.nc'.format(path, i, j))
+    ds = xr.open_dataset('test.nc')
 
     # Calculate specific humidity
-    ds['q'] = ds['hur'] * qsat(ds['ta'], ds['p'])
+    ds['q'] = ds['hur'] * calc_qsat(ds['ta'], ds['p'])
 
     return ds
 
@@ -44,108 +44,154 @@ def read_Cabauw():
     exclude = ['valid_dates']
     ds = xr.open_mfdataset(files, drop_variables=exclude)
 
+    # Fix units...
+    ds['RH'] /= 100.        # %    -> fraction
+    df['Q']  /= 1000.       # g/kg -> kg/kg
+
     return ds
 
 
 
 if __name__ == '__main__':
     # Read DOWA and Cabauw NetCDF data:
-    if 'dowa_ds' not in locals():
-        dowa_ds   = read_DOWA(98, 74)
-        cabauw_ds = read_Cabauw()
+    if 'dw_ds' not in locals():
+        dw_ds = read_DOWA(98, 74)
+        cb_ds = read_Cabauw()
 
     # Heights to compare
-    heights = np.array([10, 80, 200])
+    heights = np.array([10, 200])
+
+    # Variable names in the DOWA and Cabauw files
+    dw_vars = {'q': 'q', 'ta': 'ta', 'rh': 'hur', 'u': 'wspeed', 'udir': 'wdir'}
+    cb_vars = {'q': 'Q', 'ta': 'TA', 'rh': 'RH',  'u': 'F',      'udir': 'D'}
 
     # Gather time series from DOWA and Cabauw data, and put in Pandas dataframe
     data_dw = {}
     data_cb = {}
     for z in heights:
         # Find height index:
-        k_dw = int(np.abs(dowa_ds.height - z).argmin())
-        k_cb = int(np.abs(cabauw_ds.z    - z).argmin())
+        k_dw = int(np.abs(dw_ds.height - z).argmin())
+        k_cb = int(np.abs(cb_ds.z      - z).argmin())
 
-        # Store moisture & temperature time series in dictionary
-        data_dw['dw_q_{0:03d}'.format(z)] = dowa_ds  ['q'][:,k_dw,0,0]
-        data_cb['cb_q_{0:03d}'.format(z)] = cabauw_ds['Q'][:,k_cb] * 1e-3
-
-        data_dw['dw_ta_{0:03d}'.format(z)] = dowa_ds  ['ta'][:,k_dw,0,0]
-        data_cb['cb_ta_{0:03d}'.format(z)] = cabauw_ds['TA'][:,k_cb]
-
-        data_dw['dw_rh_{0:03d}'.format(z)] = dowa_ds  ['hur'][:,k_dw,0,0]
-        data_cb['cb_rh_{0:03d}'.format(z)] = cabauw_ds['RH'][:,k_cb]
+        for var in dw_vars.keys():
+            data_dw['dw_{0:}_{1:03d}'.format(var, z)] = dw_ds[dw_vars[var]][:,k_dw,0,0]
+            data_cb['cb_{0:}_{1:03d}'.format(var, z)] = cb_ds[cb_vars[var]][:,k_cb    ]
 
     # Create Pandas dataframes
-    dowa_df   = pd.DataFrame(data_dw, index=dowa_ds  .time)
-    cabauw_df = pd.DataFrame(data_cb, index=cabauw_ds.time)
+    dw_df = pd.DataFrame(data_dw, index=dw_ds.time)
+    cb_df = pd.DataFrame(data_cb, index=cb_ds.time)
 
     # Mask invalid (not-yet filled) part of DOWA data
-    dowa_df = dowa_df.mask(dowa_df['dw_ta_010'] > 1e12)
+    dw_df = dw_df.mask(dw_df['dw_ta_010'] > 1e12)
 
     # Cabauw time is a bit inaccurate; round it...
-    cabauw_df.index = cabauw_df.index.round('min')
+    cb_df.index = cb_df.index.round('min')
 
     # Merge them; this drops times which don't exists in both time series (Harmonie = hourly, Cabauw = 10 min)
-    df = pd.concat([dowa_df, cabauw_df], axis=1, join='inner')
+    df = pd.concat([dw_df, cb_df], axis=1, join='inner')
     df.dropna(inplace=True)
 
     # Season selections
-    #df = df.loc[(df.index.month >= 5)  & (df.index.month <= 8)]
+    #df = df.loc[(df.index.month >= 4)  & (df.index.month <= 9)]
     #df = df.loc[(df.index.month >= 11) | (df.index.month <= 2)]
 
-    rmse_q = np.zeros((24, heights.size))
-    rmse_T = np.zeros((24, heights.size))
-
-    bias_q = np.zeros((24, heights.size))
-    bias_T = np.zeros((24, heights.size))
+    # Calculate statistics
+    rmse = {}
+    bias = {}
+    for var in dw_vars.keys():
+        rmse[var] = np.zeros((24, heights.size))
+        bias[var] = np.zeros((24, heights.size))
 
     for t in range(24):
-        for k in range(heights.size):
-            df_hour = df.loc[df.index.hour == t]
+        df_hour = df.loc[df.index.hour == t]
 
-            q1 = 'dw_q_{0:03d}'.format(heights[k])
-            q2 = 'cb_q_{0:03d}'.format(heights[k])
+        for var in dw_vars.keys():
+            for k in range(heights.size):
+                z = heights[k]
 
-            T1 = 'dw_ta_{0:03d}'.format(heights[k])
-            T2 = 'cb_ta_{0:03d}'.format(heights[k])
+                v_dw = 'dw_{0:}_{1:03d}'.format(var, z)
+                v_cb = 'cb_{0:}_{1:03d}'.format(var, z)
 
-            bias_q[t,k] = np.mean(df_hour[q1] - df_hour[q2])
-            bias_T[t,k] = np.mean(df_hour[T1] - df_hour[T2])
-
-            rmse_q[t,k] = rmse(df_hour[q1], df_hour[q2])
-            rmse_T[t,k] = rmse(df_hour[T1], df_hour[T2])
+                bias[var][t,k] = np.mean  (df_hour[v_dw] - df_hour[v_cb])
+                rmse[var][t,k] = calc_rmse(df_hour[v_dw],  df_hour[v_cb])
 
 
-    pl.figure(figsize=(8,6))
-    pl.subplot(221)
-    pl.plot(np.arange(24)+1, bias_q[:,0]*1000., label='10 m')
-    pl.plot(np.arange(24)+1, bias_q[:,1]*1000., label='80 m')
-    pl.plot(np.arange(24)+1, bias_q[:,2]*1000., label='200 m')
+
+
+    pl.figure(figsize=(12,7))
+    pl.subplot(241)
+    pl.plot(np.arange(24), bias['q'][:,0]*1000., label='10 m')
+    pl.plot(np.arange(24), bias['q'][:,1]*1000., label='200 m')
     pl.legend()
     pl.xlabel('time UTC (h)')
     pl.ylabel('<q model-obs> (g kg-1)')
 
-    pl.subplot(222)
-    pl.plot(np.arange(24)+1, bias_T[:,0])
-    pl.plot(np.arange(24)+1, bias_T[:,1])
-    pl.plot(np.arange(24)+1, bias_T[:,2])
+    pl.subplot(242)
+    pl.plot(np.arange(24), bias['ta'][:,0])
+    pl.plot(np.arange(24), bias['ta'][:,1])
     pl.xlabel('time UTC (h)')
     pl.ylabel('<T model-obs> (K)')
 
-    pl.subplot(223)
-    pl.plot(np.arange(24)+1, rmse_q[:,0]*1000.)
-    pl.plot(np.arange(24)+1, rmse_q[:,1]*1000.)
-    pl.plot(np.arange(24)+1, rmse_q[:,2]*1000.)
+    pl.subplot(243)
+    pl.plot(np.arange(24), bias['rh'][:,0]*100)
+    pl.plot(np.arange(24), bias['rh'][:,1]*100)
     pl.xlabel('time UTC (h)')
-    pl.ylabel('RMSE q (g kg-1)')
+    pl.ylabel('<RH model-obs> (%)')
 
-    pl.subplot(224)
-    pl.plot(np.arange(24)+1, rmse_T[:,0])
-    pl.plot(np.arange(24)+1, rmse_T[:,1])
-    pl.plot(np.arange(24)+1, rmse_T[:,2])
-    pl.ylabel('RMSE T (K)')
+    pl.subplot(244)
+    pl.plot(np.arange(24), bias['u'][:,0])
+    pl.plot(np.arange(24), bias['u'][:,1])
+    pl.xlabel('time UTC (h)')
+    pl.ylabel('<u model-obs> (m/s)')
+
+    pl.subplot(245)
+    pl.plot(np.arange(24), rmse['q'][:,0]*1000., label='10 m')
+    pl.plot(np.arange(24), rmse['q'][:,1]*1000., label='200 m')
+    pl.legend()
+    pl.xlabel('time UTC (h)')
+    pl.ylabel('rmse q (g kg-1)')
+
+    pl.subplot(246)
+    pl.plot(np.arange(24), rmse['ta'][:,0])
+    pl.plot(np.arange(24), rmse['ta'][:,1])
+    pl.xlabel('time UTC (h)')
+    pl.ylabel('rmse T (K)')
+
+    pl.subplot(247)
+    pl.plot(np.arange(24), rmse['rh'][:,0]*100)
+    pl.plot(np.arange(24), rmse['rh'][:,1]*100)
+    pl.xlabel('time UTC (h)')
+    pl.ylabel('rmse RH (%)')
+
+    pl.subplot(248)
+    pl.plot(np.arange(24), rmse['u'][:,0])
+    pl.plot(np.arange(24), rmse['u'][:,1])
+    pl.xlabel('time UTC (h)')
+    pl.ylabel('rmse u (m/s)')
 
     pl.tight_layout()
+
+
+
+
+
+
+
+#
+#    pl.subplot(223)
+#    pl.plot(np.arange(24)+1, rmse_q[:,0]*1000.)
+#    pl.plot(np.arange(24)+1, rmse_q[:,1]*1000.)
+#    pl.plot(np.arange(24)+1, rmse_q[:,2]*1000.)
+#    pl.xlabel('time UTC (h)')
+#    pl.ylabel('RMSE q (g kg-1)')
+#
+#    pl.subplot(224)
+#    pl.plot(np.arange(24)+1, rmse_T[:,0])
+#    pl.plot(np.arange(24)+1, rmse_T[:,1])
+#    pl.plot(np.arange(24)+1, rmse_T[:,2])
+#    pl.ylabel('RMSE T (K)')
+#
+#    pl.tight_layout()
 
 
 
