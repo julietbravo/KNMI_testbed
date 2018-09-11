@@ -1,7 +1,7 @@
 &RUN
 iexpnr = 001
 lwarmstart = .false.
-startfile  = 'initd00h01m000.001'
+startfile  = 'initd072h00mx000y000.001'
 runtime = 604800
 trestart = 86400
 dtmax = 10
@@ -22,8 +22,8 @@ kmax = 160
 xsize = 3200.
 ysize = 3200.
 
-xlat = 54.0099983215332
-xlon = 6.590000152587891
+xlat = 54.0099983215
+xlon = 6.59000015259
 xday = 162
 xtime = 0
 /

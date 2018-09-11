@@ -61,6 +61,7 @@ dz_nudge = 2000         # Transition thickness
 f0_nudge = 0.25         # Nudging near surface
 d_nudge  = 1-f0_nudge
 nudgefac = (erf((grid.z-z0_nudge)/(0.25*dz_nudge))+1) * d_nudge/2 + f0_nudge  # Nudge factor (0-1)
+nudgefac = 1./nudgefac
 create_nudging_profiles(nc_data, grid, nudgefac, t0, t1, iloc, docstring, interval, expnr)
 
 # Create NetCDF file with reference profiles for RRTMG
