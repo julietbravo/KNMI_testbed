@@ -187,11 +187,11 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, n_accumulate=1, e
 
     # Fix t==0 forcings (if necessary)
     if (n_accumulate == 1 or n_accumulate > 2):
-        dtthl_dyn[0,:] = 0.5 * (dtthl_dyn_f       [t0-1,     :] + dtthl_dyn_f       [t0,     :])
-        dtthl_rad[0,:] = 0.5 * (dtthl_rad_f       [t0-1,     :] + dtthl_rad_f       [t0,     :])
-        dtu_dyn  [0,:] = 0.5 * (nc_data['dtT_dyn'][t0-1,iloc,:] + nc_data['dtT_dyn'][t0,iloc,:])
-        dtv_dyn  [0,:] = 0.5 * (nc_data['dtT_dyn'][t0-1,iloc,:] + nc_data['dtT_dyn'][t0,iloc,:])
-        dtq_dyn  [0,:] = 0.5 * (nc_data['dtT_dyn'][t0-1,iloc,:] + nc_data['dtT_dyn'][t0,iloc,:])
+        dtthl_dyn[0,:] = 0.5 * (dtthl_dyn_f        [t0,     :] + dtthl_dyn_f        [t0+1,     :])
+        dtthl_rad[0,:] = 0.5 * (dtthl_rad_f        [t0,     :] + dtthl_rad_f        [t0+1,     :])
+        dtu_dyn  [0,:] = 0.5 * (nc_data['dtu_dyn' ][t0,iloc,:] + nc_data['dtu_dyn' ][t0+1,iloc,:])
+        dtv_dyn  [0,:] = 0.5 * (nc_data['dtv_dyn' ][t0,iloc,:] + nc_data['dtv_dyn' ][t0+1,iloc,:])
+        dtq_dyn  [0,:] = 0.5 * (nc_data['dtqv_dyn'][t0,iloc,:] + nc_data['dtqv_dyn'][t0+1,iloc,:])
 
     # Interpolate onto LES grid
     dtthl_dyn = interpz_time(z, grid.z, dtthl_dyn)
@@ -238,7 +238,7 @@ def create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, n_accumulate=1, e
     write_profiles('lscale.inp.{0:03d}'.format(expnr), output_ls2, grid.kmax, docstring)
 
     # Return data from debugging....
-    return output_sfc, output_ls
+    #return output_sfc, output_ls
 
 
 

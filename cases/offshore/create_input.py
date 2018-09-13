@@ -15,14 +15,14 @@ from tools import *
 # ----- Settings -----
 expnr   = 1          # DALES experiment number
 iloc    = 0+12       # Location (domain) in NetCDF file
-n_accum = 6         # Number of time steps to accumulate in the forcings
+n_accum = 1         # Number of time steps to accumulate in the forcings
 
 # Start and endtime of experiment:
 start = datetime.datetime(year=2017, month=6, day=11, hour=0)
 end   = datetime.datetime(year=2017, month=6, day=18, hour=0)
 
-path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'      # Path of DDH data.
-#path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+#path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'      # Path of DDH data.
+path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
 # ----- End settings -----
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
