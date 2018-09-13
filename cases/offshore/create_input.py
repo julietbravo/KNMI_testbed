@@ -1,33 +1,29 @@
-import numpy as np
 import xarray as xr
+import numpy as np
+import datetime
+import sys
+import os
+
 from collections import OrderedDict as odict
 from scipy.special import erf
-import datetime
 
 # tools.py contains most routines which create/write
 # the LES initial conditions, large-scale forcings, ...
+sys.path.append(os.path.abspath('{}/../'.format(os.path.dirname(os.path.abspath(__file__)))))
 from tools import *
 
-# DALES experiment number
-expnr = 1
-
-# Location (domain) in NetCDF file
-# 0=FINO1, 1=Goeree, 2=EPL, 3=K13, 4=HKZ, 5=P11B, 6=F3FB1
-# 7=Cabauw, 8=Loobos, 9=Lutjewad, 10=Schiphol, 11=Rotterdam
-# +12 = 10x10km, +24 = 30x30 km
-iloc = 0+12
+# ----- Settings -----
+expnr   = 1          # DALES experiment number
+iloc    = 0+12       # Location (domain) in NetCDF file
+n_accum = 6         # Number of time steps to accumulate in the forcings
 
 # Start and endtime of experiment:
 start = datetime.datetime(year=2017, month=6, day=11, hour=0)
 end   = datetime.datetime(year=2017, month=6, day=18, hour=0)
 
-# Interval of atmospheric forcings (factors of 10 min)
-interval = 1
-
-# Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
-#path  = '/nobackup/users/stratum/DOWA/LES_forcing'
-#path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
-path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'      # Path of DDH data.
+#path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+# ----- End settings -----
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
 nc_files = get_file_list(path, start, end)
@@ -47,13 +43,14 @@ print(docstring)
 # Create stretched vertical grid for LES
 grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=130)
 #grid = Grid_stretched(kmax=80, dz0=30, nloc1=40, nbuf1=10, dz1=200)    # debug
+#grid = Grid_equidist(kmax=32, dz0=100)  # debug-debug..
 #grid.plot()
 
 # Create and write the initial vertical profiles (prof.inp)
 create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)
 
 # Create and write the surface and atmospheric forcings (ls_flux.inp, ls_fluxsv.inp, lscale.inp)
-create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, interval, expnr, harmonie_rad=True)
+create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, n_accum, expnr, harmonie_rad=True)
 
 # Write the nudging profiles (nudge.inp)
 z0_nudge = 1500         # Starting height of nudging (m)
@@ -62,7 +59,7 @@ f0_nudge = 0.25         # Nudging near surface
 d_nudge  = 1-f0_nudge
 nudgefac = (erf((grid.z-z0_nudge)/(0.25*dz_nudge))+1) * d_nudge/2 + f0_nudge  # Nudge factor (0-1)
 nudgefac = 1./nudgefac
-create_nudging_profiles(nc_data, grid, nudgefac, t0, t1, iloc, docstring, interval, expnr)
+create_nudging_profiles(nc_data, grid, nudgefac, t0, t1, iloc, docstring, n_accum, expnr)
 
 # Create NetCDF file with reference profiles for RRTMG
 create_backrad(nc_data, t0, iloc, expnr)
