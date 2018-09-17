@@ -49,6 +49,9 @@ def interpz(z1, z2, zg, v1, v2):
     f1 = 1 - f2
     return f1*v1 + f2*v2
 
+def moving_av(x, N):
+    return np.convolve(x, np.ones((N,))/N, mode='same')
+
 class Statistics:
     def __init__(self, obs, model, label='', scale=1):
         self.mean_diff = (model - obs).mean() * scale
@@ -78,7 +81,7 @@ class Read_LES:
     def calc_stat(self, obs, harm):
         # Merge all data frames
         df = pd.concat([obs, self.df, harm], axis=1, join='inner')
-        
+
         self.U_90 = Statistics(df['Uc_90'], df['LES_U_90'], label='LES, U90')
         self.u_90 = Statistics(df['uc_90'], df['LES_u_90'], label='LES, u90')
         self.v_90 = Statistics(df['vc_90'], df['LES_v_90'], label='LES, v90')
@@ -93,8 +96,8 @@ if __name__ == '__main__':
 
     # Read the FINO1 observations
     if 'f1' not in locals():
-        #path = '/nobackup/users/stratum/FINO1_obs/'
-        path = '/Users/bart/meteo/data/offshore_wind/FINO1/'
+        path = '/nobackup/users/stratum/FINO1_obs/'
+        #path = '/Users/bart/meteo/data/offshore_wind/FINO1/'
         f1   = read_FINO1(path, start, end)
 
         # Fix units.....
@@ -117,8 +120,8 @@ if __name__ == '__main__':
 
     ## Read the Harmonie LES forcings
     if 'h1' not in locals():
-        #path = '/nobackup/users/stratum/DOWA/LES_forcing/'
-        path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+        path = '/nobackup/users/stratum/DOWA/LES_forcing/'
+        #path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
         h1   = read_DDH_netcdf(start, end, path)
         iloc = 0
 
@@ -201,9 +204,8 @@ if __name__ == '__main__':
         pl.tight_layout()
         pl.savefig('tser_full_LES10min.pdf')
 
+    if False:
 
-
-    if True:
         pl.figure(figsize=(8,5))
 
         pl.subplot(111)
@@ -224,3 +226,30 @@ if __name__ == '__main__':
         pl.tight_layout()
         pl.savefig('tser_u_LES_sensitivity_short.pdf')
 
+
+
+    if True:
+        dtu_dyn = np.abs(h1['dtu_dyn'][:,iloc,3])
+        dtu_phy = np.abs(h1['dtu_phy'][:,iloc,3])
+        dtu = dtu_dyn + dtu_phy
+
+        pl.figure(figsize=(8,5))
+
+        ax=pl.subplot(111)
+        pl.title('z = 90 m: ', loc='left')
+        pl.plot(f1.index, f1['u_90'], 'o', color='r', markersize=2, label='FINO1 obs')
+        pl.plot(h1.time, h1['u'][:,iloc,3], 'k-',  label='HAM: mean diff={0:.2f} m/s, rmse={1:.2f} m/s'.format(u_90_HAM.mean_diff, u_90_HAM.rmse))
+        format_date_day()
+        #format_date_hour()
+        #pl.xlim(datetime.datetime(2017,6,15,11), datetime.datetime(2017,6,15,19))
+        #pl.ylim(-5,15)
+        pl.legend(fontsize='small')
+        pl.ylabel('u (m s-1)')
+
+        ax=ax.twinx()
+        pl.plot(h1.time, moving_av(dtu_dyn/dtu, 12), 'C2')
+        pl.ylim(0,1)
+        pl.ylabel('dtu_dyn / dtu (-)')
+        ax.spines['right'].set_visible(True)
+
+        pl.tight_layout()
