@@ -6,12 +6,14 @@ import sys
 import os
 
 # Add src directory to Python path, and import DALES specific tools
-sys.path.append(os.path.abspath('{}/../../src/'.format(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.append(os.path.abspath('{}/..'.format(os.path.dirname(os.path.abspath(__file__)))))
+src_dir = os.path.abspath('{}/../../src/'.format(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(src_dir)
+
 from DALES_tools import *
-from tools import *
 from read_soil_ERA5 import *
 
+
+# ----- Settings -----
 expnr   = 1       # DALES experiment number
 iloc    = 7+12    # Location in DDH files
 n_accum = 1       # Number of time steps to accumulate in the forcings
@@ -23,6 +25,7 @@ end   = datetime.datetime(year=2017, month=6, day=2, hour=0)
 # Path of DDH data. Data structure below is expected to be in format "path/yyyy/mm/dd/hh/"
 path  = '/nobackup/users/stratum/DOWA/LES_forcing'
 #path  = '/Users/bart/meteo/data/Harmonie_DDH/'
+# ----- End settings -----
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
 nc_files = get_file_list(path, start, end)
