@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 43200
+runtime = 86400
 trestart = 999999
 dtmax = 10
 ladaptive = .true.
@@ -24,8 +24,8 @@ ysize = 400.
 
 xlat = 51.970001220703125
 xlon = 4.900000095367432
-xday = 152
-xtime = 3
+xday = 160
+xtime = 0
 /
 
 &PHYSICS
@@ -41,7 +41,7 @@ timerad = 30        ! Interval (sec) of radiation calls
 
 &NAMSURFACE
 isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
-l_vg  = .true.      ! Van Genuchten parameterisation
+l_vg  = .true.     ! Van Genuchten parameterisation
 z0mav = 0.05        ! Fig. 4.8 MvT
 z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
 Cskinav = 0
@@ -55,9 +55,9 @@ cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav = 282.8929848074813
-tsoilav = 285.21208609 290.20804592 288.62503487 282.89298481
-phiwav = 0.1990918  0.20502124 0.25603061 0.34956247
+tsoildeepav = 286.1958581447602
+tsoilav = 289.85928764 290.04212382 288.84580793 286.19585814
+phiwav = 0.25531741 0.31591245 0.52       0.52      
 
 ! ECMWF fine (Table 3.1 MvT)
 gammasat = 2.87e-6
@@ -107,7 +107,7 @@ ce2 = 0.51
 /
 
 &NAMMICROPHYSICS
-imicro = 0          ! 2 = warm, 5=simpleice
+imicro = 2          ! 2 = warm, 5=simpleice
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
 Nc_0 = 200e6        ! cloud droplet conventration
 /
@@ -117,10 +117,10 @@ lCnstAlbedo = .true.
 /
 
 &NAMBULKMICROSTAT
-lmicrostat = .false.
+lmicrostat = .true.
 lascii = .false.
-timeav = 300
-dtav = 300
+timeav = 120
+dtav = 120
 /
 
 &NAMCHECKSIM
