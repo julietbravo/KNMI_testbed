@@ -1,10 +1,19 @@
 import matplotlib.pyplot as pl
+import matplotlib.dates as mdates
 import xarray as xr
 import pandas as pd
 import numpy as np
 import datetime
 import sys
 import os
+
+def format_date_hour(interval):
+    hours     = mdates.HourLocator(interval=interval)
+    hours_fmt = mdates.DateFormatter('%H:%M')
+
+    ax = pl.gca()
+    ax.xaxis.set_major_locator(hours)
+    ax.xaxis.set_major_formatter(hours_fmt)
 
 from scipy import interpolate
 
@@ -54,38 +63,42 @@ co = 'C2'
 if True:
     # Surface radiation balance
     # -------------------------
-    pl.figure()
+    pl.figure(figsize=(12,8))
     pl.subplot(221)
     pl.plot(daa_time, -daa.lwd[:,0], color=cd, label='DALES')
     pl.plot(cb.time, cb.LWD[:], '+', ms=3, color=co, label='Cabauw')
     pl.legend()
     pl.xlim(start, end)
     pl.ylabel('LW_in (W m-2)')
+    format_date_hour(3)
 
     pl.subplot(222)
     pl.plot(daa_time, daa.lwu[:,0], color=cd)
     pl.plot(cb.time, cb.LWU[:], '+', ms=3, color=co)
     pl.xlim(start, end)
     pl.ylabel('LW_out (W m-2)')
+    format_date_hour(3)
 
     pl.subplot(223)
     pl.plot(daa_time, -daa.swd[:,0], color=cd)
     pl.plot(cb.time, cb.SWD[:], '+', ms=3, color=co)
     pl.xlim(start, end)
     pl.ylabel('SW_in (W m-2)')
+    format_date_hour(3)
 
     pl.subplot(224)
     pl.plot(daa_time, daa.swu[:,0], color=cd)
     pl.plot(cb.time, cb.SWU[:], '+', ms=3, color=co)
     pl.xlim(start, end)
     pl.ylabel('SW_out (W m-2)')
+    format_date_hour(3)
 
     pl.tight_layout()
 
 if True:
     # Soil temperature & moisture
     # ----------------
-    pl.figure()
+    pl.figure(figsize=(12,8))
     pl.subplot(121)
     pl.plot(das_time, das.thlskin[:], '-',  color=cd, linewidth=2, label='DALES Ts')
     pl.plot(daa_time, daa.tsoil[:,0], '-',  color=cd, label='DALES {0:.1f} cm'.format(-daa.zts[0].values*100))
@@ -100,6 +113,7 @@ if True:
 
     pl.legend()
     pl.xlim(start, end)
+    format_date_hour(3)
 
     pl.subplot(122)
     pl.plot(daa_time, daa.phiw[:,0], '-',  color=cd, label='DALES {0:.1f} cm'.format(-daa.zts[0].values*100))
@@ -114,6 +128,7 @@ if True:
 
     pl.legend()
     pl.xlim(start, end)
+    format_date_hour(3)
 
 
 if False:
@@ -159,17 +174,18 @@ if False:
 if True:
     # Precipitation
     # --------------
-    pl.figure()
+    pl.figure(figsize=(12,8))
     pl.plot(cb.time, cb.RAIN*6, 'x', ms=3, color=co, label='Cabauw H')
     pl.plot(daa_time, daa.rainrate[:,0]/(daa.rhof[:,0]*2.45e6)*3600, '-', label='DALES')
     pl.xlim(start, end)
     pl.xlabel('date')
     pl.ylabel('rainrate (mm h-1)')
+    format_date_hour(3)
 
 if True:
     # Surface fluxes
     # --------------
-    pl.figure()
+    pl.figure(figsize=(12,8))
     pl.subplot(221)
     pl.plot(das_time, das.H, color=cd, label='DALES H')
     pl.plot(ham.time, -ham.H[:,iloc], color=ch, label='Harmonie H')
@@ -177,6 +193,7 @@ if True:
     pl.legend()
     pl.xlim(start, end)
     pl.ylabel('H (W m-2)')
+    format_date_hour(3)
 
     pl.subplot(222)
     pl.plot(das_time, das.LE, color=cd)
@@ -184,17 +201,20 @@ if True:
     pl.plot(cb.time, cb.LE, 'x', ms=3, color=co)
     pl.xlim(start, end)
     pl.ylabel('LE (W m-2)')
+    format_date_hour(3)
 
     pl.subplot(223)
     pl.plot(das_time, das.G0, color=cd)
     pl.plot(cb.time, cb.G0, 'x', ms=3, color=co)
     pl.xlim(start, end)
     pl.ylabel('G (W m-2)')
+    format_date_hour(3)
 
     pl.subplot(224)
     pl.plot(das_time, das.ustar, color=cd, label='DALES H')
     pl.plot(cb.time, cb.UST, 'x', ms=3, color=co)
     pl.xlim(start, end)
     pl.ylabel('u* (m s-1)')
+    format_date_hour(3)
 
     pl.tight_layout()
