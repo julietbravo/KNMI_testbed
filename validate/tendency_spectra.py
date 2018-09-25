@@ -64,11 +64,9 @@ class Power_spectra:
         #self.stv = Power_spectrum(data['dtv_phy'][:,iloc,:kmax].values + data['dtv_dyn'][:,iloc,:kmax].values, freq)
         self.stT = Power_spectrum(data['dtT_phy'][:,iloc,:kmax].values + data['dtT_dyn'][:,iloc,:kmax].values, freq)
 
-
-
 # Period to study
-start = datetime.datetime(year=2017, month=1,  day=1, hour=0)
-end   = datetime.datetime(year=2017, month=11, day=1, hour=0)
+start = datetime.datetime(year=2016, month=1, day=1, hour=0)
+end   = datetime.datetime(year=2016, month=2, day=1, hour=0)
 
 # DDH Domain and height:
 iloc = 0

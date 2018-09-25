@@ -51,9 +51,9 @@ if __name__ == '__main__':
     #path = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
     path = '/nobackup/users/stratum/DOWA/LES_forcing/'
 
-    start = datetime.datetime(year=2017, month=1, day=1, hour=0)
-    end   = datetime.datetime(year=2017, month=1, day=5, hour=0)
+    start = datetime.datetime(year=2016, month=12, day=31, hour=0)
+    end   = datetime.datetime(year=2017, month=1, day=1, hour=0)
 
     variables = ['z', 'u']
     nc = read_DDH_netcdf(start, end, path, variables)
-    nc = read_DDH_netcdf(start, end, path)
+    #nc = read_DDH_netcdf(start, end, path)
