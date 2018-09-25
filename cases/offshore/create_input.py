@@ -7,10 +7,12 @@ import os
 from collections import OrderedDict as odict
 from scipy.special import erf
 
-# tools.py contains most routines which create/write
-# the LES initial conditions, large-scale forcings, ...
-sys.path.append(os.path.abspath('{}/../'.format(os.path.dirname(os.path.abspath(__file__)))))
-from tools import *
+# Add src directory to Python path, and import DALES specific tools
+src_dir = os.path.abspath('{}/../../src/'.format(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(src_dir)
+
+from DALES_tools import *
+
 
 # ----- Settings -----
 expnr   = 1          # DALES experiment number
@@ -21,8 +23,14 @@ n_accum = 1         # Number of time steps to accumulate in the forcings
 start = datetime.datetime(year=2017, month=6, day=11, hour=0)
 end   = datetime.datetime(year=2017, month=6, day=18, hour=0)
 
+<<<<<<< HEAD
 #path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'      # Path of DDH data.
 path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+=======
+path  = '/nobackup/users/stratum/DOWA/LES_forcing'
+#path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'      # Path of DDH data.
+#path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+>>>>>>> 351d544fa6aedb54a23a627c3b77100d413ebe73
 # ----- End settings -----
 
 # Get list of NetCDF files which need to be processed, and open them with xarray

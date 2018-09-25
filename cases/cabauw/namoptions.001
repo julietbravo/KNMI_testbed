@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 64800
+runtime = 172800
 trestart = 999999
 dtmax = 10
 ladaptive = .true.
@@ -15,17 +15,17 @@ nprocy=1
 /
 
 &DOMAIN
-itot = 8
-jtot = 8
-kmax = 100
+itot = 4
+jtot = 4
+kmax = 160
 
-xsize = 800.
-ysize = 800.
+xsize = 6400
+ysize = 6400
 
 xlat = 51.970001220703125
 xlon = 4.900000095367432
-xday = 86
-xtime = 12
+xday = 61
+xtime = 0
 /
 
 &PHYSICS
@@ -41,12 +41,12 @@ timerad = 30        ! Interval (sec) of radiation calls
 
 &NAMSURFACE
 isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
-l_vg  = .true.      ! Van Genuchten parameterisation
+l_vg  = .true.     ! Van Genuchten parameterisation
 z0mav = 0.05        ! Fig. 4.8 MvT
-z0hav = 0.001   ! z0m / 6.4e3, Eq. 4.2 MvT
+z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
 Cskinav = 0
 lambdaskinav = 8    ! Fig. 4.11 MvT; night
-Qnetav = 5          ! Why needed?!
+Qnetav = 5          ! Why needed?
 Wlav = 0            ! Water on leaves
 rsminav = 100
 rssoilminav = 50
@@ -54,11 +54,10 @@ LAIav = 2.5         ! Fig. 4.6 MvT
 cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
-tsoildeepav = 279.36118
-!tsoilav = 279.92297 282.30188 280.73914 279.36118      ! ERA5
-tsoilav = 280.8 280.7 280.6 279.36118       ! Cabauw obs tuned
-phiwav = 0.34093195 0.3536464 0.38237214 0.37701386
 rootfav = 0.40 0.30 0.30 0.00
+tsoildeepav = 283.0488251686097
+tsoilav = 276.99122592 277.99919581 279.33596582 283.04882517
+phiwav = 0.45 0.52 0.52 0.52
 
 ! ECMWF fine (Table 3.1 MvT)
 gammasat = 2.87e-6
@@ -108,7 +107,7 @@ ce2 = 0.51
 /
 
 &NAMMICROPHYSICS
-imicro = 2          ! 2 = warm, 5=simpleice 
+imicro = 2          ! 2 = warm, 5=simpleice
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
 Nc_0 = 200e6        ! cloud droplet conventration
 /
@@ -118,10 +117,10 @@ lCnstAlbedo = .true.
 /
 
 &NAMBULKMICROSTAT
-lmicrostat = .false.
+lmicrostat = .true.
 lascii = .false.
-timeav = 300
-dtav = 300
+timeav = 120
+dtav = 120
 /
 
 &NAMCHECKSIM

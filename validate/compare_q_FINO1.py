@@ -9,11 +9,13 @@ from read_FINO1 import *
 
 pl.close('all')
 
-#path_hm = '/Users/bart/meteo/data/Harmonie_DDH/'
-#path_cb = '/Users/bart/meteo/observations/Cabauw'
+path_hm = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+path_cb = '/Users/bart/meteo/observations/Cabauw'
+path_f1 = '/Users/bart/meteo/data/offshore_wind/FINO1/'
 
-path_hm = '/nobackup/users/stratum/DOWA/LES_forcing/'
-path_f1 = '/nobackup/users/stratum/FINO1_obs/'
+
+#path_hm = '/nobackup/users/stratum/DOWA/LES_forcing/'
+#path_f1 = '/nobackup/users/stratum/FINO1_obs/'
 
 class Statistics:
     def __init__(self, obs, model, scale=1):
@@ -68,8 +70,8 @@ def interpz_simple(z1, z2, zg, v1, v2):
 # -----------------
 #for m in range(1,13):
 
-start = datetime.datetime(year=2017, month=7, day=1, hour=0)
-end   = datetime.datetime(year=2017, month=8, day=1, hour=0)
+start = datetime.datetime(year=2017, month=6, day=1, hour=3)
+end   = datetime.datetime(year=2017, month=7, day=1, hour=0)
 
 # -----------------
 # Read Harmonie statistics
