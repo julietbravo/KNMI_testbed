@@ -65,21 +65,34 @@ class Power_spectra:
         self.stT = Power_spectrum(data['dtT_phy'][:,iloc,:kmax].values + data['dtT_dyn'][:,iloc,:kmax].values, freq)
 
 # Period to study
-start = datetime.datetime(year=2016, month=1, day=1, hour=0)
-end   = datetime.datetime(year=2016, month=2, day=1, hour=0)
+#start = datetime.datetime(year=2016, month=1, day=1, hour=0)
+#end   = datetime.datetime(year=2016, month=2, day=1, hour=0)
 
 # DDH Domain and height:
 iloc = 0
 kmax = 8    # 8  = <200 m, 21 = < 1000m
 
 # Harmonie data from DDH files:
-if 'data' not in locals():
-    #path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
-    path  = '/nobackup/users/stratum/DOWA/LES_forcing/'
+#path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+path  = '/nobackup/users/stratum/DOWA/LES_forcing/'
+variables = ['z', 'u', 'v', 'T', 'dtu_dyn', 'dtv_dyn', 'dtT_dyn', 'dtu_phy', 'dtv_phy', 'dtT_phy',]
 
-    variables = ['z', 'u', 'v', 'T', 'dtu_dyn', 'dtv_dyn', 'dtT_dyn', 'dtu_phy', 'dtv_phy', 'dtT_phy',]
-    data      = read_DDH_netcdf(start, end, path, variables)
-    thour     = np.array((data.time - data.time[0]), dtype=np.float) * 1e-9 / 3600.
+if 'data16' not in locals():
+    print('Reading 2016')
+    start = datetime.datetime(year=2016, month=1,  day=1,  hour=0)
+    end   = datetime.datetime(year=2016, month=12, day=31, hour=21)
+    data16 = read_DDH_netcdf(start, end, path, variables)
+
+if 'data17' not in locals():
+    print('Reading 2017')
+    start = datetime.datetime(year=2017, month=1,  day=1,  hour=0)
+    end   = datetime.datetime(year=2017, month=12, day=31, hour=21)
+    data17 = read_DDH_netcdf(start, end, path, variables)
+
+# Merge the years
+if 'data' not in locals():
+    data  = xr.concat([data16, data17], dim='time')
+    thour = np.array((data.time - data.time[0]), dtype=np.float) * 1e-9 / 3600.
 
 # Power spectra:
 if 'spo' not in locals():
@@ -101,7 +114,7 @@ def time_labels():
 
     ax.set_ylim(yext)
 
-if (True):
+if (False):
     pl.figure(figsize=(10,10))
     pl.subplot(321)
     pl.title('U (m s-1)', loc='left')
@@ -166,7 +179,7 @@ if (True):
 
     pl.savefig('power_spectrum_U_T_{}.pdf'.format(iloc))
 
-if (True):
+if (False):
 
     for size,spec in zip([1,10,30],[spo, s10, s30]):
 
