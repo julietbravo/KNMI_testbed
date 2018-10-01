@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 172800
+runtime = 43200
 trestart = 999999
 dtmax = 10
 ladaptive = .true.
@@ -10,21 +10,21 @@ irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-nprocx=12
-nprocy=12
+nprocx=1
+nprocy=1
 /
 
 &DOMAIN
-itot = 144
-jtot = 144
-kmax = 160
+itot = 1
+jtot = 1
+kmax = 100
 
-xsize = 6400
-ysize = 6400
+xsize = 400
+ysize = 400
 
 xlat = 51.970001220703125
 xlon = 4.900000095367432
-xday = 61
+xday = 91
 xtime = 0
 /
 
@@ -41,7 +41,7 @@ timerad = 30        ! Interval (sec) of radiation calls
 
 &NAMSURFACE
 isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
-l_vg  = .true.     ! Van Genuchten parameterisation
+l_vg  = .false.     ! Van Genuchten parameterisation
 z0mav = 0.05        ! Fig. 4.8 MvT
 z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
 Cskinav = 0
@@ -55,9 +55,9 @@ cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav = 283.0488251686097
-tsoilav = 276.99122592 277.99919581 279.33596582 283.04882517
-phiwav = 0.45 0.52 0.52 0.52
+tsoildeepav = 275.47881085077915
+tsoilav = 283.28418818 282.61763641 280.70216916 275.47881085
+phiwav = 0.37380768 0.49979229 0.52       0.52      
 
 ! ECMWF fine (Table 3.1 MvT)
 gammasat = 2.87e-6
@@ -124,7 +124,7 @@ dtav = 120
 /
 
 &NAMCHECKSIM
-tcheck = 120
+tcheck = 300
 /
 
 &NAMNETCDFSTATS

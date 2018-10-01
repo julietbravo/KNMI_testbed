@@ -31,8 +31,8 @@ from read_DDH_netcdf import *
 pl.close('all')
 
 # -- Period --
-start = datetime.datetime(year=2016, month=3, day=1, hour=0)
-end   = datetime.datetime(year=2016, month=3, day=3, hour=0)
+start = datetime.datetime(year=2017, month=4, day=1, hour=0)
+end   = datetime.datetime(year=2017, month=4, day=1, hour=12)
 
 # -- Read Harmonie statistics --
 iloc = 7 #+12
@@ -41,8 +41,8 @@ path  = '/nobackup/users/stratum/DOWA/LES_forcing'
 ham  = read_DDH_netcdf(start, end, path)
 
 # -- Read DALES statistics --
-daa  = xr.open_dataset('profiles.001.nc')
-das  = xr.open_dataset('tmser.001.nc')
+daa  = xr.open_dataset('../profiles.001.nc')
+das  = xr.open_dataset('../tmser.001.nc')
 
 daa_time = [start + datetime.timedelta(seconds = int(t)) for t in daa.time.values]
 das_time = [start + datetime.timedelta(seconds = int(t)) for t in das.time.values]

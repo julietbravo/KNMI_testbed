@@ -9,14 +9,12 @@ def interpolate_soil(ds, z_obs, z_model, name, offset=0, plot=False):
     for k,z in enumerate(z_obs):
         obs[k] = ds['{0:}{1:02d}'.format(name, z)].values + offset
 
-    print(z_obs, obs)
+    print('Observations: {}'.format(obs))
 
     # Remove nans..
     mask = np.invert(np.isnan(obs))
     z_obs = z_obs[mask]
     obs   = obs  [mask]
-
-    print(z_obs, obs)
 
     # Interpolation function
     ip = interpolate.interp1d(z_obs, obs, kind='slinear', fill_value='extrapolate')

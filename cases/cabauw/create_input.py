@@ -19,16 +19,21 @@ iloc    = 7+12    # Location in DDH files
 n_accum = 1       # Number of time steps to accumulate in the forcings
 
 # Start and endtime of experiment:
-start = datetime.datetime(year=2016, month=3, day=1, hour=0)
-end   = datetime.datetime(year=2016, month=3, day=3, hour=3)
+start = datetime.datetime(year=2017, month=4, day=1, hour=0)
+end   = datetime.datetime(year=2017, month=4, day=1, hour=15)
 
 # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
-path   = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'
-#path  = '/nobackup/users/stratum/DOWA/LES_forcing'
-#path  = '/Users/bart/meteo/data/Harmonie_DDH/'
+#path    = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'
+#path_cb = '/scratch/ms/nl/nkbs/DOWA/Cabauw'
 
-path_cb = '/scratch/ms/nl/nkbs/DOWA/Cabauw'
+#path    = '/nobackup/users/stratum/DOWA/LES_forcing'
 #path_cb = '/nobackup/users/stratum/Cabauw'
+
+path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+path_cb  = '/Users/bart/meteo/observations/Cabauw/'
+path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
+
+
 # ----- End settings -----
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
@@ -42,13 +47,12 @@ t0, t1 = get_start_end_indices(start, end, nc_data.time.values)
 domain    = nc_data.name[0,iloc].values
 lat       = nc_data.central_lat[0,iloc].values
 lon       = nc_data.central_lon[0,iloc].values
-print(domain, lat,lon,start, end)
 docstring = '{0} ({1:.2f}N, {2:.2f}E): {3} to {4}'.format(domain, lat, lon, start, end)
 print(docstring)
 
 # Create stretched vertical grid for LES
-grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
-#grid = Grid_stretched(kmax=100, dz0=30, nloc1=40, nbuf1=10, dz1=200)    # debug
+#grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+grid = Grid_stretched(kmax=100, dz0=30, nloc1=40, nbuf1=10, dz1=200)    # debug
 grid.plot()
 
 # Create and write the initial vertical profiles (prof.inp)
@@ -69,13 +73,12 @@ create_backrad(nc_data, t0, iloc, expnr)
 #phisoil_e5 = get_phisoil_ERA5(start, lon, lat, path_e5)
 
 tsoil_cb   = get_Tsoil_Cabauw  (start, path_cb)
-tsoil   = tsoil_cb.copy()
+tsoil      = tsoil_cb.copy()
 
-#phisoil_cb = get_phisoil_Cabauw(start, path_cb)
+phisoil_cb = get_phisoil_Cabauw(start, path_cb)
 phi = 0.520
-#phisoil = phisoil_cb.copy()
-#phisoil = np.minimum(phisoil, phi)  # Limit soil moisture to porosity of soil
-phisoil = np.array([0.45, phi, phi, phi])
+phisoil = phisoil_cb.copy()
+phisoil = np.minimum(phisoil, phi)  # Limit soil moisture to porosity of soil
 
 # Update namelist
 namelist = 'namoptions.{0:03d}'.format(expnr)
