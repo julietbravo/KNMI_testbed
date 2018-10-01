@@ -10,13 +10,13 @@ irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-nprocx=1
-nprocy=1
+nprocx=12
+nprocy=12
 /
 
 &DOMAIN
-itot = 4
-jtot = 4
+itot = 144
+jtot = 144
 kmax = 160
 
 xsize = 6400
@@ -188,8 +188,11 @@ ldiracc = .true.
 /
 
 &NAMCROSSSECTION
-lcross = .false.
+lcross = .true.
 dtav = 300
+lxy=.false.
+lxz=.false.
+lyz=.false.
 /
 
 &NAMLSMCROSSSECTION
