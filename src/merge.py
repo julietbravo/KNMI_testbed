@@ -54,27 +54,27 @@ class Timer:
         self.start = datetime.datetime.now()
 
 
-path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+#path  = '/scratch/ms/nl/nkbs/DOWA/LES_forcing/'
+path  = '/nobackup/users/stratum/DOWA/LES_forcing/'
 rvars = ['z','time','u','v','T','dtu_dyn','dtv_dyn','dtT_dyn','dtu_phy','dtv_phy','dtT_phy']
-year  = 2016
+iloc  = 3+24
+name  = 'K13_30km'
 
 t = Timer()
 
-for month in range(1,13):
-    t.reset()
+for year in range(2016,2018):
+    for month in range(1,13):
+        t.reset()
 
-    start = datetime.datetime(year, month, 1, 0)
-    if month != 12:
-        end   = datetime.datetime(year, month+1, 1, 0)
-    else:
-        end   = datetime.datetime(year+1, 1, 1, 0)
+        start = datetime.datetime(year, month, 1, 0)
+        if month != 12:
+            end   = datetime.datetime(year, month+1, 1, 0)
+        else:
+            end   = datetime.datetime(year+1, 1, 1, 0)
 
-    data = read_DDH_netcdf(start, end, path, rvars)
+        data = read_DDH_netcdf(start, end, path, rvars)
 
-    print('Done reading: {}'.format(t.elapsed()))
-    t.reset()
+        data = data.isel(domain=iloc)
+        data.to_netcdf('{0:}/{1:}_{2:04d}{3:02d}.nc'.format(path,name,year,month))
 
-    data = data[:,31,:]
-    data.to_netcdf('{0:}/Cabauw_30km_{1:04d}{2:02d}.nc'.format(path,year,month))
-
-    print('Done writing: {}'.format(t.elapsed()))
+        print('Done: {}'.format(t.elapsed()))
