@@ -4,15 +4,13 @@ import numpy as np
 import datetime
 from scipy import interpolate
 
-def interpolate_soil(ds, z_obs, z_model, name, offset=0, plot=False):
+def interpolate_soil(ds, z_obs, z_model, name, offset=0, plot=False, min_lim=None, max_lim=None):
     obs = np.zeros_like(z_obs, dtype=np.float)
     for k,z in enumerate(z_obs):
         obs[k] = ds['{0:}{1:02d}'.format(name, z)].values + offset
 
-    print('Observations: {}'.format(obs))
-
     # Remove nans..
-    mask = np.invert(np.isnan(obs))
+    mask  = np.invert(np.isnan(obs))
     z_obs = z_obs[mask]
     obs   = obs  [mask]
 
@@ -21,6 +19,11 @@ def interpolate_soil(ds, z_obs, z_model, name, offset=0, plot=False):
 
     # Interpolate
     model = ip(z_model)
+
+    if min_lim is not None:
+        model = np.maximum(model, min_lim) 
+    if max_lim is not None:
+        model = np.minimum(model, max_lim) 
 
     if (plot):
         pl.figure()
@@ -31,7 +34,7 @@ def interpolate_soil(ds, z_obs, z_model, name, offset=0, plot=False):
     return model
 
 
-def get_Tsoil_Cabauw(date, path, plot=False):
+def get_Tsoil_Cabauw(date, path, min_lim=None, max_lim=None, plot=False):
     # Read Cabauw soil data and select nearest time
     ds = xr.open_dataset('{0:}/cesar_soil_heat_lb1_t10_v1.0_{1:04d}{2:02d}.nc'.format(path, date.year, date.month))
     ds = ds.sel(time=date, method='nearest')
@@ -41,12 +44,12 @@ def get_Tsoil_Cabauw(date, path, plot=False):
     z_model = np.array([3.5, 17.5, 64, 195])
     name    = 'TS'
 
-    T_model = interpolate_soil(ds, z_obs, z_model, name, offset=273.15, plot=plot)
+    T_model = interpolate_soil(ds, z_obs, z_model, name, 273.15, plot, min_lim, max_lim)
 
     return T_model
 
 
-def get_phisoil_Cabauw(date, path, plot=False):
+def get_phisoil_Cabauw(date, path, min_lim=None, max_lim=None, plot=False):
     # Read Cabauw soil data and select nearest time
     ds = xr.open_dataset('{0:}/cesar_soil_water_lb1_t10_v1.1_{1:04d}{2:02d}.nc'.format(path, date.year, date.month))
     ds = ds.sel(time=date, method='nearest')
@@ -56,7 +59,7 @@ def get_phisoil_Cabauw(date, path, plot=False):
     z_model = np.array([3.5, 17.5, 64, 195])
     name    = 'TH'
 
-    phi_model = interpolate_soil(ds, z_obs, z_model, name, offset=0, plot=plot)
+    phi_model = interpolate_soil(ds, z_obs, z_model, name, 0, plot, min_lim, max_lim)
 
     return phi_model
 
@@ -67,9 +70,11 @@ def array_to_string(arr):
 if __name__ == '__main__':
     pl.close('all')
 
-    #path = '/nobackup/users/stratum/Cabauw'
-    path = '/scratch/ms/nl/nkbs/DOWA/Cabauw'
-    date = datetime.datetime(year=2016, month=3, day=1, hour=0)
+    path = '/nobackup/users/stratum/Cabauw'
+    #path = '/scratch/ms/nl/nkbs/DOWA/Cabauw'
+    date = datetime.datetime(year=2017, month=4, day=1, hour=0)
 
-    Tsoil   = get_Tsoil_Cabauw  (date, path, True)
-    phisoil = get_phisoil_Cabauw(date, path, True)
+    phi = 0.5
+
+    Tsoil   = get_Tsoil_Cabauw  (date, path, plot=True)
+    phisoil = get_phisoil_Cabauw(date, path, plot=True, max_lim=phi)

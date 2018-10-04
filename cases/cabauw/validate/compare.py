@@ -12,6 +12,7 @@ from scipy import interpolate
 src_dir = os.path.abspath('{}/../../../src/'.format(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(src_dir)
 from read_DDH_netcdf import *
+from DALES_tools     import *
 
 pl.close('all')
 
@@ -26,6 +27,20 @@ def format_date_hour(interval):
 def filter(arr, N):
     return np.convolve(arr, np.ones((N,))/N, mode='same')
 
+def interpz(arr, z, z_goal):
+    k0 = np.abs(z-z_goal).argmin()
+    if z[k0] > z_goal:
+        k0 -= 1
+    k1 = k0+1
+
+    if k0 < 0:
+        k0 = 0
+        k1 = 1
+
+    f1 = (z_goal-z[k0]) / (z[k1] - z[k0])
+    f0 = 1-f1
+
+    return f0*arr[:,k0] + f1*arr[:,k1]
 
 # -- Period --
 start = datetime.datetime(year=2017, month=4, day=2, hour=0)
@@ -41,14 +56,14 @@ das_time = [start + datetime.timedelta(seconds = int(t)) for t in das.time.value
 if 'ham' not in locals():
     # -- Read Harmonie statistics --
     iloc = 7 #+12
-    #path  = '/nobackup/users/stratum/DOWA/LES_forcing'
-    path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+    path  = '/nobackup/users/stratum/DOWA/LES_forcing'
+    #path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
     ham  = read_DDH_netcdf(start, end, path)
 
 if 'cb' not in locals():
     # -- Read Cabauw observations --
-    path = '/Users/bart/meteo/observations/Cabauw'
-    #path = '/nobackup/users/stratum/Cabauw'
+    path = '/nobackup/users/stratum/Cabauw'
+    #path = '/Users/bart/meteo/observations/Cabauw'
     files = ['{0}/cesar_surface_radiation_lc1_t10_v1.0_{1:04d}{2:02d}.nc'    .format(path, start.year, start.month),
              '{0}/cesar_surface_meteo_lc1_t10_v1.0_{1:04d}{2:02d}.nc'        .format(path, start.year, start.month),
              '{0}/cesar_surface_flux_lc1_t10_v1.0_{1:04d}{2:02d}.nc'         .format(path, start.year, start.month),
@@ -68,10 +83,14 @@ if 'cb' not in locals():
     for type in nubi_type.keys():
         cbc_ct[type] = cbc_ct['obscuration_type'] == type
 
+    z_cb = {200:0,140:1,80:2,40:3,20:4,10:5,2:6}
+
 # -- Colors et al. --
 cd   = 'k'    # DALES color
 ch   = 'C3'   # Harmonie color
 co   = '#e41a1c'   # Obs color
+c1   = '#1f78b4'
+c2   = co
 mo   = 'o'    # Obs marker
 ms   = 1.5     # Obs marker size
 lw   = 1.5    # Linewidth
@@ -79,6 +98,50 @@ xint = 24     # Interval of x-markers
 dash = [4,2]  # Format of dashed lines
 
 if True:
+
+    # Temperature, wind, et al.
+    # -------------------------
+    pl.figure(figsize=(12,7))
+    pl.suptitle('Cabauw: {} to {} UTC'.format(start, end), fontsize='medium')
+
+    exn010 = (interpz(daa.presh, daa.zt, 10. ) / constants['p0'])**(constants['rd']/constants['cp'])
+    exn200 = (interpz(daa.presh, daa.zt, 200.) / constants['p0'])**(constants['rd']/constants['cp'])
+
+    pl.subplot(131)
+    pl.plot(daa_time, interpz(daa.thl, daa.zt, 10.)*exn010,  color=c2, linewidth=lw, label='DALES 10 m')
+    pl.plot(daa_time, interpz(daa.thl, daa.zt, 200.)*exn200, color=c1, linewidth=lw, label='DALES 200 m')
+    pl.plot(cb.time, cb.TA[:,z_cb[10 ]], mo, ms=ms, color=c2, label='Cabauw 10 m') 
+    pl.plot(cb.time, cb.TA[:,z_cb[200]], mo, ms=ms, color=c1, label='Cabauw 200 m')
+    pl.legend(ncol=1)
+    pl.xlim(start, end)
+    pl.ylabel(r'T$_a$ (K)')
+    format_date_hour(xint)
+
+    pl.subplot(132)
+    U010 = (interpz(daa.u, daa.zt, 10.)**2 + interpz(daa.v, daa.zt, 10.)**2)**0.5
+    U200 = (interpz(daa.u, daa.zt, 200)**2 + interpz(daa.v, daa.zt, 200)**2)**0.5
+
+    pl.plot(daa_time, U010, color=c2, linewidth=lw, label='DALES 10 m')
+    pl.plot(daa_time, U200, color=c1, linewidth=lw, label='DALES 200 m')
+    pl.plot(cb.time, cb.F[:,z_cb[10 ]], mo, ms=ms, color=c2, label='Cabauw 10 m') 
+    pl.plot(cb.time, cb.F[:,z_cb[200]], mo, ms=ms, color=c1, label='Cabauw 200 m')
+    pl.xlim(start, end)
+    pl.ylabel(r'U (m$^{-1}$)')
+    format_date_hour(xint)
+
+    pl.subplot(133)
+    pl.plot(daa_time, interpz(daa.qt, daa.zt, 10. )*1e3, color=c2, linewidth=lw, label='DALES 10 m')
+    pl.plot(daa_time, interpz(daa.qt, daa.zt, 200.)*1e3, color=c1, linewidth=lw, label='DALES 200 m')
+    pl.plot(cb.time, cb.Q[:,z_cb[10 ]], mo, ms=ms, color=c2, label='Cabauw 10 m') 
+    pl.plot(cb.time, cb.Q[:,z_cb[200]], mo, ms=ms, color=c1, label='Cabauw 200 m')
+    pl.xlim(start, end)
+    pl.ylabel(r'q$_t$ (g kg$^{-1}$)')
+    pl.xlabel('time UTC')
+    format_date_hour(xint)
+
+
+
+if False:
 
     # Surface radiation balance
     # -------------------------
@@ -120,9 +183,8 @@ if True:
     # Surface fluxes
     # --------------
     pl.subplot(243)
-    pl.plot(das_time, das.H, color=cd, label='DALES H')
-    #pl.plot(ham.time, -ham.H[:,iloc], color=ch, linewidth=lw, label='Harmonie H')
-    pl.plot(cb.time, cb.H, mo, ms=ms, color=co, linewidth=lw, label='Cabauw H')
+    pl.plot(das_time, das.H, color=cd, label='DALES')
+    pl.plot(cb.time, cb.H, mo, ms=ms, color=co, linewidth=lw, label='Cabauw')
     pl.legend()
     pl.xlim(start, end)
     pl.ylabel(r'H (W m$^{-2}$)')
@@ -131,7 +193,6 @@ if True:
 
     pl.subplot(244)
     pl.plot(das_time, das.LE, color=cd)
-    #pl.plot(ham.time, -ham.LE[:,iloc], color=ch, linewidth=lw)
     pl.plot(cb.time, cb.LE, mo, ms=ms, color=co, linewidth=lw)
     pl.xlim(start, end)
     pl.ylabel(r'LE (W m$^{-2}$)')
@@ -191,9 +252,10 @@ if False:
     pl.legend()
     format_date_hour(xint)
 
+    pl.tight_layout()
 
 
-if True:
+if False:
     # Soil temperature & moisture
     # ----------------
     exns = (daa.presh[:,0]/1e5)**(287/1004.)     # Not really surface; first model level... Ps is not in DALES output.....
@@ -204,8 +266,8 @@ if True:
     pl.plot(daa_time, exns*daa.thl[:,0  ], color='C1',  linewidth=lw, label='DALES Ta(10m)')
     pl.plot(das_time, exns*das.thlskin[:], color='k',   linewidth=lw, label='DALES Ts')
 
-    pl.plot(cb.time, cb.TA[:,-2],                     color='C1',  linewidth=lw, label='Cabauw Ta(10m)', dashes=dash)
-    pl.plot(cb.time, (cb.LWU / (0.98*5.67e-8))**0.25, color='k',   linewidth=lw, label='Cabauw Ts',  dashes=dash)
+    pl.plot(cb.time, cb.TA[:,-2], mo, ms=ms, color='C1',  linewidth=lw, label='Cabauw Ta(10m)')
+    pl.plot(cb.time, (cb.LWU / (0.98*5.67e-8))**0.25, mo, ms=ms, color='k',   linewidth=lw, label='Cabauw Ts')
 
     pl.xlabel('time UTC')
     pl.ylabel('T (K)')
@@ -218,9 +280,9 @@ if True:
     pl.plot(daa_time, daa.tsoil[:,1],      color='C2',   linewidth=lw, label='DALES {0:.1f} cm'.format(-daa.zts[1].values*100))
     pl.plot(daa_time, daa.tsoil[:,2],      color='C3',   linewidth=lw, label='DALES {0:.1f} cm'.format(-daa.zts[2].values*100))
 
-    pl.plot(cb.time, cb.TS04+273.15, color='C1', linewidth=lw, label='Cabauw 4 cm',  dashes=dash)
-    pl.plot(cb.time, cb.TS20+273.15, color='C2', linewidth=lw, label='Cabauw 20 cm', dashes=dash)
-    pl.plot(cb.time, cb.TS50+273.15, color='C3', linewidth=lw, label='Cabauw 50 cm', dashes=dash)
+    pl.plot(cb.time, cb.TS04+273.15, mo, ms=ms, color='C1', linewidth=lw, label='Cabauw 4 cm')
+    pl.plot(cb.time, cb.TS20+273.15, mo, ms=ms, color='C2', linewidth=lw, label='Cabauw 20 cm')
+    pl.plot(cb.time, cb.TS50+273.15, mo, ms=ms, color='C3', linewidth=lw, label='Cabauw 50 cm')
 
     pl.xlabel('time UTC')
     pl.ylabel('T (K)')
@@ -232,12 +294,10 @@ if True:
     pl.plot(daa_time, daa.phiw[:,0], color='k',  linewidth=lw, label='DALES {0:.1f} cm'.format(-daa.zts[0].values*100))
     pl.plot(daa_time, daa.phiw[:,1], color='C1', linewidth=lw, label='DALES {0:.1f} cm'.format(-daa.zts[1].values*100))
     pl.plot(daa_time, daa.phiw[:,2], color='C2', linewidth=lw, label='DALES {0:.1f} cm'.format(-daa.zts[2].values*100))
-    #pl.plot(daa_time, daa.phiw[:,3], color='C3', linewidth=lw, label='DALES {0:.1f} cm'.format(-daa.zts[3].values*100))
 
-    pl.plot(cb.time, cb.TH05, color='k',  linewidth=lw, label='Cabauw 5 cm', dashes=dash)
-    pl.plot(cb.time, cb.TH19, color='C1', linewidth=lw, label='Cabauw 19 cm', dashes=dash)
-    #pl.plot(cb.time, cb.TH33, color='C2',linewidth=lw, label='Cabauw 33 cm', dashes=dash)
-    pl.plot(cb.time, cb.TH40, color='C2', linewidth=lw, label='Cabauw 40 cm', dashes=dash)
+    pl.plot(cb.time, cb.TH05, mo, ms=ms, color='k',  linewidth=lw, label='Cabauw 5 cm' )
+    pl.plot(cb.time, cb.TH19, mo, ms=ms, color='C1', linewidth=lw, label='Cabauw 19 cm')
+    pl.plot(cb.time, cb.TH40, mo, ms=ms, color='C2', linewidth=lw, label='Cabauw 40 cm')
 
     pl.xlabel('time UTC')
     pl.ylabel(r'$\phi_w$ (m$^3$ m$^{-3}$)')

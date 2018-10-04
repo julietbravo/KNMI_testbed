@@ -13,9 +13,12 @@ from DALES_tools import *
 from read_soil_ERA5 import *
 from read_soil_Cabauw import *
 
+# --------------------
 # ----- Settings -----
+# --------------------
+
 expnr   = 1       # DALES experiment number
-iloc    = 7+12    # Location in DDH files
+iloc    = 7+12    # Location in DDH files (7=Cabauw, 7+12 = 10x10km average Cabauw)
 n_accum = 1       # Number of time steps to accumulate in the forcings
 
 # Start and endtime of experiment:
@@ -26,14 +29,16 @@ end   = datetime.datetime(year=2017, month=4, day=6, hour=3)
 #path    = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'
 #path_cb = '/scratch/ms/nl/nkbs/DOWA/Cabauw'
 
-#path    = '/nobackup/users/stratum/DOWA/LES_forcing'
-#path_cb = '/nobackup/users/stratum/Cabauw'
+path    = '/nobackup/users/stratum/DOWA/LES_forcing'
+path_cb = '/nobackup/users/stratum/Cabauw'
 
-path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
-path_cb  = '/Users/bart/meteo/observations/Cabauw/'
-path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
+#path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+#path_cb  = '/Users/bart/meteo/observations/Cabauw/'
+#path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
 
+# ------------------------
 # ----- End settings -----
+# ------------------------
 
 # Get list of NetCDF files which need to be processed, and open them with xarray
 nc_files = get_file_list(path, start, end)
@@ -68,17 +73,9 @@ create_nudging_profiles(nc_data, grid, nudgefac, t0, t1, iloc, docstring, expnr)
 # Create NetCDF file with reference profiles for RRTMG
 create_backrad(nc_data, t0, iloc, expnr)
 
-# Get the soil temperature and moisture from ERA5 (or Cabauw...)
-#tsoil_e5   = get_Tsoil_ERA5  (start, lon, lat, path_e5)
-#phisoil_e5 = get_phisoil_ERA5(start, lon, lat, path_e5)
-
-tsoil_cb   = get_Tsoil_Cabauw  (start, path_cb)
-tsoil      = tsoil_cb.copy()
-
-phisoil_cb = get_phisoil_Cabauw(start, path_cb)
-phi = 0.520
-phisoil = phisoil_cb.copy()
-phisoil = np.minimum(phisoil, phi)  # Limit soil moisture to porosity of soil
+# Get the soil temperature and moisture from Cabauw obs
+tsoil   = get_Tsoil_Cabauw  (start, path_cb)
+phisoil = get_phisoil_Cabauw(start, path_cb, max_lim=0.590)
 
 # Update namelist
 namelist = 'namoptions.{0:03d}'.format(expnr)
