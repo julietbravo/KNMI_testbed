@@ -19,8 +19,8 @@ iloc    = 7+12    # Location in DDH files
 n_accum = 1       # Number of time steps to accumulate in the forcings
 
 # Start and endtime of experiment:
-start = datetime.datetime(year=2017, month=4, day=1, hour=0)
-end   = datetime.datetime(year=2017, month=4, day=1, hour=15)
+start = datetime.datetime(year=2017, month=4, day=2, hour=0)
+end   = datetime.datetime(year=2017, month=4, day=6, hour=3)
 
 # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
 #path    = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'
@@ -32,7 +32,6 @@ end   = datetime.datetime(year=2017, month=4, day=1, hour=15)
 path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
 path_cb  = '/Users/bart/meteo/observations/Cabauw/'
 path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
-
 
 # ----- End settings -----
 
@@ -51,9 +50,10 @@ docstring = '{0} ({1:.2f}N, {2:.2f}E): {3} to {4}'.format(domain, lat, lon, star
 print(docstring)
 
 # Create stretched vertical grid for LES
-#grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
-grid = Grid_stretched(kmax=100, dz0=30, nloc1=40, nbuf1=10, dz1=200)    # debug
-grid.plot()
+grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+#grid = Grid_stretched(kmax=100, dz0=20, nloc1=40, nbuf1=10, dz1=200)    # debug
+#grid = Grid_stretched(kmax=48,  dz0=20, nloc1=40, nbuf1=10, dz1=200)    # real debug
+#grid.plot()
 
 # Create and write the initial vertical profiles (prof.inp)
 create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)

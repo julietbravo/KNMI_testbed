@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 43200
+runtime = 345600
 trestart = 999999
 dtmax = 10
 ladaptive = .true.
@@ -15,38 +15,38 @@ nprocy=1
 /
 
 &DOMAIN
-itot = 1
-jtot = 1
-kmax = 100
+itot = 144
+jtot = 144
+kmax = 160
 
-xsize = 400
-ysize = 400
+xsize = 7200
+ysize = 7200
 
 xlat = 51.970001220703125
 xlon = 4.900000095367432
-xday = 91
+xday = 92
 xtime = 0
 /
 
 &PHYSICS
-ps = 100000.00
-thls = 300.00       ! Surface thl
+ps = 1e5
+thls = 300       ! Surface thl
 lmoist = .true.
 lcoriol = .false.
 ltimedep = .true.
 iradiation = 4      ! 4 = RRTMG
 igrw_damp = 3       ! 3 = nudge (damping) to mean profile
-timerad = 30        ! Interval (sec) of radiation calls
+timerad = 60        ! Interval (sec) of radiation calls
 /
 
 &NAMSURFACE
 isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
-l_vg  = .false.     ! Van Genuchten parameterisation
+l_vg  = .true.      ! Van Genuchten parameterisation
 z0mav = 0.05        ! Fig. 4.8 MvT
 z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
 Cskinav = 0
-lambdaskinav = 8    ! Fig. 4.11 MvT; night
-Qnetav = 5          ! Why needed?
+lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
+Qnetav = 0          ! Why needed?
 Wlav = 0            ! Water on leaves
 rsminav = 100
 rssoilminav = 50
@@ -55,29 +55,29 @@ cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav = 275.47881085077915
-tsoilav = 283.28418818 282.61763641 280.70216916 275.47881085
-phiwav = 0.37380768 0.49979229 0.52       0.52      
+tsoildeepav = 276.34483009974156
+tsoilav = 283.01673737 282.65823236 280.98968137 276.3448301 
+phiwav = 0.37745904 0.49924287 0.52       0.52      
 
 ! ECMWF fine (Table 3.1 MvT)
-gammasat = 2.87e-6
-nvg = 1.10
-Lvg = -1.977
-alphavg = 3.67
-phir = 0.01
-phi = 0.520
-phiwp = 0.279
-phifc = 0.448
+!gammasat = 2.87e-6
+!nvg = 1.10
+!Lvg = -1.977
+!alphavg = 3.67
+!phir = 0.01
+!phi = 0.520
+!phiwp = 0.279
+!phifc = 0.448
 
 ! B11 (Wösten) top 16cm (Table 3.1 MvT)
-!gammasat = 0.52e-6
-!nvg = 1.11
-!Lvg = -5.90
-!alphavg = 1.95
-!phir = 0.01
-!phi = 0.590
-!phiwp = 0.320
-!phifc = 0.528
+gammasat = 0.52e-6
+nvg = 1.11
+Lvg = -5.90
+alphavg = 1.95
+phir = 0.01
+phi = 0.590
+phiwp = 0.320
+phifc = 0.528
 /
 
 &DYNAMICS
@@ -87,8 +87,8 @@ cv =  0.
 iadv_mom = 2
 iadv_tke = 2
 iadv_thl = 2
-iadv_qt  = 2
-iadv_sv  = 52
+iadv_qt  = 5
+iadv_sv  = 5
 /
 
 &NAMNUDGE
@@ -109,7 +109,7 @@ ce2 = 0.51
 &NAMMICROPHYSICS
 imicro = 2          ! 2 = warm, 5=simpleice
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
-Nc_0 = 200e6        ! cloud droplet conventration
+Nc_0 = 500e6        ! cloud droplet conventration
 /
 
 &NAMRADIATION
@@ -124,7 +124,7 @@ dtav = 120
 /
 
 &NAMCHECKSIM
-tcheck = 300
+tcheck = 1800
 /
 
 &NAMNETCDFSTATS
@@ -162,12 +162,12 @@ dtav   = 120
 lstat = .true.
 lascii = .false.
 dtav   = 120
-timeav = 120.
+timeav = 120
 /
 
 &NAMLSMSTAT
 lstat = .true.
-dtav = 120
+dtav   = 120
 timeav = 120.
 /
 
