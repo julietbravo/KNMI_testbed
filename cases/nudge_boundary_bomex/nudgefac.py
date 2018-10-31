@@ -9,8 +9,8 @@ dx    = 50
 x     = np.arange(0.5*dx, xsize, dx)
 
 # Boundary settings
-dxb   = 300     # Width of boundary nudging
-oxb   = 1500    # Offset from lateral boundary
+dxb   = 250     # Width of boundary nudging
+oxb   = 1000    # Offset from lateral boundary
 
 # Center of nudging area
 bc1 = oxb
