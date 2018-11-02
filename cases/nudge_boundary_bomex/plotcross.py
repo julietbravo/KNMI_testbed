@@ -21,7 +21,6 @@ def add_colorbar(label=''):
     cbar.ax.tick_params(labelsize=9) 
     cbar.ax.set_ylabel(label, rotation=90)
 
-
 f = nc4.Dataset('crossxy.0002.001_full.nc')
 time = f.variables['time'][:]
 x = f.variables['xt'][:] / 1000.
