@@ -2,13 +2,13 @@ import netCDF4 as nc4
 import numpy as np
 import os
 
-expnr = 1
-#base  = 'crossxy.0002'
-base  = 'crossxz'
+expnr = 4
+base  = 'crossxy.0002'
+#base  = 'crossxzspan'
 npx   = 4
 npy   = 1
 itot  = 128
-jtot  = 32
+jtot  = 16
 ktot  = 75
 
 if 'xz' in base:
@@ -24,7 +24,8 @@ elif mode == 'xz':
     chy = 1
 
 for i in range(npx):
-    for j in range(npy):
+    n = 1 if 'span' in base else npy
+    for j in range(n):
         print('Processing i={}/{}, j={}/{}'.format(i+1,npx,j+1,npy))
 
         # Input file name
