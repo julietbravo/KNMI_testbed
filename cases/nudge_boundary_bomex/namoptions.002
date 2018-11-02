@@ -3,18 +3,18 @@
 !
 
 &RUN
-iexpnr     = 001
+iexpnr     = 002
 lwarmstart = .false.
 startfile  = 'initd001h00mx000y000.001'
-runtime    = 21600
+runtime    = 43200
 trestart   = 10800
 ladaptive  = .true.
 irandom    = 1
 randthl    = 0.1
 randqt     = 2.5e-5
 nsv        = 0
-nprocx     = 12
-nprocy     = 12
+nprocx     = 24
+nprocy     = 6
 /
 
 &DOMAIN
@@ -83,7 +83,7 @@ dtav        = 60
 /
 
 &NAMCROSSSECTION
-lcross      = .false.
+lcross      = .true.
 dtav        = 60
 crossheight = 2 7 17 20
 /
@@ -115,4 +115,5 @@ lnudge_boundary = .true.
 nudge_offset = 1000
 nudge_width = 250
 tau = 10
+nudge_mode = 2
 /
