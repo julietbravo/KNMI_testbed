@@ -2,10 +2,17 @@ import glob
 import os
 
 all_files = glob.glob('*')
-exclude   = ['namoptions.001','namoptions.002','run.PBS']
+exclude   = ['namoptions','run','dales4']
 
 for f in all_files:
-    if f not in exclude and '.py' not in f:
+    delete = True
+    if '.py' in f:
+        delete = False
+    for excl in exclude:
+        if excl in f:
+            delete = False
+
+    if delete:
         try:
             os.remove(f)
         except:

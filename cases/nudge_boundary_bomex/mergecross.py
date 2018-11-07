@@ -3,9 +3,9 @@ import numpy as np
 import os
 
 expnr = 4
-base  = 'crossxy.0002'
-#base  = 'crossxzspan'
-npx   = 4
+#base  = 'crossxy.0002'
+base  = 'crossxzspan'
+npx   = 2
 npy   = 1
 itot  = 128
 jtot  = 16

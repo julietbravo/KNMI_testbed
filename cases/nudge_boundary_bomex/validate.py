@@ -5,7 +5,9 @@ from itertools import cycle
 
 pl.close('all')
 
-path = '/nobackup/users/stratum/DOWA/nudge_boundary/nudge_boundary_bomex'
+#path = '/nobackup/users/stratum/DOWA/nudge_boundary/nudge_boundary_bomex'
+path = 'results'
+
 
 class Read_span:
     def __init__(self, path, file, t_start, t_end, x_start, x_end):
@@ -53,14 +55,112 @@ class Read_span:
         self.x = self.f['xt']
         self.z = self.f['zt']
 
-if 'ref_sp' not in locals():
-    ref_sp  = Read_span(path, 'crossxzspan.001.nc', 6*3600, 12*3600, 0,     6400)
-    nud_sp  = Read_span(path, 'crossxzspan.002.nc', 6*3600, 12*3600, 45000, 55000)
-    nud_spl = Read_span(path, 'crossxzspan.003.nc', 6*3600, 12*3600, 55000, 75000)
 
-    ref_pr  = xr.open_dataset('{}/profiles.001.nc'.format(path))
-    nud_pr  = xr.open_dataset('{}/profiles.002.nc'.format(path))
-    nud_prl = xr.open_dataset('{}/profiles.003.nc'.format(path))
+class Read_span_mean:
+    def __init__(self, path, file, x_start, x_end):
+        print('Reading {}'.format(file))
+        self.f = xr.open_dataset('{}/{}'.format(path, file))
+
+        # Area to average
+        self.i0 = int(np.abs(self.f.xt - x_start).argmin())
+        self.i1 = int(np.abs(self.f.xt - x_end  ).argmin())
+
+        # Time averaged
+        self.um    = self.f['uxz'  ][:,:]
+        self.vm    = self.f['vxz'  ][:,:]
+        self.wm    = self.f['wxz'  ][:,:]
+        self.thlm  = self.f['thlxz'][:,:]
+        self.qtm   = self.f['qtxz' ][:,:]
+        self.qlm   = self.f['qlxz' ][:,:]
+
+        self.u2m   = self.f['u2rxz'  ][:,:]
+        self.v2m   = self.f['v2rxz'  ][:,:]
+        self.w2m   = self.f['w2rxz'  ][:,:]
+        self.thl2m = self.f['thl2rxz'][:,:]
+        self.qt2m  = self.f['qt2rxz' ][:,:]
+        self.ql2m  = self.f['ql2rxz' ][:,:]
+
+        print(self.um.shape)
+
+        # Space (x) averaged
+        self.ub    = self.um  [:,self.i0:self.i1+1].mean(axis=1)
+        self.vb    = self.vm  [:,self.i0:self.i1+1].mean(axis=1)
+        self.wb    = self.wm  [:,self.i0:self.i1+1].mean(axis=1)
+        self.thlb  = self.thlm[:,self.i0:self.i1+1].mean(axis=1)
+        self.qtb   = self.qtm [:,self.i0:self.i1+1].mean(axis=1)
+        self.qlb   = self.qlm [:,self.i0:self.i1+1].mean(axis=1)
+
+        self.u2b   = self.u2m  [:,self.i0:self.i1+1].mean(axis=1)
+        self.v2b   = self.v2m  [:,self.i0:self.i1+1].mean(axis=1)
+        self.w2b   = self.w2m  [:,self.i0:self.i1+1].mean(axis=1)
+        self.thl2b = self.thl2m[:,self.i0:self.i1+1].mean(axis=1)
+        self.qt2b  = self.qt2m [:,self.i0:self.i1+1].mean(axis=1)
+        self.ql2b  = self.ql2m [:,self.i0:self.i1+1].mean(axis=1)
+
+        self.x = self.f['xt']
+        self.z = self.f['zt']
+
+if 'ref_sp' not in locals():
+    #ref_sp  = Read_span(path, 'crossxzspan.001.nc', 6*3600, 12*3600, 0,     6400)
+    #nud_sp  = Read_span(path, 'crossxzspan.002.nc', 6*3600, 12*3600, 45000, 55000)
+    #nud_spl = Read_span(path, 'crossxzspan.003.nc', 6*3600, 12*3600, 55000, 75000)
+
+    ref_sp   = Read_span_mean(path, 'crossxzspan.mean.001.nc', 0,     6400)
+    nud_sp0  = Read_span_mean(path, 'crossxzspan.mean.002.nc', 45000, 55000)
+    nud_sp1  = Read_span_mean(path, 'crossxzspan.mean.004.nc', 45000, 55000)
+
+    ref_pr   = xr.open_dataset('{}/profiles.001.nc'.format(path))
+    nud_pr0  = xr.open_dataset('{}/profiles.002.nc'.format(path))
+    nud_pr1  = xr.open_dataset('{}/profiles.004.nc'.format(path))
+
+
+
+
+
+if True:
+    # ------------------------------
+    # Change variance in streamwise direction
+    # ------------------------------
+    heights = np.array([100, 350, 850, 1400])
+    indexes = np.zeros_like(heights)
+    for i,z in enumerate(heights):
+        indexes[i] = np.abs(nud_sp0.z - (z)).argmin()
+
+    colors = pl.cm.Set1.colors
+    lw = 1
+
+    x0_ref = 40
+    x1_ref = 60
+
+    label_ref = 'Reference'
+    label_r0  = 'Laminar inflow'
+    label_r1  = 'Random perturbations'
+
+    pl.figure(figsize=(10,6))
+    for i in range(0,4):
+
+        pl.subplot(2,2,i+1)
+        pl.title('z={}m'.format(heights[i]), loc='left', fontsize='small')
+        pl.plot(nud_sp0.x/1000,  nud_sp0.u2m[indexes[i], :],   color=colors[0], linewidth=lw, label=label_r0)
+        pl.plot(nud_sp1.x/1000,  nud_sp1.u2m[indexes[i], :],   color=colors[1], linewidth=lw, label=label_r1)
+        pl.plot(x1_ref,          ref_sp.u2b [indexes[i]], '+', color='k', markeredgewidth=1.5, label=label_ref)
+
+        pl.ylabel(r'$\sigma^2_{u}$ (m$^2$ s$^{-2}$)')
+        pl.legend(fontsize='small')
+    pl.tight_layout()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if False:
@@ -111,7 +211,7 @@ if False:
     pl.tight_layout()
 
 
-if True:
+if False:
     # ------------------------------
     # Change variance in streamwise direction
     # ------------------------------
