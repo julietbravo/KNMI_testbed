@@ -36,4 +36,3 @@ for f in files:
 # Update expnr in namelist and runscript
 replace_namelist_value('namoptions.{0:03d}'.format(new), 'iexpnr', new)
 replace_value('run.PBS.{0:03d}'.format(new), '{0:03d}'.format(old), '{0:03d}'.format(new))
-

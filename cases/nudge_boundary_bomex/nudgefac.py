@@ -16,9 +16,13 @@ oxb   = 1000    # Offset from lateral boundary
 bc1 = oxb
 bc2 = xsize-oxb
 
+bc3 = 2*oxb
+
 f1 = np.exp(-0.5*((x-bc1)/dxb)**2)
 f2 = np.exp(-0.5*((x-bc2)/dxb)**2)
+f3 = np.exp(-0.5*((x-bc3)/dxb)**2)
 
 pl.figure()
 pl.plot(x, f1)
 pl.plot(x, f2)
+pl.plot(x, f3)

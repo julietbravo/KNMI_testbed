@@ -8,6 +8,26 @@ pl.close('all')
 #path = '/nobackup/users/stratum/DOWA/nudge_boundary/nudge_boundary_bomex'
 path = 'results'
 
+class Linecycler:
+    def __init__(self):
+        #self.colors = ['#2A3132','#FF420E','#89DA59','#336B87','#FFBB00']
+        self.colors = ['#FF420E','#89DA59','#336B87']
+        self.dashes = [(1,0), (4,2), (2,2)]
+
+        self.ic = 0
+        self.id = 0
+
+    def next(self):
+        color = self.colors[self.ic]
+        dash  = self.dashes[self.id]
+
+        self.ic += 1
+
+        if self.ic > len(self.colors)-1:
+            self.ic = 0
+            self.id += 1
+
+        return color, dash
 
 class Read_span:
     def __init__(self, path, file, t_start, t_end, x_start, x_end):
@@ -57,7 +77,9 @@ class Read_span:
 
 
 class Read_span_mean:
-    def __init__(self, path, file, x_start, x_end):
+    def __init__(self, path, file, x_start, x_end, label):
+        self.label = label
+
         print('Reading {}'.format(file))
         self.f = xr.open_dataset('{}/{}'.format(path, file))
 
@@ -79,8 +101,6 @@ class Read_span_mean:
         self.thl2m = self.f['thl2rxz'][:,:]
         self.qt2m  = self.f['qt2rxz' ][:,:]
         self.ql2m  = self.f['ql2rxz' ][:,:]
-
-        print(self.um.shape)
 
         # Space (x) averaged
         self.ub    = self.um  [:,self.i0:self.i1+1].mean(axis=1)
@@ -105,49 +125,114 @@ if 'ref_sp' not in locals():
     #nud_sp  = Read_span(path, 'crossxzspan.002.nc', 6*3600, 12*3600, 45000, 55000)
     #nud_spl = Read_span(path, 'crossxzspan.003.nc', 6*3600, 12*3600, 55000, 75000)
 
-    ref_sp   = Read_span_mean(path, 'crossxzspan.mean.001.nc', 0,     6400)
-    nud_sp0  = Read_span_mean(path, 'crossxzspan.mean.002.nc', 45000, 55000)
-    nud_sp1  = Read_span_mean(path, 'crossxzspan.mean.004.nc', 45000, 55000)
+    # Online time averaged + spanwise averaged cross-sections
+    ref_sp   = Read_span_mean(path, 'crossxzspan.mean.001.nc', 0,     6400 , r'Reference')
+    nud_sp0  = Read_span_mean(path, 'crossxzspan.mean.002.nc', 45000, 55000, r'Laminar')
+    #nud_sp1  = Read_span_mean(path, 'crossxzspan.mean.004.nc', 45000, 55000, r'1x1 pert. ($\pm$0.25K)')
+    #nud_sp2  = Read_span_mean(path, 'crossxzspan.mean.005.nc', 45000, 55000, r'5x5 pert. ($\pm$0.25k)')
+    #nud_sp3  = Read_span_mean(path, 'crossxzspan.mean.006.nc', 45000, 55000, r'10x10 pert. ($\pm$0.25k)')
+    nud_sp4  = Read_span_mean(path, 'crossxzspan.mean.007.nc', 45000, 55000, r'1x1 pert. ($\pm$0.05 K)')
+    nud_sp5  = Read_span_mean(path, 'crossxzspan.mean.008.nc', 45000, 55000, r'5x5 pert. ($\pm$0.05 K)')
+    nud_sp6  = Read_span_mean(path, 'crossxzspan.mean.009.nc', 45000, 55000, r'10x10 pert. ($\pm$0.05 K)')
+    nud_sp7  = Read_span_mean(path, 'crossxzspan.mean.010.nc', 45000, 55000, r'1x1 pert. ($\pm \sigma$ K)')
+    nud_sp8  = Read_span_mean(path, 'crossxzspan.mean.011.nc', 45000, 55000, r'5x5 pert. ($\pm \sigma$ K)')
+    nud_sp9  = Read_span_mean(path, 'crossxzspan.mean.012.nc', 45000, 55000, r'10x10 pert. ($\pm \sigma$ K)')
+
+    #sps = [nud_sp0, nud_sp4, nud_sp5, nud_sp6]      # small amplitude perturbations
+    ##sps = [nud_sp0, nud_sp1, nud_sp2, nud_sp3]      # large amplitude perturbations
+    #sps = [nud_sp0, nud_sp7, nud_sp8, nud_sp9]      # variance scaling perturbations
+    sps = [nud_sp0, nud_sp4, nud_sp5, nud_sp6, nud_sp7, nud_sp8, nud_sp9]      # all
 
     ref_pr   = xr.open_dataset('{}/profiles.001.nc'.format(path))
     nud_pr0  = xr.open_dataset('{}/profiles.002.nc'.format(path))
     nud_pr1  = xr.open_dataset('{}/profiles.004.nc'.format(path))
+    nud_pr2  = xr.open_dataset('{}/profiles.005.nc'.format(path))
+    nud_pr3  = xr.open_dataset('{}/profiles.006.nc'.format(path))
+    nud_pr4  = xr.open_dataset('{}/profiles.007.nc'.format(path))
+
+    prs = [nud_pr0, nud_pr1, nud_pr2, nud_pr3, nud_pr4]
 
 
 
-
-
-if True:
+if (True):
     # ------------------------------
     # Change variance in streamwise direction
     # ------------------------------
+
+    class Variable:
+        def __init__(self, name, label, scale=1):
+            self.name  = name
+            self.label = label
+            self.scale = scale
+
+    u2  = Variable('u2',   r'$\sigma^2_{u}$ (m$^2$ s$^{-2}$)')
+    v2  = Variable('v2',   r'$\sigma^2_{v}$ (m$^2$ s$^{-2}$)')
+    w2  = Variable('w2',   r'$\sigma^2_{w}$ (m$^2$ s$^{-2}$)')
+    th2 = Variable('thl2', r'$\sigma^2_{\theta}$ (K$^2$)')
+    qt2 = Variable('qt2',  r'$\sigma^2_{q_t}$ (g$^2$ kg$^{-2}$)', 1e6)
+    ql2 = Variable('ql2',  r'$\sigma^2_{q_l}$ (g$^2$ kg$^{-2}$)', 1e6)
+
+    #variables = [u2, v2, w2, th2, qt2, ql2]
+    variables = [u2, w2, th2]
+
     heights = np.array([100, 350, 850, 1400])
     indexes = np.zeros_like(heights)
     for i,z in enumerate(heights):
         indexes[i] = np.abs(nud_sp0.z - (z)).argmin()
 
-    colors = pl.cm.Set1.colors
-    lw = 1
+    lw = 1.1
 
-    x0_ref = 40
+    x0_ref = 0
     x1_ref = 60
 
-    label_ref = 'Reference'
-    label_r0  = 'Laminar inflow'
-    label_r1  = 'Random perturbations'
+    for v in variables:
+        pl.figure(figsize=(10,6))
+        for k in range(heights.size):
+            pl.subplot(2,2,k+1)
+            pl.title('z={}m'.format(heights[k]), loc='left', fontsize='small')
+            lines = Linecycler()
 
-    pl.figure(figsize=(10,6))
-    for i in range(0,4):
+            for e,exp in enumerate(sps):
+                if e==0:
+                    color, dash = 'k', (1,0)
+                else:
+                    color, dash = lines.next()
+                pl.plot(exp.x/1000, getattr(exp, '{}m'.format(v.name))[indexes[k],:]*v.scale, color=color, linewidth=lw, dashes=dash, label=exp.label)
+            pl.plot(x1_ref, getattr(ref_sp, '{}b'.format(v.name))[indexes[k]]*v.scale, 'k+', label='Reference')
 
-        pl.subplot(2,2,i+1)
-        pl.title('z={}m'.format(heights[i]), loc='left', fontsize='small')
-        pl.plot(nud_sp0.x/1000,  nud_sp0.u2m[indexes[i], :],   color=colors[0], linewidth=lw, label=label_r0)
-        pl.plot(nud_sp1.x/1000,  nud_sp1.u2m[indexes[i], :],   color=colors[1], linewidth=lw, label=label_r1)
-        pl.plot(x1_ref,          ref_sp.u2b [indexes[i]], '+', color='k', markeredgewidth=1.5, label=label_ref)
+            pl.ylabel(v.label)
+            pl.xlabel(r'$x$ (km)')
+            if k == 0:
+                pl.legend(fontsize='small', ncol=1, frameon=True, framealpha=0.8, edgecolor='w')
+        pl.tight_layout()
 
-        pl.ylabel(r'$\sigma^2_{u}$ (m$^2$ s$^{-2}$)')
-        pl.legend(fontsize='small')
-    pl.tight_layout()
+
+if (False):
+    # ------------------------------
+    # Mixed layer scaling Sorbjan (1989)
+    # ------------------------------
+
+    # Average reference case
+    ref_mean = ref_pr.sel(time=slice(6*3600, 12*3600)).mean(dim='time')
+    z = ref_mean['zt'].values
+
+    thetastar = -0.028571   # Fixed for BOMEX
+    zi = 600
+
+    var = (thetastar**2. * (2*(z/zi)**(-2/3.) * (1-(z/zi))**(4/3.) + 0.94*(z/zi)**(4/3.) * (1-(z/zi))**(-2/3.)))**0.5
+    
+
+
+    pl.figure()
+    pl.plot(ref_mean['thl2r']**0.5, z, label='LES')
+    pl.plot(var, z, label='LES')
+    pl.legend()
+
+
+
+
+
+
 
 
 
