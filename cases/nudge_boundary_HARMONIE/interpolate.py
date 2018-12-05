@@ -106,7 +106,7 @@ class Grid_interpolator:
 
     def interpolate(self, field_LS, locx, locy, locz):
         """
-        Interpolate `field_LS` onto the LES grid, at the specified location (x={x,xh}, y={y,yh})
+        Interpolate `field_LS` onto the LES grid, at the specified location (x={x,xh}, y={y,yh}, z={z,zh})
         """
 
         # Switch between full and half levels
@@ -119,6 +119,7 @@ class Grid_interpolator:
         kfac = self.kfac if locz == 'z' else self.khfac
 
         field_LES = np.zeros((i0.size, j0.size, k0.shape[2]), dtype=np.float)
+
         interpolate_kernel(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac)
 
         return field_LES

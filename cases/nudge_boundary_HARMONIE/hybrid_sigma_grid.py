@@ -11,6 +11,7 @@ class Sigma_grid:
     def __init__(self, grid_description):
 
         # Constants (see IFS part IV, chapter 12)
+        print('BvS; reminder, still using IFS constants....')
         self.grav  = 9.80665
         self.Rd    = 287.0597
         self.Rv    = 461.5250
