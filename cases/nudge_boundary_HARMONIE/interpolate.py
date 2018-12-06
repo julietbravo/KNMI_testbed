@@ -11,8 +11,8 @@ from numba import jit
 @jit(nopython=True, nogil=True)
 def interpolate_kernel(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac):
     """
-    Interpolation function; kept out of class to allow
-    acceleration with Numba (JIT compilation)
+    Tri-linear interpolation of HARMONIE field onto LES grid
+    Kept out of class to allow acceleration with Numba
     """
 
     itot = field_LES.shape[0]
@@ -23,13 +23,13 @@ def interpolate_kernel(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac):
         for j in range(jtot):
             for k in range(ktot):
 
-                ii = i0[i]
-                jj = j0[j]
+                il = i0[i]
+                jl = j0[j]
 
-                field_LES[i,j,k] = jfac[j]     * (  ifac[i]  * ( kfac[ii,   jj,   k] * field_LS[ k0[ii,   jj,   k], jj,   ii   ] + (1-kfac[ii,   jj,   k]) * field_LS[ k0[ii,   jj,   k]+1, jj,   ii   ] )  + \
-                                                 (1-ifac[i]) * ( kfac[ii+1, jj,   k] * field_LS[ k0[ii+1, jj,   k], jj,   ii+1 ] + (1-kfac[ii+1, jj,   k]) * field_LS[ k0[ii+1, jj,   k]+1, jj,   ii+1 ] )) + \
-                                   (1-jfac[j]) * (  ifac[i]  * ( kfac[ii,   jj+1, k] * field_LS[ k0[ii,   jj+1, k], jj+1, ii   ] + (1-kfac[ii,   jj+1, k]) * field_LS[ k0[ii,   jj+1, k]+1, jj+1, ii   ] )  + \
-                                                 (1-ifac[i]) * ( kfac[ii+1, jj+1, k] * field_LS[ k0[ii+1, jj+1, k], jj+1, ii+1 ] + (1-kfac[ii+1, jj+1, k]) * field_LS[ k0[ii+1, jj+1, k]+1, jj+1, ii+1 ] ))
+                field_LES[i,j,k] = jfac[j]     * (  ifac[i]  * ( kfac[il,   jl,   k] * field_LS[ k0[il,   jl,   k], jl,   il   ] + (1-kfac[il,   jl,   k]) * field_LS[ k0[il,   jl,   k]+1, jl,   il   ] )  + \
+                                                 (1-ifac[i]) * ( kfac[il+1, jl,   k] * field_LS[ k0[il+1, jl,   k], jl,   il+1 ] + (1-kfac[il+1, jl,   k]) * field_LS[ k0[il+1, jl,   k]+1, jl,   il+1 ] )) + \
+                                   (1-jfac[j]) * (  ifac[i]  * ( kfac[il,   jl+1, k] * field_LS[ k0[il,   jl+1, k], jl+1, il   ] + (1-kfac[il,   jl+1, k]) * field_LS[ k0[il,   jl+1, k]+1, jl+1, il   ] )  + \
+                                                 (1-ifac[i]) * ( kfac[il+1, jl+1, k] * field_LS[ k0[il+1, jl+1, k], jl+1, il+1 ] + (1-kfac[il+1, jl+1, k]) * field_LS[ k0[il+1, jl+1, k]+1, jl+1, il+1 ] ))
 
 
 @jit(nopython=True, nogil=True)
