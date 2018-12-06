@@ -46,7 +46,7 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, procy, t, iexpnr):
     block_y = int(jtot / nprocy)
 
     # Write the zonal boundaries
-    for i in (1, nprocx):
+    for i in (0, nprocx-1):
         for j in range(nprocy):
 
             # East and west slices
@@ -56,40 +56,57 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, procy, t, iexpnr):
                 s = np.s_[itot-block_x:, j*block_y:(j+1)*block_y, :]
 
             # Open binary file
-            name = 'lbc{0:03d}h{1:02d}m_x{2:03d}y{2:03d}.{3:03d}'.format(t, 0, i, j+1, iexpnr)
+            name = 'lbc{0:03d}h{1:02d}m_x{2:03d}y{3:03d}.{4:03d}'.format(t, 0, i, j, iexpnr)
             print('Writing {}'.format(name))
             f = open(name, 'wb+')
 
             # Write boundaries and close file
-            u  [s].tofile(f)
-            v  [s].tofile(f)
-            thl[s].tofile(f)
-            qt [s].tofile(f)
+            np.transpose(u  [s]).tofile(f)
+            np.transpose(v  [s]).tofile(f)
+            np.transpose(thl[s]).tofile(f)
+            np.transpose(qt [s]).tofile(f)
             f.close()
 
     # Write the meridional boundaries
-    if nprocx > 2:
-        for j in (1, nprocy):
-            for i in range(1,nprocx-1):
+    for j in (0, nprocy-1):
+        for i in range(1,nprocx-1):
 
-                # South and north slices
-                if j==1:
-                    s = np.s_[i*block_x:(i+1)*block_x, :block_y,     :]
-                else:
-                    s = np.s_[i*block_y:(i+1)*block_x, jtot-block_y: :]
+            # South and north slices
+            if j==1:
+                s = np.s_[i*block_x:(i+1)*block_x, :block_y,     :]
+            else:
+                s = np.s_[i*block_y:(i+1)*block_x, jtot-block_y: :]
 
-                # Open binary file
-                name = 'lbc{0:03d}h{1:02d}m_x{2:03d}y{2:03d}.{3:03d}'.format(t, 0, i+1, j, iexpnr)
-                print('Writing {}'.format(name))
-                f = open(name, 'wb+')
+            # Open binary file
+            name = 'lbc{0:03d}h{1:02d}m_x{2:03d}y{3:03d}.{4:03d}'.format(t, 0, i, j, iexpnr)
+            print('Writing {}'.format(name))
+            f = open(name, 'wb+')
 
-                # Write boundaries and close file
-                u  [s].tofile(f)
-                v  [s].tofile(f)
-                thl[s].tofile(f)
-                qt [s].tofile(f)
-                f.close()
+            # Write boundaries and close file
+            np.transpose(u  [s]).tofile(f)
+            np.transpose(v  [s]).tofile(f)
+            np.transpose(thl[s]).tofile(f)
+            np.transpose(qt [s]).tofile(f)
+            f.close()
 
+
+def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr):
+
+    # Initial profiles
+    f = open('prof.inp.{0:03d}'.format(iexpnr), 'w')
+    f.write('Initial profiles\n')
+    f.write('{0:^20s} {1:^20s} {2:^20s} {3:^20s} {4:^20s} {5:^20s}\n'.format('z','thl','qt', 'u', 'v', 'tke'))
+    for k in range(z.size):
+        f.write('{0:1.14E} {1:1.14E} {2:1.14E} {3:1.14E} {4:1.14E} {5:1.14E}\n'.format(z[k], thl[k], qt[k], u[k], v[k], tke[k]))
+    f.close()
+
+    # Dummy lscale.inp
+    f = open('lscale.inp.{0:03d}'.format(iexpnr), 'w')
+    f.write('Large-scale forcings\n')
+    f.write('{0:^20s} {1:^20s} {2:^20s} {3:^20s} {4:^20s} {5:^20s} {6:^20s} {7:^20s}\n'.format('z','ug','vg','wls','dqtdx','dqtdy','dqtdt','dthldt'))
+    for k in range(z.size):
+        f.write('{0:1.14E} {1:1.14E} {2:1.14E} {3:1.14E} {4:1.14E} {5:1.14E} {6:1.14E} {7:1.14E}\n'.format(z[k],0,0,0,0,0,0,0))
+    f.close()
 
 
 if __name__ == '__main__':
@@ -101,16 +118,16 @@ if __name__ == '__main__':
 
     # Start and end time (index in HARMONIE files)
     t0 = 0
-    t1 = 1
+    t1 = 4
 
     # Lower left corner LES domain in Harmonie (m)
     x0 = 150000
     y0 = 150000
 
     # Domain size LES (m)
-    xsize = 100000
-    ysize = 100000
-    zsize = 3000
+    xsize = 50000
+    ysize = 50000
+    zsize = 5120
 
     # Number of grid points LES
     itot = 100
@@ -118,8 +135,8 @@ if __name__ == '__main__':
     ktot = 128
 
     # Number of x,y MPI processes
-    nprocx = 4
-    nprocy = 4
+    nprocx = 2
+    nprocy = 2
 
     # DALES constants (modglobal.f90)
     cd = dict(p0=1.e5, Rd=287.04, Rv=461.5, cp=1004., Lv=2.53e6)
@@ -176,7 +193,7 @@ if __name__ == '__main__':
         z  = grid_sig.calc_full_level_Zg(zh)
 
         # Conversions HARMONIE quantities -> LES
-        exner = (p/cd['p0'])**(cd['Rd']/cd['cp'])
+        exner = (p[::-1]/cd['p0'])**(cd['Rd']/cd['cp'])
         th_t  = T_t / exner
         thl_t = th_t - cd['Lv'] / (cd['cp'] * exner) * ql_t
         qt_t  = qv_t + ql_t
@@ -190,11 +207,18 @@ if __name__ == '__main__':
         u_LES   = intp.interpolate(u_t  [::-1,:,:], 'xh', 'y',  'z')
         v_LES   = intp.interpolate(v_t  [::-1,:,:], 'x',  'yh', 'z')
         thl_LES = intp.interpolate(thl_t[::-1,:,:], 'x',  'y',  'z')
-        ql_LES  = intp.interpolate(qt_t [::-1,:,:], 'x',  'y',  'z')
+        qt_LES  = intp.interpolate(qt_t [::-1,:,:], 'x',  'y',  'z')
 
         # Write the LBCs in binary format for LES
-        write_LBC(u_LES, v_LES, thl_LES, ql_LES, itot, jtot, nprocx, nprocy, t, iexpnr)
+        write_LBC(u_LES, v_LES, thl_LES, qt_LES, itot, jtot, nprocx, nprocy, t, iexpnr)
 
+        if t == t0:
+            # Write the initial profiles for LES
+            tke = 0.1 * np.ones_like(grid.z)
+            write_initial_profiles(grid.z, np.mean(u_LES,   axis=(0,1)),
+                                           np.mean(v_LES,   axis=(0,1)),
+                                           np.mean(thl_LES, axis=(0,1)),
+                                           np.mean(qt_LES,  axis=(0,1)), tke, iexpnr)
 
 
 
