@@ -9,7 +9,7 @@ from numba import jit
 
 
 @jit(nopython=True, nogil=True)
-def interpolate_kernel(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac):
+def interpolate_kernel_3d(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac):
     """
     Tri-linear interpolation of HARMONIE field onto LES grid
     Kept out of class to allow acceleration with Numba
@@ -31,6 +31,25 @@ def interpolate_kernel(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac):
                                    (1-jfac[j]) * (  ifac[i]  * ( kfac[il,   jl+1, k] * field_LS[ k0[il,   jl+1, k], jl+1, il   ] + (1-kfac[il,   jl+1, k]) * field_LS[ k0[il,   jl+1, k]+1, jl+1, il   ] )  + \
                                                  (1-ifac[i]) * ( kfac[il+1, jl+1, k] * field_LS[ k0[il+1, jl+1, k], jl+1, il+1 ] + (1-kfac[il+1, jl+1, k]) * field_LS[ k0[il+1, jl+1, k]+1, jl+1, il+1 ] ))
 
+
+@jit(nopython=True, nogil=True)
+def interpolate_kernel_2d(field_LES, field_LS, i0, j0, ifac, jfac):
+    """
+    Bi-linear interpolation of HARMONIE field onto LES grid
+    Kept out of class to allow acceleration with Numba
+    """
+
+    itot = field_LES.shape[0]
+    jtot = field_LES.shape[1]
+
+    for i in range(itot):
+        for j in range(jtot):
+
+            il = i0[i]
+            jl = j0[j]
+
+            field_LES[i,j] = jfac[j]     * (ifac[i] * field_LS[jl  , il] + (1-ifac[i]) * field_LS[jl  , il+1]) + \
+                             (1-jfac[j]) * (ifac[i] * field_LS[jl+1, il] + (1-ifac[i]) * field_LS[jl+1, il+1])
 
 @jit(nopython=True, nogil=True)
 def calc_horz_interpolation_factors(i0, fi, x_LS, x):
@@ -82,12 +101,14 @@ class Grid_interpolator:
         self.j0   = np.zeros_like(y, dtype=np.int)
         self.jfac = np.zeros_like(y, dtype=np.float)
 
-        self.k0   = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.int)
-        self.kfac = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.float)
-
         calc_horz_interpolation_factors(self.i0, self.ifac, x_LS, x+x0)
         calc_horz_interpolation_factors(self.j0, self.jfac, y_LS, y+y0)
-        calc_vert_interpolation_factors(self.k0, self.kfac, z_LS, z)
+        
+        if z is not None:
+            self.k0   = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.int)
+            self.kfac = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.float)
+
+            calc_vert_interpolation_factors(self.k0, self.kfac, z_LS, z)
 
         # Half level (grid edge):
         self.ih0   = np.zeros_like(x, dtype=np.int)
@@ -96,15 +117,17 @@ class Grid_interpolator:
         self.jh0   = np.zeros_like(y, dtype=np.int)
         self.jhfac = np.zeros_like(y, dtype=np.float)
 
-        self.kh0   = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.int)
-        self.khfac = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.float)
-
         calc_horz_interpolation_factors(self.ih0, self.ihfac, x_LS, xh+x0)
         calc_horz_interpolation_factors(self.jh0, self.jhfac, y_LS, yh+y0)
-        calc_vert_interpolation_factors(self.kh0, self.khfac, z_LS, zh)
+
+        if z is not None:
+            self.kh0   = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.int)
+            self.khfac = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.float)
+
+            calc_vert_interpolation_factors(self.kh0, self.khfac, z_LS, zh)
 
 
-    def interpolate(self, field_LS, locx, locy, locz):
+    def interpolate_3d(self, field_LS, locx, locy, locz):
         """
         Interpolate `field_LS` onto the LES grid, at the specified location (x={x,xh}, y={y,yh}, z={z,zh})
         """
@@ -120,6 +143,24 @@ class Grid_interpolator:
 
         field_LES = np.zeros((i0.size, j0.size, k0.shape[2]), dtype=np.float)
 
-        interpolate_kernel(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac)
+        interpolate_kernel_3d(field_LES, field_LS, i0, j0, k0, ifac, jfac, kfac)
+
+        return field_LES
+
+    def interpolate_2d(self, field_LS, locx, locy):
+        """
+        Interpolate `field_LS` onto the LES grid, at the specified location (x={x,xh}, y={y,yh})
+        """
+
+        # Switch between full and half levels
+        i0 = self.i0 if locx == 'x' else self.ih0
+        j0 = self.j0 if locy == 'y' else self.jh0
+
+        ifac = self.ifac if locx == 'x' else self.ihfac
+        jfac = self.jfac if locy == 'y' else self.jhfac
+
+        field_LES = np.zeros((i0.size, j0.size), dtype=np.float)
+
+        interpolate_kernel_2d(field_LES, field_LS, i0, j0, ifac, jfac)
 
         return field_LES
