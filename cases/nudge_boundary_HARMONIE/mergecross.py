@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 expnr = 1
-base  = 'crossxy.0002'
+base  = 'crossxy'
 #base  = 'crossxzspan'
 npx   = 2
 npy   = 1
