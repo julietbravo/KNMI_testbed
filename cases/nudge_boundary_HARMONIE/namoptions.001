@@ -8,10 +8,9 @@ ladaptive  = .true.
 irandom    = 1
 randthl    = 0.1
 randqt     = 2.5e-5
-nsv        = 0
-nprocx     = 2
+nsv        = 2
+nprocx     = 24
 nprocy     = 24
-nsv        = 24
 /
 
 &DOMAIN
@@ -35,7 +34,6 @@ igrw_damp  = 3       ! 3 = nudge (damping) to mean profile
 wtsurf     = 0.
 wqsurf     = 0.
 isurf      = 2      ! 2 = Ts, calculated fluxes
-!ustin      = 0.28
 /
 
 &DYNAMICS
@@ -73,7 +71,7 @@ timeav     = 60.
 /
 
 &NAMCHECKSIM
-tcheck     = 60
+tcheck     = 1
 /
 
 &NAMSAMPLING
@@ -96,7 +94,7 @@ lxz         = .false.
 lyz         = .false.
 lspan       = .false.
 dtav        = 60
-crossheight = 1 2
+crossheight = 1 2 5 21
 /
 
 &NAMGENSTAT

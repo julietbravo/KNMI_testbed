@@ -3,13 +3,13 @@ import numpy as np
 import os
 
 expnr = 1
-base  = 'crossxy'
+base  = 'crossxy.0001'
 #base  = 'crossxzspan'
-npx   = 2
-npy   = 1
-itot  = 128
-jtot  = 128
-ktot  = 32
+npx   = 4
+npy   = 4
+itot  = 64
+jtot  = 64
+ktot  = 128
 
 if 'xz' in base:
     mode = 'xz'

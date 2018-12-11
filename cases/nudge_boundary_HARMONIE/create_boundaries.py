@@ -82,61 +82,38 @@ class Grid_stretched:
         pl.ylabel('z (m)')
 
 
-
-
-
-def write_LBC(u, v, thl, qt, itot, jtot, nprocx, procy, hour, minutes, iexpnr):
+def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, iexpnr):
 
     # Size of MPI sub-domains
     block_x = int(itot / nprocx)
     block_y = int(jtot / nprocy)
 
-    # Write the zonal boundaries
-    for i in (0, nprocx-1):
-        for j in range(nprocy):
+    # For t==0 and the left and right boundary, write the full range of y-processes
+    # Otherwise only write the meridional boundaries
+    if (hour==0 or mpiidx==0 or mpiidx==nprocx-1):
+        yprocs = np.arange(nprocy)
+    else:
+        yprocs = (0, nprocy-1)
 
-            # East and west slices
-            if i==0:
-                s = np.s_[:block_x,      j*block_y:(j+1)*block_y, :]
-            else:
-                s = np.s_[itot-block_x:, j*block_y:(j+1)*block_y, :]
+    for mpiidy in yprocs:
+        slice = np.s_[:, mpiidy*block_y:(mpiidy+1)*block_y, :]
+    
+        # Open binary file
+        name = 'lbc{0:03.0f}h{1:02.0f}m_x{2:03d}y{3:03d}.{4:03d}'.format(hour, minutes, mpiidx, mpiidy, iexpnr)
+        print('Writing {}'.format(name))
+        f = open(name, 'wb+')
 
-            # Open binary file
-            name = 'lbc{0:03.0f}h{1:02.0f}m_x{2:03d}y{3:03d}.{4:03d}'.format(hour, minutes, i, j, iexpnr)
-            print('Writing {}'.format(name))
-            f = open(name, 'wb+')
-
-            # Write boundaries and close file
-            np.transpose(u  [s]).tofile(f)
-            np.transpose(v  [s]).tofile(f)
-            np.transpose(thl[s]).tofile(f)
-            np.transpose(qt [s]).tofile(f)
-            f.close()
-
-    # Write the meridional boundaries
-    for j in (0, nprocy-1):
-        for i in range(1,nprocx-1):
-
-            # South and north slices
-            if j==0:
-                s = np.s_[i*block_x:(i+1)*block_x, :block_y,     :]
-            else:
-                s = np.s_[i*block_y:(i+1)*block_x, jtot-block_y: :]
-
-            # Open binary file
-            name = 'lbc{0:03.0f}h{1:02.0f}m_x{2:03d}y{3:03d}.{4:03d}'.format(hour, minutes, i, j, iexpnr)
-            print('Writing {}'.format(name))
-            f = open(name, 'wb+')
-
-            # Write boundaries and close file
-            np.transpose(u  [s]).tofile(f)
-            np.transpose(v  [s]).tofile(f)
-            np.transpose(thl[s]).tofile(f)
-            np.transpose(qt [s]).tofile(f)
-            f.close()
+        # Write boundaries and close file
+        np.transpose(u  [slice]).tofile(f)
+        np.transpose(v  [slice]).tofile(f)
+        np.transpose(thl[slice]).tofile(f)
+        np.transpose(qt [slice]).tofile(f)
+        f.close()
+        
 
 
 def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr):
+    print('Writing initial profiles')
 
     # Initial profiles
     f = open('prof.inp.{0:03d}'.format(iexpnr), 'w')
@@ -175,16 +152,14 @@ if __name__ == '__main__':
     t0 = 13
     t1 = 18
 
-    # Lower left corner LES domain in Harmonie (m)
-    #x0 = 800000
-    #y0 = 1100000
+    # Lower left corner LES domain in HARMONIE (m)
     x0 = 1000000 - 150000
     y0 = 1000000 - 150000
 
     # Domain size LES (m)
     xsize = 1680*200
     ysize = 1680*200
-    zsize = 3200
+    #zsize = 3200
 
     # Number of grid points LES
     itot = 1680
@@ -192,8 +167,8 @@ if __name__ == '__main__':
     ktot = 128
 
     # Number of x,y MPI processes
-    nprocx = 2
-    nprocy = 1
+    nprocx = 24
+    nprocy = 24
 
     # DALES constants (modglobal.f90)
     cd = dict(p0=1.e5, Rd=287.04, Rv=461.5, cp=1004., Lv=2.53e6)
@@ -207,8 +182,8 @@ if __name__ == '__main__':
     grid_sig = hsg.Sigma_grid('data/H40_65lev.txt')
 
     # HARMONIE data
-    data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/2010/02/28/00'
-    #data_path = '/home/bart/meteo/data/DOWA_fulldomain/2010/02/28/00/'
+    #data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/2010/02/28/00'
+    data_path = '/home/bart/meteo/data/DOWA_fulldomain/2010/02/28/00/'
     u  = xr.open_dataset('{}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
     v  = xr.open_dataset('{}/va.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
     T  = xr.open_dataset('{}/ta.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
@@ -218,7 +193,7 @@ if __name__ == '__main__':
 
     # Select a sub-area around the LES domain, to speed up
     # calculations done over the entire HARMONIE grid
-    def sel_sub_area(ds, x0, y0, xsize, ysize, margin=5000):
+    def sel_sub_area(ds, x0, y0, xsize, ysize, margin=2500):
         return ds.sel(x=slice(x0-margin, x0+xsize+margin), y=slice(y0-margin, y0+ysize+margin))
 
     u  = sel_sub_area(u,  x0, y0, xsize, ysize)['ua' ]
@@ -228,89 +203,113 @@ if __name__ == '__main__':
     ql = sel_sub_area(ql, x0, y0, xsize, ysize)['clw']
     ps = sel_sub_area(ps, x0, y0, xsize, ysize)['ps' ]
 
-    # ....
+    # Store lat/lon on LES grid (to-do: use proj.4 to simply re-create HARMONIE projection on LES grid..)
     intp = ip.Grid_interpolator(u['x'].values, u['y'].values, None, grid.x, grid.y, None, grid.xh, grid.yh, None, x0, y0)
     lon_LES = intp.interpolate_2d(u['lon'].values, 'x', 'y')
     lat_LES = intp.interpolate_2d(u['lat'].values, 'x', 'y')
     np.save('lon_LES', lon_LES) 
     np.save('lat_LES', lat_LES) 
 
-    # Create hourly boundaries:
-    for t in range(t0, t1):
-        print('Processing t={0:>2d}/{1:<2d}'.format(t+1, (t1-t0)))
+    if (True):
+        # Create hourly boundaries:
+        for t in range(t0, t1):
+            print('Processing t={0:>2d}/{1:<2d}'.format(t+1, (t1-t0)))
 
-        # Load data from current time step (not really necessary, but otherwise
-        # from here on some variable do have a time dimension, and some dont't....)
-        # Also, nice time to drop the no longer necessary xarray stuff with `.values`
-        u_t  = u [t,:,:,:].values
-        v_t  = v [t,:,:,:].values
-        T_t  = T [t,:,:,:].values
-        qv_t = q [t,:,:,:].values
-        ql_t = ql[t,:,:,:].values
-        ps_t = ps[t,:,:  ].values
+            # Load data from current time step (not really necessary, but otherwise
+            # from here on some variable do have a time dimension, and some dont't....)
+            # Also, nice time to drop the no longer necessary xarray stuff with `.values`
+            u_t  = u [t,:,:,:].values
+            v_t  = v [t,:,:,:].values
+            T_t  = T [t,:,:,:].values
+            qv_t = q [t,:,:,:].values
+            ql_t = ql[t,:,:,:].values
+            ps_t = ps[t,:,:  ].values
 
-        # Virtual temperature for height calculation
-        Tv_t = T_t * (1+cd['eps']*qv_t - ql_t)
+            # Virtual temperature for height calculation
+            Tv_t = T_t * (1+cd['eps']*qv_t - ql_t)
 
-        # Calculate pressure and height on full and half HARMONIE grid levels
-        ph = grid_sig.calc_half_level_pressure(ps_t)
-        zh = grid_sig.calc_half_level_Zg(ph, Tv_t)
-        p  = grid_sig.calc_full_level_pressure(ph)
-        z  = grid_sig.calc_full_level_Zg(zh)
+            # Calculate pressure and height on full and half HARMONIE grid levels
+            ph = grid_sig.calc_half_level_pressure(ps_t)
+            zh = grid_sig.calc_half_level_Zg(ph, Tv_t)
+            p  = grid_sig.calc_full_level_pressure(ph)
+            z  = grid_sig.calc_full_level_Zg(zh)
 
-        # Conversions HARMONIE quantities -> LES
-        exner = (p[::-1]/cd['p0'])**(cd['Rd']/cd['cp'])
-        th_t  = T_t / exner
-        thl_t = th_t - cd['Lv'] / (cd['cp'] * exner) * ql_t
-        qt_t  = qv_t + ql_t
+            # Conversions HARMONIE quantities -> LES
+            exner = (p[::-1]/cd['p0'])**(cd['Rd']/cd['cp'])
+            th_t  = T_t / exner
+            thl_t = th_t - cd['Lv'] / (cd['cp'] * exner) * ql_t
+            qt_t  = qv_t + ql_t
 
-        # Create the interpolator for HARMONIE -> LES
-        intp = ip.Grid_interpolator(u['x'].values, u['y'].values, z, grid.x, grid.y, grid.z, grid.xh, grid.yh, grid.zh, x0, y0)
+            # Mean profiles to init LES (prof.inp)
+            if (t==t0):
+                mean_u = np.zeros(grid.ktot, dtype=np.float)
+                mean_v = np.zeros(grid.ktot, dtype=np.float)
+                mean_t = np.zeros(grid.ktot, dtype=np.float)
+                mean_q = np.zeros(grid.ktot, dtype=np.float)
 
-        # Interpolate HARMONIE onto LES grid
-        # `::-1` reverses the vertical dimension (HARMONIE's data
-        # is aranged from top-to-bottom, LES from bottom-to-top
-        u_LES   = intp.interpolate_3d(u_t  [::-1,:,:], 'xh', 'y',  'z')
-#        v_LES   = intp.interpolate_3d(v_t  [::-1,:,:], 'x',  'yh', 'z')
-#        thl_LES = intp.interpolate_3d(thl_t[::-1,:,:], 'x',  'y',  'z')
-#        qt_LES  = intp.interpolate_3d(qt_t [::-1,:,:], 'x',  'y',  'z')
-#
-#        # Write the LBCs in binary format for LES
-#        write_LBC(u_LES, v_LES, thl_LES, qt_LES, itot, jtot, nprocx, nprocy, t-t0, 0., iexpnr)
-#
-#        if t == t0:
-#            # Write the initial profiles for LES
-#            tke = 0.1 * np.ones_like(grid.z)
-#            write_initial_profiles(grid.z, np.mean(u_LES,   axis=(0,1)),
-#                                           np.mean(v_LES,   axis=(0,1)),
-#                                           np.mean(thl_LES, axis=(0,1)),
-#                                           np.mean(qt_LES,  axis=(0,1)), tke, iexpnr)
+            # Do the rest in yz slices per MPI task in the x-direction (otherwise memory -> BOEM!)
+            blocksize_x = int(itot / nprocx)
+            for mpiidx in range(0, nprocx):
 
-        if True:
-            fig  = pl.figure()
-            proj = ccrs.LambertConformal(central_longitude=4.9, central_latitude=51.967)
-            ax   = pl.axes(projection=proj)
-            pl.title('t={}:00'.format(t), loc='left')
+                # Create the interpolator for HARMONIE -> LES
+                sx = np.s_[mpiidx*blocksize_x:(mpiidx+1)*blocksize_x]
+                intp = ip.Grid_interpolator(u['x'].values, u['y'].values, z, grid.x[sx], grid.y, grid.z, grid.xh[sx], grid.yh, grid.zh, x0, y0)
 
-            # Add coast lines et al.
-            ax.coastlines(resolution='10m', linewidth=0.8, color='k')
-        
-            countries = cfeature.NaturalEarthFeature(
-                    category='cultural', name='admin_0_boundary_lines_land', scale='50m', facecolor='none', zorder=100)
-            ax.add_feature(countries, edgecolor='k', linewidth=0.8)
+                # Interpolate HARMONIE onto LES grid
+                # `::-1` reverses the vertical dimension (HARMONIE's data
+                # is aranged from top-to-bottom, LES from bottom-to-top
+                u_LES   = intp.interpolate_3d(u_t  [::-1,:,:], 'xh', 'y',  'z')
+                v_LES   = intp.interpolate_3d(v_t  [::-1,:,:], 'x',  'yh', 'z')
+                thl_LES = intp.interpolate_3d(thl_t[::-1,:,:], 'x',  'y',  'z')
+                qt_LES  = intp.interpolate_3d(qt_t [::-1,:,:], 'x',  'y',  'z')
 
-            lakes = cfeature.NaturalEarthFeature(
-                    category='physical', name='lakes', scale='50m', facecolor='none', zorder=100)
-            ax.add_feature(lakes, edgecolor='k', linewidth=0.8)
+                # Write the LBCs in binary format for LES
+                write_LBC(u_LES, v_LES, thl_LES, qt_LES, itot, jtot, nprocx, nprocy, mpiidx, t-t0, 0., iexpnr)
 
-            ax.set_extent([lon_LES.min()-0.1, lon_LES.max()+0.1, lat_LES.min()-0.1, lat_LES.max()+0.1], ccrs.PlateCarree())
+                if (t==t0):
+                    # Store mean profiles
+                    mean_u[:] += np.mean(u_LES,   axis=(0,1))
+                    mean_v[:] += np.mean(v_LES,   axis=(0,1))
+                    mean_t[:] += np.mean(thl_LES, axis=(0,1))
+                    mean_q[:] += np.mean(qt_LES,  axis=(0,1))
 
-            vmin = u[:,-1,:,:].min()
-            vmax = u[:,-1,:,:].max()
+            if (t==t0):
+                # Write initial profiles to prof.inp.expnr
+                mean_u /= nprocx
+                mean_v /= nprocx
+                mean_t /= nprocx
+                mean_q /= nprocx
 
-            ax.pcolormesh(u['lon'], u['lat'], u[t,-1,:,:], transform=ccrs.PlateCarree(), cmap=pl.cm.RdBu_r, vmin=vmin, vmax=vmax)
-            pc=ax.pcolormesh(lon_LES, lat_LES, u_LES[:,:,0], transform=ccrs.PlateCarree(), cmap=pl.cm.RdBu_r, vmin=vmin, vmax=vmax)
-            pl.colorbar(pc)
+                tke = 0.1 * np.ones_like(grid.z)
+                write_initial_profiles(grid.z, mean_u, mean_v, mean_t, mean_q, tke, iexpnr)
+
+
+
+
+
+
+    # Plot ~location of LES domain
+    if False:
+        fig  = pl.figure()
+        proj = ccrs.LambertConformal(central_longitude=4.9, central_latitude=51.967)
+        ax   = pl.axes(projection=proj)
+    
+        # Add coast lines et al.
+        ax.coastlines(resolution='10m', linewidth=0.8, color='k')
+    
+        countries = cfeature.NaturalEarthFeature(
+                category='cultural', name='admin_0_boundary_lines_land', scale='50m', facecolor='none', zorder=100)
+        ax.add_feature(countries, edgecolor='k', linewidth=0.8)
+    
+        lakes = cfeature.NaturalEarthFeature(
+                category='physical', name='lakes', scale='50m', facecolor='none', zorder=100)
+        ax.add_feature(lakes, edgecolor='k', linewidth=0.8)
+    
+        ax.set_extent([lon_LES.min()-0.1, lon_LES.max()+0.1, lat_LES.min()-0.1, lat_LES.max()+0.1], ccrs.PlateCarree())
+    
+        pc=ax.pcolormesh(u['lon'], u['lat'], u[t0,-1,:,:], transform=ccrs.PlateCarree(), cmap=pl.cm.RdBu_r)
+    
+        pl.colorbar(pc)
 
 
 
