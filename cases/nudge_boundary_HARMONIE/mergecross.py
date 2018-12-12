@@ -11,6 +11,8 @@ itot  = 64
 jtot  = 64
 ktot  = 128
 
+include = ['u','v','thl','qt']
+
 if 'xz' in base:
     mode = 'xz'
 elif 'xy' in base:
@@ -55,7 +57,8 @@ for i in range(npx):
 
             # Create variables
             for name, var in src.variables.items():
-                dst.createVariable(name, var.datatype, var.dimensions)
+                if name == 'time' or name[0] == 'x' or name[0] == 'y' or name[0] == 'z' or name.replace(mode, '') in include:
+                    dst.createVariable(name, var.datatype, var.dimensions)
 
             # Copy time
             dst.variables['time'][:]= src.variables['time'][:]
@@ -75,9 +78,10 @@ for i in range(npx):
                 elif name[0] == 'z':
                     dst.variables[name][:] = src.variables[name][:]
                 else:
-                    if mode == 'xy':
-                        dst.variables[name][:,sy,sx] = src.variables[name][:]
-                    elif mode == 'xz':
-                        dst.variables[name][:,:,sx] = src.variables[name][:]
+                    if name.replace(mode, '') in include:
+                        if mode == 'xy':
+                            dst.variables[name][:,sy,sx] = src.variables[name][:]
+                        elif mode == 'xz':
+                            dst.variables[name][:,:,sx] = src.variables[name][:]
 
 dst.close()
