@@ -10,6 +10,7 @@ npy   = 4
 itot  = 64
 jtot  = 64
 ktot  = 128
+ntime = 2
 
 include = ['u','v','thl','qt']
 
@@ -61,7 +62,7 @@ for i in range(npx):
                     dst.createVariable(name, var.datatype, var.dimensions)
 
             # Copy time
-            dst.variables['time'][:]= src.variables['time'][:]
+            dst.variables['time'][:]= src.variables['time'][::ntime]
 
             src.close()
 
@@ -80,8 +81,8 @@ for i in range(npx):
                 else:
                     if name.replace(mode, '') in include:
                         if mode == 'xy':
-                            dst.variables[name][:,sy,sx] = src.variables[name][:]
+                            dst.variables[name][:,sy,sx] = src.variables[name][::ntime]
                         elif mode == 'xz':
-                            dst.variables[name][:,:,sx] = src.variables[name][:]
+                            dst.variables[name][:,:,sx] = src.variables[name][::ntime]
 
 dst.close()
