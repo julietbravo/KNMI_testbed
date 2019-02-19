@@ -14,6 +14,7 @@ import cartopy.feature as cfeature
 import hybrid_sigma_grid as hsg
 import interpolate as ip
 
+
 class Grid:
     """
     Simple version of LES grid, without ghost cells (not needed here)
@@ -182,8 +183,8 @@ if __name__ == '__main__':
     grid_sig = hsg.Sigma_grid('data/H40_65lev.txt')
 
     # HARMONIE data
-    #data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/2010/02/28/00'
-    data_path = '/home/bart/meteo/data/DOWA_fulldomain/2010/02/28/00/'
+    data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/2010/02/28/00'
+    #data_path = '/home/bart/meteo/data/DOWA_fulldomain/2010/02/28/00/'
     u  = xr.open_dataset('{}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
     v  = xr.open_dataset('{}/va.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
     T  = xr.open_dataset('{}/ta.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
@@ -209,6 +210,7 @@ if __name__ == '__main__':
     lat_LES = intp.interpolate_2d(u['lat'].values, 'x', 'y')
     np.save('lon_LES', lon_LES) 
     np.save('lat_LES', lat_LES) 
+
 
     if (True):
         # Create hourly boundaries:
