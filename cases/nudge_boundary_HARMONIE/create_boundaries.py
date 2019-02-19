@@ -5,6 +5,7 @@
 
 import xarray as xr
 import numpy as np
+import datetime
 
 import cartopy
 import cartopy.crs as ccrs
@@ -83,7 +84,7 @@ class Grid_stretched:
         pl.ylabel('z (m)')
 
 
-def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, iexpnr):
+def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, iexpnr, output_dir):
 
     # Size of MPI sub-domains
     block_x = int(itot / nprocx)
@@ -100,8 +101,8 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, 
         slice = np.s_[:, mpiidy*block_y:(mpiidy+1)*block_y, :]
     
         # Open binary file
-        name = 'lbc{0:03.0f}h{1:02.0f}m_x{2:03d}y{3:03d}.{4:03d}'.format(hour, minutes, mpiidx, mpiidy, iexpnr)
-        print('Writing {}'.format(name))
+        name = '{0:}/lbc{1:03.0f}h{2:02.0f}m_x{3:03d}y{4:03d}.{5:03d}'.format(output_dir, hour, minutes, mpiidx, mpiidy, iexpnr)
+        #print('Writing {}'.format(name))
         f = open(name, 'wb+')
 
         # Write boundaries and close file
@@ -113,11 +114,11 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, 
         
 
 
-def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr):
+def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr, output_dir):
     print('Writing initial profiles')
 
     # Initial profiles
-    f = open('prof.inp.{0:03d}'.format(iexpnr), 'w')
+    f = open('{0:}/prof.inp.{1:03d}'.format(output_dir, iexpnr), 'w')
     f.write('Initial profiles\n')
     f.write('{0:^20s} {1:^20s} {2:^20s} {3:^20s} {4:^20s} {5:^20s}\n'.format('z','thl','qt', 'u', 'v', 'tke'))
     for k in range(z.size):
@@ -125,7 +126,7 @@ def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr):
     f.close()
 
     # Dummy lscale.inp
-    f = open('lscale.inp.{0:03d}'.format(iexpnr), 'w')
+    f = open('{0:}/lscale.inp.{1:03d}'.format(output_dir, iexpnr), 'w')
     f.write('Large-scale forcings\n')
     f.write('{0:^20s} {1:^20s} {2:^20s} {3:^20s} {4:^20s} {5:^20s} {6:^20s} {7:^20s}\n'.format('z','ug','vg','wls','dqtdx','dqtdy','dqtdt','dthldt'))
     for k in range(z.size):
@@ -133,7 +134,7 @@ def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr):
     f.close()
 
     # Dummy scalar.inp
-    f = open('scalar.inp.{0:03d}'.format(iexpnr), 'w')
+    f = open('{0:}/scalar.inp.{1:03d}'.format(output_dir, iexpnr), 'w')
     f.write('Scalars\n')
     f.write('{0:^20s} {1:^20s} {2:^20s}\n'.format('z','s1','s2'))
     for k in range(z.size):
@@ -150,12 +151,12 @@ if __name__ == '__main__':
     iexpnr = 1
 
     # Start and end time (index in HARMONIE files)
-    t0 = 13
-    t1 = 18
+    t0 = 8
+    t1 = 20
 
     # Lower left corner LES domain in HARMONIE (m)
-    x0 = 1000000 - 150000
-    y0 = 1000000 - 150000
+    x0 = 700000
+    y0 = 1200000
 
     # Domain size LES (m)
     xsize = 1680*200
@@ -171,6 +172,11 @@ if __name__ == '__main__':
     nprocx = 24
     nprocy = 24
 
+    # Output directory (boundaries are LARGE)
+    output_dir = '/nobackup/users/stratum/tmp/nudge_boundary_HARMONIE/'
+    # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
+    data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+
     # DALES constants (modglobal.f90)
     cd = dict(p0=1.e5, Rd=287.04, Rv=461.5, cp=1004., Lv=2.53e6)
     cd['eps'] = cd['Rv']/cd['Rd']-1.
@@ -182,15 +188,20 @@ if __name__ == '__main__':
     # Hybrid sigma grid tools
     grid_sig = hsg.Sigma_grid('data/H40_65lev.txt')
 
+    # --------------------------
     # HARMONIE data
-    data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/2010/02/28/00'
-    #data_path = '/home/bart/meteo/data/DOWA_fulldomain/2010/02/28/00/'
-    u  = xr.open_dataset('{}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
-    v  = xr.open_dataset('{}/va.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
-    T  = xr.open_dataset('{}/ta.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
-    q  = xr.open_dataset('{}/hus.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
-    ql = xr.open_dataset('{}/clw.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
-    ps = xr.open_dataset('{}/ps.his.NETHERLANDS.DOWA_40h12tg2_fERA5_ptA.20100228.nc'.format(data_path))
+    # --------------------------
+    date_hm = datetime.datetime(year=2018, month=10, day=1)
+    dowa_pt = 'ptF'
+
+    date = '{0:04d}{1:02d}{2:02d}'.format(date_hm.year, date_hm.month, date_hm.day)
+    dir  = '{0:04d}/{1:02d}/{2:02d}/00'.format(date_hm.year, date_hm.month, date_hm.day)
+    u  = xr.open_dataset('{0}/{1}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
+    v  = xr.open_dataset('{0}/{1}/va.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
+    T  = xr.open_dataset('{0}/{1}/ta.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
+    q  = xr.open_dataset('{0}/{1}/hus.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc'.format(data_path, dir, dowa_pt, date))
+    ql = xr.open_dataset('{0}/{1}/clw.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc'.format(data_path, dir, dowa_pt, date))
+    ps = xr.open_dataset('{0}/{1}/ps.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc'      .format(data_path, dir, dowa_pt, date))
 
     # Select a sub-area around the LES domain, to speed up
     # calculations done over the entire HARMONIE grid
@@ -208,14 +219,14 @@ if __name__ == '__main__':
     intp = ip.Grid_interpolator(u['x'].values, u['y'].values, None, grid.x, grid.y, None, grid.xh, grid.yh, None, x0, y0)
     lon_LES = intp.interpolate_2d(u['lon'].values, 'x', 'y')
     lat_LES = intp.interpolate_2d(u['lat'].values, 'x', 'y')
-    np.save('lon_LES', lon_LES) 
-    np.save('lat_LES', lat_LES) 
-
+    np.save('{}/lon_LES'.format(output_dir), lon_LES) 
+    np.save('{}/lat_LES'.format(output_dir), lat_LES) 
 
     if (True):
         # Create hourly boundaries:
-        for t in range(t0, t1):
-            print('Processing t={0:>2d}/{1:<2d}'.format(t+1, (t1-t0)))
+        for t in range(t0, t1+1):
+            print('Processing t={0:>2d}:00 UTC'.format(t))
+            start_time = datetime.datetime.now()
 
             # Load data from current time step (not really necessary, but otherwise
             # from here on some variable do have a time dimension, and some dont't....)
@@ -252,6 +263,7 @@ if __name__ == '__main__':
             # Do the rest in yz slices per MPI task in the x-direction (otherwise memory -> BOEM!)
             blocksize_x = int(itot / nprocx)
             for mpiidx in range(0, nprocx):
+                print('Processing mpiidx={}/{}'.format(mpiidx+1, nprocx))
 
                 # Create the interpolator for HARMONIE -> LES
                 sx = np.s_[mpiidx*blocksize_x:(mpiidx+1)*blocksize_x]
@@ -266,7 +278,7 @@ if __name__ == '__main__':
                 qt_LES  = intp.interpolate_3d(qt_t [::-1,:,:], 'x',  'y',  'z')
 
                 # Write the LBCs in binary format for LES
-                write_LBC(u_LES, v_LES, thl_LES, qt_LES, itot, jtot, nprocx, nprocy, mpiidx, t-t0, 0., iexpnr)
+                write_LBC(u_LES, v_LES, thl_LES, qt_LES, itot, jtot, nprocx, nprocy, mpiidx, t-t0, 0., iexpnr, output_dir)
 
                 if (t==t0):
                     # Store mean profiles
@@ -283,15 +295,18 @@ if __name__ == '__main__':
                 mean_q /= nprocx
 
                 tke = 0.1 * np.ones_like(grid.z)
-                write_initial_profiles(grid.z, mean_u, mean_v, mean_t, mean_q, tke, iexpnr)
+                write_initial_profiles(grid.z, mean_u, mean_v, mean_t, mean_q, tke, iexpnr, output_dir)
 
+            # Statistics
+            end_time = datetime.datetime.now()
+            print('Elapsed = {}'.format(end_time-start_time))
 
 
 
 
 
     # Plot ~location of LES domain
-    if False:
+    if True:
         fig  = pl.figure()
         proj = ccrs.LambertConformal(central_longitude=4.9, central_latitude=51.967)
         ax   = pl.axes(projection=proj)
@@ -307,7 +322,7 @@ if __name__ == '__main__':
                 category='physical', name='lakes', scale='50m', facecolor='none', zorder=100)
         ax.add_feature(lakes, edgecolor='k', linewidth=0.8)
     
-        ax.set_extent([lon_LES.min()-0.1, lon_LES.max()+0.1, lat_LES.min()-0.1, lat_LES.max()+0.1], ccrs.PlateCarree())
+        ax.set_extent([lon_LES.min()-4.1, lon_LES.max()+4.1, lat_LES.min()-4.1, lat_LES.max()+4.1], ccrs.PlateCarree())
     
         pc=ax.pcolormesh(u['lon'], u['lat'], u[t0,-1,:,:], transform=ccrs.PlateCarree(), cmap=pl.cm.RdBu_r)
     
