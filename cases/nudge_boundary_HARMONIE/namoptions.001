@@ -2,7 +2,7 @@
 iexpnr     = 001
 lwarmstart = .false.
 startfile  = 'initd001h00mx000y000.001'
-runtime    = 14400
+runtime    = 21600
 trestart   = 3600
 ladaptive  = .true.
 irandom    = 1
@@ -14,19 +14,22 @@ nprocy     = 24
 /
 
 &DOMAIN
-itot       = 1680
-jtot       = 1680
+itot       = 840 !1680
+jtot       = 840 !1680
 kmax       = 128
 xsize      = 336000
 ysize      = 336000
+
+xlat = 55. 
+xlon = 4.
 /
 
 &PHYSICS
 z0         = 1e-3
-ps         = 98000.00
-thls       = 277.5
+ps         = 120000.00
+thls       = 287
 lmoist     = .true.
-lcoriol    = .false.
+lcoriol    = .true.
 igrw_damp  = 3       ! 3 = nudge (damping) to mean profile
 /
 
@@ -121,12 +124,12 @@ tnudgefac = 10800
 
 &NAMNUDGEBOUNDARY
 lnudge_boundary = .true.
-nudge_offset = 1500
-nudge_width = 250
+nudge_offset = 3000
+nudge_width = 800
 tau = 10
 dt_input_lbc = 3600
 lperturb_boundary = .true.
 perturb_ampl = 0.1
 zmax_perturb = 500
-blocksize=4
+blocksize=2
 /

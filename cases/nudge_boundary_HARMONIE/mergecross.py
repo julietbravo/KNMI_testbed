@@ -1,19 +1,32 @@
 import netCDF4 as nc4
 import numpy as np
+
+import sys
 import os
 
+#
+# Settings
+#
 expnr = 1
-base  = 'crossxy.0001'
-#base  = 'crossxzspan'
-npx   = 4
-npy   = 4
-itot  = 64
-jtot  = 64
-ktot  = 128
-ntime = 2
+npx   = 24
+npy   = 24
+itot  = 840 #1680
+jtot  = 840 #1680
+ktot  = 75
+ntime = 1
 
-include = ['u','v','thl','qt']
+#
+# Get base and variable name to process
+# 
+if len(sys.argv) != 3:
+    sys.exit('Provide cross-section base name (e.g. crossxy or crossxy.0001) and variable (e.g. thl) to process')
+else:
+    base     = sys.argv[1]
+    variable = sys.argv[2]
 
+#
+# Set some settings
+#
 if 'xz' in base:
     mode = 'xz'
 elif 'xy' in base:
@@ -26,6 +39,9 @@ elif mode == 'xz':
     chx = int(itot / npx)
     chy = 1
 
+#
+# Process cross-sections of each MPI task
+#
 for i in range(npx):
     n = 1 if 'span' in base else npy
     for j in range(n):
@@ -38,10 +54,10 @@ for i in range(npx):
         sx = np.s_[i*chx:(i+1)*chx]
         sy = np.s_[j*chy:(j+1)*chy]
 
+        # Create new NetCDF file if first MPI task
         if i==0 and j==0:
-            # Open first file to copy dimensions et al.
             src = nc4.Dataset(fname)
-            dst = nc4.Dataset('{0:}.{1:03d}.nc'.format(base, expnr), 'w')
+            dst = nc4.Dataset('{0:}.{1:}.{2:03d}.nc'.format(base, variable, expnr), 'w')
 
             # Copy NetCDF attributes and dimensions
             for name in src.ncattrs():
@@ -58,7 +74,8 @@ for i in range(npx):
 
             # Create variables
             for name, var in src.variables.items():
-                if name == 'time' or name[0] == 'x' or name[0] == 'y' or name[0] == 'z' or name.replace(mode, '') in include:
+                print(name)
+                if name == 'time' or name[0] == 'x' or name[0] == 'y' or name[0] == 'z' or name.replace(mode, '') == variable:
                     dst.createVariable(name, var.datatype, var.dimensions)
 
             # Copy time
@@ -79,10 +96,12 @@ for i in range(npx):
                 elif name[0] == 'z':
                     dst.variables[name][:] = src.variables[name][:]
                 else:
-                    if name.replace(mode, '') in include:
+                    if name.replace(mode, '') == variable:
                         if mode == 'xy':
                             dst.variables[name][:,sy,sx] = src.variables[name][::ntime]
                         elif mode == 'xz':
                             dst.variables[name][:,:,sx] = src.variables[name][::ntime]
 
 dst.close()
+
+

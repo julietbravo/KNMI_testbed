@@ -1,0 +1,14 @@
+#!/bin/ksh
+#PBS -S /usr/bin/ksh
+#PBS -q ns
+#PBS -N merge
+#PBS -l walltime=04:00:00
+
+module load python
+
+# Switch to working directory
+cd /scratch/ms/nl/nkbs/DALES/nudge_boundary_HARMONIE
+
+# Run!
+python mergecross.py crossxy lwp
+python mergecross.py crossxy rwp

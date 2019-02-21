@@ -3,7 +3,7 @@
 #PBS -q np
 #PBS -N LES_NL
 #PBS -m a
-#PBS -l walltime=24:00:00
+#PBS -l walltime=24:10:00
 
 #PBS -l EC_total_tasks=576
 #PBS -l EC_threads_per_task=1

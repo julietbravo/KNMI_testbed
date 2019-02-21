@@ -99,7 +99,7 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, 
 
     for mpiidy in yprocs:
         slice = np.s_[:, mpiidy*block_y:(mpiidy+1)*block_y, :]
-    
+
         # Open binary file
         name = '{0:}/lbc{1:03.0f}h{2:02.0f}m_x{3:03d}y{4:03d}.{5:03d}'.format(output_dir, hour, minutes, mpiidx, mpiidy, iexpnr)
         #print('Writing {}'.format(name))
@@ -111,7 +111,7 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, 
         np.transpose(thl[slice]).tofile(f)
         np.transpose(qt [slice]).tofile(f)
         f.close()
-        
+
 
 
 def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr, output_dir):
@@ -173,9 +173,12 @@ if __name__ == '__main__':
     nprocy = 24
 
     # Output directory (boundaries are LARGE)
-    output_dir = '/nobackup/users/stratum/tmp/nudge_boundary_HARMONIE/'
+    #output_dir = '/nobackup/users/stratum/tmp/nudge_boundary_HARMONIE/'
+    output_dir = '/scratch/ms/nl/nkbs/DALES_boundaries/20181001_08/'
+
     # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
-    data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+    #data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+    data_path = '/scratch/ms/nl/nkbs/HARMONIE_boundaries/'
 
     # DALES constants (modglobal.f90)
     cd = dict(p0=1.e5, Rd=287.04, Rv=461.5, cp=1004., Lv=2.53e6)
@@ -196,6 +199,7 @@ if __name__ == '__main__':
 
     date = '{0:04d}{1:02d}{2:02d}'.format(date_hm.year, date_hm.month, date_hm.day)
     dir  = '{0:04d}/{1:02d}/{2:02d}/00'.format(date_hm.year, date_hm.month, date_hm.day)
+    print('{0}/{1}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
     u  = xr.open_dataset('{0}/{1}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
     v  = xr.open_dataset('{0}/{1}/va.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
     T  = xr.open_dataset('{0}/{1}/ta.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
@@ -219,8 +223,8 @@ if __name__ == '__main__':
     intp = ip.Grid_interpolator(u['x'].values, u['y'].values, None, grid.x, grid.y, None, grid.xh, grid.yh, None, x0, y0)
     lon_LES = intp.interpolate_2d(u['lon'].values, 'x', 'y')
     lat_LES = intp.interpolate_2d(u['lat'].values, 'x', 'y')
-    np.save('{}/lon_LES'.format(output_dir), lon_LES) 
-    np.save('{}/lat_LES'.format(output_dir), lat_LES) 
+    np.save('{}/lon_LES'.format(output_dir), lon_LES)
+    np.save('{}/lat_LES'.format(output_dir), lat_LES)
 
     if (True):
         # Create hourly boundaries:
@@ -310,22 +314,22 @@ if __name__ == '__main__':
         fig  = pl.figure()
         proj = ccrs.LambertConformal(central_longitude=4.9, central_latitude=51.967)
         ax   = pl.axes(projection=proj)
-    
+
         # Add coast lines et al.
         ax.coastlines(resolution='10m', linewidth=0.8, color='k')
-    
+
         countries = cfeature.NaturalEarthFeature(
                 category='cultural', name='admin_0_boundary_lines_land', scale='50m', facecolor='none', zorder=100)
         ax.add_feature(countries, edgecolor='k', linewidth=0.8)
-    
+
         lakes = cfeature.NaturalEarthFeature(
                 category='physical', name='lakes', scale='50m', facecolor='none', zorder=100)
         ax.add_feature(lakes, edgecolor='k', linewidth=0.8)
-    
+
         ax.set_extent([lon_LES.min()-4.1, lon_LES.max()+4.1, lat_LES.min()-4.1, lat_LES.max()+4.1], ccrs.PlateCarree())
-    
+
         pc=ax.pcolormesh(u['lon'], u['lat'], u[t0,-1,:,:], transform=ccrs.PlateCarree(), cmap=pl.cm.RdBu_r)
-    
+
         pl.colorbar(pc)
 
 
