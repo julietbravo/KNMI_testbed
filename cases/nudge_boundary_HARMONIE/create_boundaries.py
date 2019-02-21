@@ -150,35 +150,71 @@ if __name__ == '__main__':
     # Settings
     iexpnr = 1
 
-    # Start and end time (index in HARMONIE files)
-    t0 = 8
-    t1 = 20
+    # -----------------
+    # Production domain
+    # -----------------
+    if False:
+        # Start and end time (index in HARMONIE files)
+        t0 = 8
+        t1 = 20
 
-    # Lower left corner LES domain in HARMONIE (m)
-    x0 = 700000
-    y0 = 1200000
+        # Lower left corner LES domain in HARMONIE (m)
+        x0 = 700000
+        y0 = 1200000
 
-    # Domain size LES (m)
-    xsize = 1680*200
-    ysize = 1680*200
-    #zsize = 3200
+        # Domain size LES (m)
+        xsize = 1680*200
+        ysize = 1680*200
+        #zsize = 3200
 
-    # Number of grid points LES
-    itot = 1680
-    jtot = 1680
-    ktot = 128
+        # Number of grid points LES
+        itot = 1680
+        jtot = 1680
+        ktot = 128
 
-    # Number of x,y MPI processes
-    nprocx = 24
-    nprocy = 24
+        # Number of x,y MPI processes
+        nprocx = 24
+        nprocy = 24
 
-    # Output directory (boundaries are LARGE)
-    #output_dir = '/nobackup/users/stratum/tmp/nudge_boundary_HARMONIE/'
-    output_dir = '/scratch/ms/nl/nkbs/DALES_boundaries/20181001_08/'
+        # Output directory (boundaries are LARGE)
+        output_dir = '/scratch/ms/nl/nkbs/DALES_boundaries/20181001_08/'
 
-    # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
-    #data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
-    data_path = '/scratch/ms/nl/nkbs/HARMONIE_boundaries/'
+        # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
+        data_path = '/scratch/ms/nl/nkbs/HARMONIE_boundaries/'
+
+    # -----------------
+    # Development domain
+    # -----------------
+    else:
+        # Start and end time (index in HARMONIE files)
+        t0 = 8
+        t1 = 10
+
+        # Lower left corner LES domain in HARMONIE (m)
+        x0 = 700000
+        y0 = 1200000
+
+        # Domain size LES (m)
+        xsize = 64*500
+        ysize = 64*500
+        #zsize = 3200
+
+        # Number of grid points LES
+        itot = 64
+        jtot = 64
+        ktot = 128
+
+        # Number of x,y MPI processes
+        nprocx = 4
+        nprocy = 4
+
+        # Output directory (boundaries are LARGE)
+        output_dir = '/nobackup/users/stratum/tmp/nudge_boundary_HARMONIE/'
+
+        # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
+        data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+
+
 
     # DALES constants (modglobal.f90)
     cd = dict(p0=1.e5, Rd=287.04, Rv=461.5, cp=1004., Lv=2.53e6)
@@ -199,7 +235,6 @@ if __name__ == '__main__':
 
     date = '{0:04d}{1:02d}{2:02d}'.format(date_hm.year, date_hm.month, date_hm.day)
     dir  = '{0:04d}/{1:02d}/{2:02d}/00'.format(date_hm.year, date_hm.month, date_hm.day)
-    print('{0}/{1}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
     u  = xr.open_dataset('{0}/{1}/ua.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
     v  = xr.open_dataset('{0}/{1}/va.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
     T  = xr.open_dataset('{0}/{1}/ta.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc' .format(data_path, dir, dowa_pt, date))
