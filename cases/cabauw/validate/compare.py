@@ -24,8 +24,10 @@ def format_date_hour(interval):
     ax.xaxis.set_major_locator(hours)
     ax.xaxis.set_major_formatter(hours_fmt)
 
+
 def filter(arr, N):
     return np.convolve(arr, np.ones((N,))/N, mode='same')
+
 
 def interpz(arr, z, z_goal):
     k0 = np.abs(z-z_goal).argmin()
@@ -42,9 +44,10 @@ def interpz(arr, z, z_goal):
 
     return f0*arr[:,k0] + f1*arr[:,k1]
 
+
 # -- Period --
-start = datetime.datetime(year=2017, month=4, day=2, hour=0)
-end   = datetime.datetime(year=2017, month=4, day=6, hour=0)
+start = datetime.datetime(year=2016, month=8, day=4, hour=0)
+end   = datetime.datetime(year=2016, month=8, day=5, hour=0)
 
 # -- Read DALES statistics --
 daa  = xr.open_dataset('../profiles.001.nc')
@@ -53,24 +56,26 @@ das  = xr.open_dataset('../tmser.001.nc')
 daa_time = [start + datetime.timedelta(seconds = int(t)) for t in daa.time.values]
 das_time = [start + datetime.timedelta(seconds = int(t)) for t in das.time.values]
 
+
 if 'ham' not in locals():
     # -- Read Harmonie statistics --
     iloc = 7 #+12
-    path  = '/nobackup/users/stratum/DOWA/LES_forcing'
-    #path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+    #path  = '/nobackup/users/stratum/DOWA/LES_forcing'
+    path = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
     ham  = read_DDH_netcdf(start, end, path)
+
 
 if 'cb' not in locals():
     # -- Read Cabauw observations --
-    path = '/nobackup/users/stratum/Cabauw'
-    #path = '/Users/bart/meteo/observations/Cabauw'
+    #path = '/nobackup/users/stratum/Cabauw'
+    path = '/Users/bart/meteo/observations/Cabauw'
     files = ['{0}/cesar_surface_radiation_lc1_t10_v1.0_{1:04d}{2:02d}.nc'    .format(path, start.year, start.month),
              '{0}/cesar_surface_meteo_lc1_t10_v1.0_{1:04d}{2:02d}.nc'        .format(path, start.year, start.month),
              '{0}/cesar_surface_flux_lc1_t10_v1.0_{1:04d}{2:02d}.nc'         .format(path, start.year, start.month),
              '{0}/cesar_soil_heat_lb1_t10_v1.0_{1:04d}{2:02d}.nc'            .format(path, start.year, start.month),
              '{0}/cesar_soil_water_lb1_t10_v1.1_{1:04d}{2:02d}.nc'           .format(path, start.year, start.month),
              '{0}/cesar_tower_meteo_lc1_t10_v1.0_{1:04d}{2:02d}.nc'          .format(path, start.year, start.month)]
-    cb = xr.open_mfdataset(files)
+    cb = xr.open_mfdataset(files, drop_variables='valid_dates')
 
     fnubi = '{0}/cesar_nubiscope_cloudcover_la1_t10_v1.0_{1:04d}{2:02d}.nc' .format(path, start.year, start.month)
     if os.path.exists(fnubi):
@@ -84,6 +89,7 @@ if 'cb' not in locals():
         cbc_ct[type] = cbc_ct['obscuration_type'] == type
 
     z_cb = {200:0,140:1,80:2,40:3,20:4,10:5,2:6}
+
 
 # -- Colors et al. --
 cd   = 'k'    # DALES color
@@ -140,8 +146,7 @@ if True:
     format_date_hour(xint)
 
 
-
-if False:
+if True:
 
     # Surface radiation balance
     # -------------------------
@@ -221,7 +226,7 @@ if False:
 
 
 
-if False:
+if True:
     # Precipitation
     # --------------
     pl.figure(figsize=(12,7))
@@ -255,7 +260,7 @@ if False:
     pl.tight_layout()
 
 
-if False:
+if True:
     # Soil temperature & moisture
     # ----------------
     exns = (daa.presh[:,0]/1e5)**(287/1004.)     # Not really surface; first model level... Ps is not in DALES output.....

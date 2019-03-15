@@ -38,9 +38,11 @@ def read_DDH_netcdf(start, end, path, include_variables=None):
             if var not in include_variables:
                 exclude.append(var)
 
-        nc = xr.open_mfdataset(files, drop_variables=exclude, concat_dim='time', autoclose=True)
+        nc = xr.open_mfdataset(files, drop_variables=exclude, concat_dim='time')
+        #nc = xr.open_mfdataset(files, drop_variables=exclude, concat_dim='time', autoclose=True)
     else:
-        nc = xr.open_mfdataset(files, autoclose=True)
+        nc = xr.open_mfdataset(files)
+        #nc = xr.open_mfdataset(files, autoclose=True)
 
     # Read data with xarray
     return nc
