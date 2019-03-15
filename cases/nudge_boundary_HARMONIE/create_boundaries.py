@@ -84,7 +84,7 @@ class Grid_stretched:
         pl.ylabel('z (m)')
 
 
-def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, iexpnr, output_dir):
+def write_LBC(u, v, thl, qt, thls, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, iexpnr, output_dir):
 
     # Size of MPI sub-domains
     block_x = int(itot / nprocx)
@@ -98,7 +98,8 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, 
         yprocs = (0, nprocy-1)
 
     for mpiidy in yprocs:
-        slice = np.s_[:, mpiidy*block_y:(mpiidy+1)*block_y, :]
+        slice3 = np.s_[:, mpiidy*block_y:(mpiidy+1)*block_y, :]
+        slice2 = np.s_[:, mpiidy*block_y:(mpiidy+1)*block_y   ]
 
         # Open binary file
         name = '{0:}/lbc{1:03.0f}h{2:02.0f}m_x{3:03d}y{4:03d}.{5:03d}'.format(output_dir, hour, minutes, mpiidx, mpiidy, iexpnr)
@@ -106,12 +107,12 @@ def write_LBC(u, v, thl, qt, itot, jtot, nprocx, nprocy, mpiidx, hour, minutes, 
         f = open(name, 'wb+')
 
         # Write boundaries and close file
-        np.transpose(u  [slice]).tofile(f)
-        np.transpose(v  [slice]).tofile(f)
-        np.transpose(thl[slice]).tofile(f)
-        np.transpose(qt [slice]).tofile(f)
+        np.transpose(u   [slice3]).tofile(f)
+        np.transpose(v   [slice3]).tofile(f)
+        np.transpose(thl [slice3]).tofile(f)
+        np.transpose(qt  [slice3]).tofile(f)
+        np.transpose(thls[slice2]).tofile(f)
         f.close()
-
 
 
 def write_initial_profiles(z, u, v, thl, qt, tke, iexpnr, output_dir):
@@ -153,10 +154,10 @@ if __name__ == '__main__':
     # -----------------
     # Production domain
     # -----------------
-    if False:
+    if True:
         # Start and end time (index in HARMONIE files)
         t0 = 8
-        t1 = 20
+        t1 = 10
 
         # Lower left corner LES domain in HARMONIE (m)
         x0 = 700000
@@ -241,6 +242,7 @@ if __name__ == '__main__':
     q  = xr.open_dataset('{0}/{1}/hus.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc'.format(data_path, dir, dowa_pt, date))
     ql = xr.open_dataset('{0}/{1}/clw.Slev.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc'.format(data_path, dir, dowa_pt, date))
     ps = xr.open_dataset('{0}/{1}/ps.his.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc'      .format(data_path, dir, dowa_pt, date))
+    Ts = xr.open_dataset('{0}/{1}/sst.sfx.NETHERLANDS.DOWA_40h12tg2_fERA5_{2}.{3}.nc'     .format(data_path, dir, dowa_pt, date))
 
     # Select a sub-area around the LES domain, to speed up
     # calculations done over the entire HARMONIE grid
@@ -253,6 +255,7 @@ if __name__ == '__main__':
     q  = sel_sub_area(q,  x0, y0, xsize, ysize)['hus']
     ql = sel_sub_area(ql, x0, y0, xsize, ysize)['clw']
     ps = sel_sub_area(ps, x0, y0, xsize, ysize)['ps' ]
+    Ts = sel_sub_area(Ts, x0, y0, xsize, ysize)['sst']
 
     # Store lat/lon on LES grid (to-do: use proj.4 to simply re-create HARMONIE projection on LES grid..)
     intp = ip.Grid_interpolator(u['x'].values, u['y'].values, None, grid.x, grid.y, None, grid.xh, grid.yh, None, x0, y0)
@@ -276,6 +279,7 @@ if __name__ == '__main__':
             qv_t = q [t,:,:,:].values
             ql_t = ql[t,:,:,:].values
             ps_t = ps[t,:,:  ].values
+            Ts_t = Ts[t,:,:  ].values
 
             # Virtual temperature for height calculation
             Tv_t = T_t * (1+cd['eps']*qv_t - ql_t)
@@ -287,10 +291,13 @@ if __name__ == '__main__':
             z  = grid_sig.calc_full_level_Zg(zh)
 
             # Conversions HARMONIE quantities -> LES
-            exner = (p[::-1]/cd['p0'])**(cd['Rd']/cd['cp'])
-            th_t  = T_t / exner
-            thl_t = th_t - cd['Lv'] / (cd['cp'] * exner) * ql_t
-            qt_t  = qv_t + ql_t
+            exner  = (p[::-1]/cd['p0'])**(cd['Rd']/cd['cp'])
+            exners = (ps_t/cd['p0'])**(cd['Rd']/cd['cp'])
+
+            th_t   = T_t  / exner
+            ths_t  = Ts_t / exners
+            thl_t  = th_t - cd['Lv'] / (cd['cp'] * exner) * ql_t
+            qt_t   = qv_t + ql_t
 
             # Mean profiles to init LES (prof.inp)
             if (t==t0):
@@ -306,18 +313,19 @@ if __name__ == '__main__':
 
                 # Create the interpolator for HARMONIE -> LES
                 sx = np.s_[mpiidx*blocksize_x:(mpiidx+1)*blocksize_x]
-                intp = ip.Grid_interpolator(u['x'].values, u['y'].values, z, grid.x[sx], grid.y, grid.z, grid.xh[sx], grid.yh, grid.zh, x0, y0)
+                intp  = ip.Grid_interpolator(u['x'].values, u['y'].values, z,    grid.x[sx], grid.y, grid.z, grid.xh[sx], grid.yh, grid.zh, x0, y0)
 
                 # Interpolate HARMONIE onto LES grid
                 # `::-1` reverses the vertical dimension (HARMONIE's data
                 # is aranged from top-to-bottom, LES from bottom-to-top
-                u_LES   = intp.interpolate_3d(u_t  [::-1,:,:], 'xh', 'y',  'z')
-                v_LES   = intp.interpolate_3d(v_t  [::-1,:,:], 'x',  'yh', 'z')
-                thl_LES = intp.interpolate_3d(thl_t[::-1,:,:], 'x',  'y',  'z')
-                qt_LES  = intp.interpolate_3d(qt_t [::-1,:,:], 'x',  'y',  'z')
+                u_LES    = intp.interpolate_3d(u_t   [::-1,:,:], 'xh', 'y',  'z')
+                v_LES    = intp.interpolate_3d(v_t   [::-1,:,:], 'x',  'yh', 'z')
+                thl_LES  = intp.interpolate_3d(thl_t [::-1,:,:], 'x',  'y',  'z')
+                qt_LES   = intp.interpolate_3d(qt_t  [::-1,:,:], 'x',  'y',  'z')
+                ths_LES  = intp.interpolate_2d(ths_t [:,:     ], 'x',  'y'      )
 
                 # Write the LBCs in binary format for LES
-                write_LBC(u_LES, v_LES, thl_LES, qt_LES, itot, jtot, nprocx, nprocy, mpiidx, t-t0, 0., iexpnr, output_dir)
+                write_LBC(u_LES, v_LES, thl_LES, qt_LES, ths_LES, itot, jtot, nprocx, nprocy, mpiidx, t-t0, 0., iexpnr, output_dir)
 
                 if (t==t0):
                     # Store mean profiles
@@ -339,8 +347,6 @@ if __name__ == '__main__':
             # Statistics
             end_time = datetime.datetime.now()
             print('Elapsed = {}'.format(end_time-start_time))
-
-
 
 
 

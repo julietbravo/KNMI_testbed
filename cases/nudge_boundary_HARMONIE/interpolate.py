@@ -107,7 +107,7 @@ class Grid_interpolator:
 
         calc_horz_interpolation_factors(self.i0, self.ifac, x_LS, x+x0)
         calc_horz_interpolation_factors(self.j0, self.jfac, y_LS, y+y0)
-        
+
         if z is not None:
             self.k0   = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.int)
             self.kfac = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.float)
