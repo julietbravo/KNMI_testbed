@@ -16,7 +16,7 @@ def _get_or_default(dict, name, shape, default_value):
     if name in dict:
         return dict[name]
     else:
-        print('No input profile for \"{}\", defaulting values at zero'.format(name))
+        #print('No input profile for \"{}\", defaulting values at zero'.format(name))
         return default_value * np.ones(shape)
 
 

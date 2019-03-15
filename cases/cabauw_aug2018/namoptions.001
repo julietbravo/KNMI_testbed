@@ -1,0 +1,202 @@
+&RUN
+iexpnr = 001
+lwarmstart = .false.
+startfile  = 'initd00h01m000.001'
+runtime = 82800
+trestart = 999999
+dtmax = 10
+ladaptive = .true.
+irandom = 1
+randthl = 0.01
+randqt = 2.5e-5
+nsv = 2
+nprocx=1
+nprocy=1
+/
+
+&DOMAIN
+itot = 1
+jtot = 1
+kmax = 100
+
+xsize = 100
+ysize = 100
+
+xlat = 51.970001220703125
+xlon = 4.900000095367432
+xday = 231
+xtime = 0
+/
+
+&PHYSICS
+ps = 1e5
+thls = 300       ! Surface thl
+lmoist = .true.
+lcoriol = .false.
+ltimedep = .true.
+iradiation = 4      ! 4 = RRTMG
+igrw_damp = 3       ! 3 = nudge (damping) to mean profile
+timerad = 60        ! Interval (sec) of radiation calls
+/
+
+&NAMSURFACE
+isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
+l_vg  = .true.      ! Van Genuchten parameterisation
+z0mav = 0.05        ! Fig. 4.8 MvT
+z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
+Cskinav = 0
+lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
+Qnetav = 0          ! Why needed?
+Wlav = 0            ! Water on leaves
+rsminav = 100
+rssoilminav = 50
+LAIav = 2.5         ! Fig. 4.6 MvT
+cvegav = 1
+albedoav = 0.25     ! Fig. 4.9 MvT
+gDav = 0
+rootfav = 0.40 0.30 0.30 0.00
+tsoildeepav = 288.4697351981182
+tsoilav = 287.10782672 290.73116457 289.76901714 288.4697352 
+phiwav = 0.24690826 0.26315605 0.27983093 0.34704218
+
+! ECMWF fine (Table 3.1 MvT)
+!gammasat = 2.87e-6
+!nvg = 1.10
+!Lvg = -1.977
+!alphavg = 3.67
+!phir = 0.01
+!phi = 0.520
+!phiwp = 0.279
+!phifc = 0.448
+
+! B11 (Wösten) top 16cm (Table 3.1 MvT)
+gammasat = 0.52e-6
+nvg = 1.11
+Lvg = -5.90
+alphavg = 1.95
+phir = 0.01
+phi = 0.590
+phiwp = 0.320
+phifc = 0.528
+/
+
+&DYNAMICS
+cu =  0.
+cv =  0.
+
+iadv_mom = 2
+iadv_tke = 2
+iadv_thl = 2
+iadv_qt  = 5
+iadv_sv  = 5
+/
+
+&NAMNUDGE
+lnudge=.true.
+tnudgefac=10800
+/
+
+&SUBGRID
+ldelta = .false.
+cm = 0.12
+cn = 0.76
+ch1 = 1.
+ch2 = 2.
+ce1 = 0.19
+ce2 = 0.51
+/
+
+&NAMMICROPHYSICS
+imicro = 2          ! 2 = warm, 5=simpleice
+l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
+Nc_0 = 500e6        ! cloud droplet conventration
+/
+
+&NAMRADIATION
+lCnstAlbedo = .true.
+/
+
+&NAMBULKMICROSTAT
+lmicrostat = .true.
+lascii = .false.
+timeav = 120
+dtav = 120
+/
+
+&NAMCHECKSIM
+tcheck = 1800
+/
+
+&NAMNETCDFSTATS
+lnetcdf = .true.
+lsync = .true.
+/
+
+&NAMTIMESTAT
+ltimestat = .true.
+lascii = .false.
+dtav = 120
+/
+
+&NAMGENSTAT
+lstat  = .true.
+lascii = .false.
+dtav   = 120
+timeav = 120
+/
+
+&NAMBUDGET
+lbudget = .false.
+lascii  = .false.
+dtav    = 120.
+timeav  = 120.
+/
+
+&NAMSTATTEND
+ltend  = .true.
+lascii = .false.
+dtav   = 120
+/
+
+&NAMRADSTAT
+lstat = .true.
+lascii = .false.
+dtav   = 120
+timeav = 120
+/
+
+&NAMLSMSTAT
+lstat = .true.
+dtav   = 120
+timeav = 120.
+/
+
+&NAMSAMPLING
+lsampcl    = .false.
+lsampco    = .false.
+lsampup    = .false.
+lsampbuup  = .false.
+lsampcldup = .false.
+dtav   = 120
+timeav = 120.
+/
+
+&NAMFIELDDUMP
+lfielddump = .false.
+dtav = 300
+ldiracc = .true.
+/
+
+&NAMCROSSSECTION
+lcross = .true.
+dtav = 300
+lxy=.false.
+lxz=.false.
+lyz=.false.
+/
+
+&NAMLSMCROSSSECTION
+lcross = .false.
+dtav = 10
+crossheight = 1
+/
