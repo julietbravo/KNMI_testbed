@@ -2,7 +2,7 @@
 iexpnr = 001
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
-runtime = 345600
+runtime = 86400
 trestart = 999999
 dtmax = 10
 ladaptive = .true.
@@ -15,16 +15,16 @@ nprocy=1
 /
 
 &DOMAIN
-itot = 144
-jtot = 144
-kmax = 160
+itot = 1
+jtot = 1
+kmax = 100
 
-xsize = 7200
-ysize = 7200
+xsize = 100
+ysize = 100
 
 xlat = 51.970001220703125
 xlon = 4.900000095367432
-xday = 92
+xday = 217
 xtime = 0
 /
 
@@ -55,9 +55,9 @@ cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav = 276.34483009974156
-tsoilav = 283.01673737 282.65823236 280.98968137 276.3448301 
-phiwav = 0.37745904 0.49924287 0.52       0.52      
+tsoildeepav = 285.05851688384996
+tsoilav = 290.95380011 290.75908842 289.26942749 285.05851688
+phiwav = 0.2721178  0.48760417 0.59       0.59      
 
 ! ECMWF fine (Table 3.1 MvT)
 !gammasat = 2.87e-6

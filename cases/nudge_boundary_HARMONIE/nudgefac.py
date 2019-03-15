@@ -6,15 +6,15 @@ pl.close('all')
 # Numerical grid
 xsize = 64*500
 ysize = 64*500
-dx    = 500
-dy    = 500
+dx    = 200
+dy    = 200
 x     = np.arange(0.5*dx, xsize, dx)
 y     = np.arange(0.5*dy, ysize, dy)
 
 # Boundary settings
 dxb   = 800     # Width of boundary nudging
 oxb   = 3000    # Offset from lateral boundary
-rb    = 1800    # Radius or corners domain
+rb    = 2300    # Radius or corners domain
 
 # Center of nudging area
 xbc1 = oxb
@@ -62,9 +62,12 @@ for i in range(x.size):
 
 
 pl.figure()
-ax=pl.subplot(111, aspect='equal')
+ax=pl.subplot(121, aspect='equal')
 pl.pcolormesh(x,y,f)
 pl.colorbar()
+
+ax=pl.subplot(122)
+pl.plot(x,f[int(y.size/2),:])
 
 #
 #bc3 = 2*oxb
