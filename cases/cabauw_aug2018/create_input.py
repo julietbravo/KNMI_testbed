@@ -5,6 +5,7 @@ import datetime
 import shutil
 import sys
 import os
+import subprocess
 
 # Add src directory to Python path, and import DALES specific tools
 src_dir = os.path.abspath('{}/../../src/'.format(os.path.dirname(os.path.abspath(__file__))))
@@ -12,7 +13,9 @@ sys.path.append(src_dir)
 
 from DALES_tools import *
 from read_soil_ERA5 import *
-from read_soil_Cabauw import *
+
+def execute(task):
+    subprocess.call(task, shell=True, executable='/bin/bash')
 
 # --------------------
 # Settings
@@ -31,22 +34,22 @@ eps   = datetime.timedelta(hours=1)
 #end   = datetime.datetime(year=2016, month=8, day=10, hour=0)
 
 # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
-#path    = '/scratch/ms/nl/nkbs/DOWA/LES_forcing'
-#path_cb = '/scratch/ms/nl/nkbs/DOWA/Cabauw'
+path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA
+path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	# CCA
+path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818/'
 
-path    = '/nobackup/users/stratum/DOWA/LES_forcing'
-path_cb = '/nobackup/users/stratum/Cabauw'
-path_e5 = '/nobackup/users/stratum/ERA5/soil'
+#path    = '/nobackup/users/stratum/DOWA/LES_forcing'	# KNMI
+#path_e5 = '/nobackup/users/stratum/ERA5/soil'		# KNMI
 
-#path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
-#path_cb  = '/Users/bart/meteo/observations/Cabauw/'
-#path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
+#path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'	# Macbook
+#path_e5  = '/Users/bart/meteo/data/ERA5/soil/'			# Macbook
 
 # ------------------------
 # End settings
 # ------------------------
 
 date = start
+n = 1
 while date < end:
 
     # Get list of NetCDF files which need to be processed, and open them with xarray
@@ -58,17 +61,17 @@ while date < end:
     
     # Docstring for DALES input files
     domain    = nc_data.name[0,iloc].values
-    lat       = nc_data.central_lat[0,iloc].values
-    lon       = nc_data.central_lon[0,iloc].values
+    lat       = float(nc_data.central_lat[0,iloc].values)
+    lon       = float(nc_data.central_lon[0,iloc].values)
     docstring = '{0} ({1:.2f}N, {2:.2f}E): {3} to {4}'.format(domain, lat, lon, date, date+dt+eps)
     print(docstring)
     
     # Create stretched vertical grid for LES
-    #grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
-    grid = Grid_stretched(kmax=100, dz0=20, nloc1=40, nbuf1=10, dz1=200)    # debug
+    grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+    #grid = Grid_stretched(kmax=100, dz0=20, nloc1=40, nbuf1=10, dz1=200)    # debug
     #grid = Grid_stretched(kmax=48,  dz0=20, nloc1=40, nbuf1=10, dz1=200)    # real debug
-    #grid.plot()
-    
+    grid.plot()
+
     # Create and write the initial vertical profiles (prof.inp)
     create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)
     
@@ -98,11 +101,23 @@ while date < end:
     replace_namelist_value(namelist, 'tsoildeepav', tsoil[-1])  #????
 
     # Copy/move files to work directory
-    wdir = '{0:04d}{1:02d}{2:02d}'.format(date.year, date.month, date.day)
+    wdir = '{0}/{1:04d}{2:02d}{3:02d}'.format(path_out, date.year, date.month, date.day)
     if not os.path.exists(wdir):
         os.mkdir(wdir)
 
-    to_copy = ['namoptions.001','rrtmg_lw.nc','rrtmg_sw.nc']
+    # AARGH, change directory in run script (why?)
+    with open('run.PBS') as f:
+        lines = f.readlines()
+    with open('run.PBS', 'w') as f:
+        for line in lines:
+            if '/scratch/ms/nl/' in line:
+                f.write('cd {}\n'.format(wdir))
+            elif '-N' in line:
+		f.write('#PBS -N LES_CB_{}\n'.format(n))
+            else:
+                f.write(line)
+
+    to_copy = ['namoptions.001','rrtmg_lw.nc','rrtmg_sw.nc','dales4','run.PBS']
     to_move = ['backrad.inp.001.nc','lscale.inp.001','ls_flux.inp.001',\
                'ls_fluxsv.inp.001','nudge.inp.001','prof.inp.001','scalar.inp.001']
 
@@ -111,5 +126,9 @@ while date < end:
     for f in to_copy:
         shutil.copy(f, '{}/{}'.format(wdir, f))
 
+    # Submit task!
+    execute('qsub {}/run.PBS'.format(wdir))
+
     # Advance time...
     date += dt
+    n += 1
