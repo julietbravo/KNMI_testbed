@@ -22,9 +22,9 @@ kmax = 160
 xsize = 15000
 ysize = 15000
 
-xlat = 51.9700012207
-xlon = 4.90000009537
-xday = 231
+xlat = 51.970001220703125
+xlon = 4.900000095367432
+xday = 217
 xtime = 0
 /
 
@@ -55,11 +55,14 @@ cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav = 288.469726562
-tsoilav =  287.1078186   290.73117065  289.76901245  288.46972656
-phiwav =  0.24690826  0.26315606  0.27983093  0.34704217
+tsoildeepav = 287.911376953125
+tsoilav = 290.0637  291.06326 290.4437  287.91138
+phiwav = 0.3106892  0.2866719  0.29377648 0.35078132
 
-! ECMWF fine (Table 3.1 MvT)
+! NOTE: soil types ECMWF. ERA5 grid point Cabauw = 3
+! 1=Coarse, 2=Medium, 3=Medium-fine, 4=Fine, 5=Very fine, 6=Organic
+
+! ECMWF fine (MvT)
 !gammasat = 2.87e-6
 !nvg = 1.10
 !Lvg = -1.977
@@ -70,14 +73,24 @@ phiwav =  0.24690826  0.26315606  0.27983093  0.34704217
 !phifc = 0.448
 
 ! B11 (Wösten) top 16cm (Table 3.1 MvT)
-gammasat = 0.52e-6
-nvg = 1.11
-Lvg = -5.90
-alphavg = 1.95
+!gammasat = 0.52e-6
+!nvg = 1.11
+!Lvg = -5.90
+!alphavg = 1.95
+!phir = 0.01
+!phi = 0.590
+!phiwp = 0.320
+!phifc = 0.528
+
+! ECMWF medium fine
+gammasat = 0.26e-6
+nvg = 1.25
+Lvg = -0.588
+alphavg = 0.83
 phir = 0.01
-phi = 0.590
-phiwp = 0.320
-phifc = 0.528
+phi = 0.430
+phiwp = 0.133
+phifc = 0.383
 /
 
 &DYNAMICS
