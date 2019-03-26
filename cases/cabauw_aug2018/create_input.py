@@ -34,15 +34,16 @@ eps   = datetime.timedelta(hours=1)
 #end   = datetime.datetime(year=2016, month=8, day=10, hour=0)
 
 # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
-path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA
-path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	# CCA
-path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818/'
+#path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA
+#path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	# CCA
+#path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818/'
 
 #path    = '/nobackup/users/stratum/DOWA/LES_forcing'	# KNMI
 #path_e5 = '/nobackup/users/stratum/ERA5/soil'		# KNMI
 
-#path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'	# Macbook
-#path_e5  = '/Users/bart/meteo/data/ERA5/soil/'			# Macbook
+path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'	# Macbook
+path_e5  = '/Users/bart/meteo/data/ERA5/soil/'			# Macbook
+path_out = '/Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018/'
 
 # ------------------------
 # End settings
@@ -113,7 +114,7 @@ while date < end:
             if '/scratch/ms/nl/' in line:
                 f.write('cd {}\n'.format(wdir))
             elif '-N' in line:
-		f.write('#PBS -N LES_CB_{}\n'.format(n))
+                f.write('#PBS -N LES_CB_{}\n'.format(n))
             else:
                 f.write(line)
 
