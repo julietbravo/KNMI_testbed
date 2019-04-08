@@ -21,7 +21,6 @@ class Soil_type:
 
         return f2
 
-
     def rescale(self, phi_in, new_type):
 
         f2 = self.calc_f2(phi_in)
@@ -52,9 +51,9 @@ if __name__ == '__main__':
     
     pl.figure()
     ax=pl.subplot(111)
-    pl.scatter(np.ones(3)*1, [med_fine.phi_wp, med_fine.phi_fc, med_fine.phi_sat])
-    pl.scatter(np.ones(3)*2, [fine.    phi_wp, fine.    phi_fc, fine.    phi_sat])
-    pl.scatter(np.ones(3)*3, [wosten.  phi_wp, wosten.  phi_fc, wosten.  phi_sat])
+    pl.scatter(np.ones(3)*1, [med_fine.phi_wp, med_fine.phi_fc, med_fine.phi_sat], marker='x', color='k')
+    pl.scatter(np.ones(3)*2, [fine.    phi_wp, fine.    phi_fc, fine.    phi_sat], marker='x', color='k')
+    pl.scatter(np.ones(3)*3, [wosten.  phi_wp, wosten.  phi_fc, wosten.  phi_sat], marker='x', color='k')
     for i in range(4):
         pl.plot([1,3], [phi[i], phi[i]], color=cc[i], label='L{} original'.format(i+1))
     for i in range(4):

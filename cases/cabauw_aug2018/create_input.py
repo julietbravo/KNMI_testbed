@@ -13,6 +13,7 @@ sys.path.append(src_dir)
 
 from DALES_tools import *
 from read_soil_ERA5 import *
+from ECMWF_soil import *
 
 def execute(task):
     subprocess.call(task, shell=True, executable='/bin/bash')
@@ -71,7 +72,7 @@ while date < end:
     grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
     #grid = Grid_stretched(kmax=100, dz0=20, nloc1=40, nbuf1=10, dz1=200)    # debug
     #grid = Grid_stretched(kmax=48,  dz0=20, nloc1=40, nbuf1=10, dz1=200)    # real debug
-    grid.plot()
+    #grid.plot()
 
     # Create and write the initial vertical profiles (prof.inp)
     create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)
@@ -89,7 +90,14 @@ while date < end:
     # Get the soil temperature and moisture from ERA5
     tsoil   = get_Tsoil_ERA5  (date, 4.9, 51.97, path_e5)
     phisoil = get_phisoil_ERA5(date, 4.9, 51.97, path_e5)
-    
+
+    if True:
+        # Scale soil moisture from ERA5 properties to Cabauw
+        # properties, maintaining a constant relative soil moisture content
+        # ERA5=medium fine -> Cabauw=fine
+        print('ACHTUNG: rescaling soil moisture content...')
+        phisoil_2 = med_fine.rescale(phisoil, fine)
+        
     # Update namelist
     namelist = 'namoptions.{0:03d}'.format(expnr)
     replace_namelist_value(namelist, 'xlat',    lat)
