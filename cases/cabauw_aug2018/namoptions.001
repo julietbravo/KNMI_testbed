@@ -22,9 +22,9 @@ kmax = 160
 xsize = 15000
 ysize = 15000
 
-xlat = 51.970001220703125
-xlon = 4.900000095367432
-xday = 217
+xlat = 51.9700012207
+xlon = 4.90000009537
+xday = 228
 xtime = 0
 /
 
@@ -55,9 +55,9 @@ cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav = 287.911376953125
-tsoilav = 290.0637  291.06326 290.4437  287.91138
-phiwav = 0.3106892  0.2866719  0.29377648 0.35078132
+tsoildeepav = 288.383056641
+tsoilav =  287.07876587  290.20053101  289.69412231  288.38305664
+phiwav =  0.3844749   0.38137665  0.38282484  0.42431313
 
 ! NOTE: soil types ECMWF. ERA5 grid point Cabauw = 3
 ! 1=Coarse, 2=Medium, 3=Medium-fine, 4=Fine, 5=Very fine, 6=Organic
@@ -134,12 +134,12 @@ lCnstAlbedo = .true.
 &NAMBULKMICROSTAT
 lmicrostat = .true.
 lascii = .false.
-timeav = 120
-dtav = 120
+timeav = 600
+dtav = 600
 /
 
 &NAMCHECKSIM
-tcheck = 30
+tcheck = 120
 /
 
 &NAMNETCDFSTATS
@@ -150,40 +150,40 @@ lsync = .true.
 &NAMTIMESTAT
 ltimestat = .true.
 lascii = .false.
-dtav = 120
+dtav = 600
 /
 
 &NAMGENSTAT
 lstat  = .true.
 lascii = .false.
-dtav   = 120
-timeav = 120
+dtav   = 600
+timeav = 600
 /
 
 &NAMBUDGET
 lbudget = .false.
 lascii  = .false.
-dtav    = 120.
-timeav  = 120.
+dtav    = 600.
+timeav  = 600.
 /
 
 &NAMSTATTEND
 ltend  = .true.
 lascii = .false.
-dtav   = 120
+dtav   = 600
 /
 
 &NAMRADSTAT
 lstat = .true.
 lascii = .false.
-dtav   = 120
-timeav = 120
+dtav   = 600
+timeav = 600
 /
 
 &NAMLSMSTAT
 lstat = .true.
-dtav   = 120
-timeav = 120.
+dtav   = 600
+timeav = 600.
 /
 
 &NAMSAMPLING
@@ -192,8 +192,8 @@ lsampco    = .false.
 lsampup    = .false.
 lsampbuup  = .false.
 lsampcldup = .false.
-dtav   = 120
-timeav = 120.
+dtav   = 600
+timeav = 600.
 /
 
 &NAMFIELDDUMP
@@ -204,7 +204,7 @@ ldiracc = .true.
 
 &NAMCROSSSECTION
 lcross = .true.
-dtav = 300
+dtav = 600
 lxy=.false.
 lxz=.false.
 lyz=.false.
