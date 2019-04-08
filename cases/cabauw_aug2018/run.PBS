@@ -1,7 +1,7 @@
 #!/bin/ksh
 #PBS -S /usr/bin/ksh
 #PBS -q np
-#PBS -N LES_CB_15
+#PBS -N LES_CB_1
 #PBS -m a
 #PBS -l walltime=24:10:00
 
@@ -14,6 +14,6 @@ prgenvswitchto intel
 module load netcdf4
 
 # Switch to working directory
-cd /scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818//20160818
+cd /Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018//20160804
 
 aprun -n 96 ./dales4 namoptions.001 > dales4.out

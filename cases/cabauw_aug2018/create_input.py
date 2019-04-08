@@ -12,8 +12,7 @@ src_dir = os.path.abspath('{}/../../src/'.format(os.path.dirname(os.path.abspath
 sys.path.append(src_dir)
 
 from DALES_tools import *
-from read_soil_ERA5 import *
-from ECMWF_soil import *
+from IFS_soil import *
 
 def execute(task):
     subprocess.call(task, shell=True, executable='/bin/bash')
@@ -31,16 +30,16 @@ dt    = datetime.timedelta(hours=24)
 eps   = datetime.timedelta(hours=1)
 
 # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
-path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA
-path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	# CCA
-path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_soil_scaled/'
+#path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA
+#path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	# CCA
+#path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_soil_scaled/'
 
 #path    = '/nobackup/users/stratum/DOWA/LES_forcing'	# KNMI
 #path_e5 = '/nobackup/users/stratum/ERA5/soil'		# KNMI
 
-#path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'	# Macbook
-#path_e5  = '/Users/bart/meteo/data/ERA5/soil/'			# Macbook
-#path_out = '/Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018/'
+path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'	# Macbook
+path_e5  = '/Users/bart/meteo/data/ERA5/soil/'			# Macbook
+path_out = '/Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018/'
 
 # ------------------------
 # End settings
@@ -87,12 +86,11 @@ while date < end:
     tsoil   = get_Tsoil_ERA5  (date, 4.9, 51.97, path_e5)
     phisoil = get_phisoil_ERA5(date, 4.9, 51.97, path_e5)
 
-    if True:
-        # Scale soil moisture from ERA5 properties to Cabauw
-        # properties, maintaining a constant relative soil moisture content
-        # ERA5=medium fine -> Cabauw=fine
-        print('ACHTUNG: rescaling soil moisture content...')
-        phisoil_2 = med_fine.rescale(phisoil, fine)
+    # Option to re-scale soil moisture content
+    soil_in  = soil_med_fine      # ERA5 grid point soil type
+    soil_out = soil_fine          # ~Cabauw soil type
+    old_phisoil = phisoil.copy()    
+    phisoil = soil_in.rescale(old_phisoil, soil_out)
 
     # Update namelist
     namelist = 'namoptions.{0:03d}'.format(expnr)
@@ -102,8 +100,19 @@ while date < end:
     replace_namelist_value(namelist, 'xtime',   date.hour)
     replace_namelist_value(namelist, 'kmax',    grid.kmax)
     replace_namelist_value(namelist, 'tsoilav', array_to_string(tsoil))
-    replace_namelist_value(namelist, 'phiwav',  array_to_string(phisoil_2))
+    replace_namelist_value(namelist, 'phiwav',  array_to_string(phisoil))
     replace_namelist_value(namelist, 'tsoildeepav', tsoil[-1])  #????
+
+    print('Setting soil properties for {} (input={})'.format(soil_out.name, soil_in.name))
+    replace_namelist_value(namelist, 'gammasat', soil_out.gammasat)
+    replace_namelist_value(namelist, 'nvg',      soil_out.nvg)
+    replace_namelist_value(namelist, 'Lvg',      soil_out.lvg)
+    replace_namelist_value(namelist, 'alphavg',  soil_out.alphavg)
+    replace_namelist_value(namelist, 'phir',     soil_out.phir)
+    replace_namelist_value(namelist, 'phi',      soil_out.phi_sat)
+    replace_namelist_value(namelist, 'phiwp',    soil_out.phi_wp)
+    replace_namelist_value(namelist, 'phifc',    soil_out.phi_fc)
+
 
     # Copy/move files to work directory
     wdir = '{0}/{1:04d}{2:02d}{3:02d}'.format(path_out, date.year, date.month, date.day)
@@ -132,7 +141,7 @@ while date < end:
         shutil.copy(f, '{}/{}'.format(wdir, f))
 
     # Submit task!
-    execute('qsub {}/run.PBS'.format(wdir))
+#    execute('qsub {}/run.PBS'.format(wdir))
 
     # Advance time...
     date += dt

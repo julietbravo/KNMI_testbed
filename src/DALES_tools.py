@@ -188,7 +188,7 @@ def replace_namelist_value(namelist, variable, new_value, group=None):
                 curr_group = lstrip[1:].lower()
 
             if group is None or curr_group == group.lower():
-                source.write(re.sub(r'({}).*'.format(variable), r'\1 = {}'.format(new_value), line))
+                source.write(re.sub(r'({}[ |=]).*'.format(variable), r'\1 = {}'.format(new_value), line))
             else:
                 source.write(line)
 
