@@ -78,9 +78,6 @@ soil_wosten   = Soil_type(phi_sat=0.590, phi_fc=0.528, phi_wp=0.320,
 
 
 
-
-
-
 if __name__ == '__main__':
     import matplotlib.pyplot as pl
     pl.close('all')
@@ -101,11 +98,18 @@ if __name__ == '__main__':
     
     cc = pl.cm.bwr(np.linspace(0,1,4))
     
+    def scatter_phi(phi, x, ha='left'):
+        pl.scatter(np.ones(3)*x, phi, marker='x', color='k')
+        labels = ['wp','fc','sat']
+        for i in range(3):
+            pl.text(x+0.05, phi[i], labels[i], ha=ha, va='center')
+
+
     pl.figure()
     ax=pl.subplot(111)
-    pl.scatter(np.ones(3)*1, [soil_med_fine.phi_wp, soil_med_fine.phi_fc, soil_med_fine.phi_sat], marker='x', color='k')
-    pl.scatter(np.ones(3)*2, [soil_fine.    phi_wp, soil_fine.    phi_fc, soil_fine.    phi_sat], marker='x', color='k')
-    pl.scatter(np.ones(3)*3, [soil_wosten.  phi_wp, soil_wosten.  phi_fc, soil_wosten.  phi_sat], marker='x', color='k')
+    scatter_phi([soil_med_fine.phi_wp, soil_med_fine.phi_fc, soil_med_fine.phi_sat], 1)
+    scatter_phi([soil_fine.    phi_wp, soil_fine.    phi_fc, soil_fine.    phi_sat], 2)
+    scatter_phi([soil_wosten.  phi_wp, soil_wosten.  phi_fc, soil_wosten.  phi_sat], 3)
     for i in range(4):
         pl.plot([1,3], [phi[i], phi[i]], color=cc[i], label='L{} original'.format(i+1))
     for i in range(4):

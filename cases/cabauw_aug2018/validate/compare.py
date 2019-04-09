@@ -1,12 +1,12 @@
 import matplotlib.pyplot as pl
 import matplotlib.gridspec as gridspec
+import matplotlib.dates as mdates
 
 import xarray as xr
 import pandas as pd
 import numpy as np
 
 from datetime import datetime, timedelta
-
 
 
 class Read_LES:
@@ -39,6 +39,13 @@ def lim_and_line2(v1, v2):
     pl.plot([vmin,vmax], [vmin,vmax], 'k:', linewidth=1)
     pl.plot([vmin,vmax], [0,0], 'k:', linewidth=1)
     pl.plot([0,0], [vmin,vmax], 'k:', linewidth=1)
+
+def format_ax():
+    ax = pl.gca()
+    h24 = mdates.HourLocator(interval=48)
+    fmt = mdates.DateFormatter('%d-%m')
+    ax.xaxis.set_major_locator(h24)
+    ax.xaxis.set_major_formatter(fmt)
 
 
 if __name__ == '__main__':
@@ -160,7 +167,7 @@ if __name__ == '__main__':
         pl.tight_layout()
 
 
-    if False:
+    if True:
         # --------------
         # Surface fluxes
         # --------------
@@ -175,6 +182,7 @@ if __name__ == '__main__':
         pl.plot(cb_sf.time.values, cb_sf.H, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'H (W m$^{-2}$')
+        format_ax()
 
         pl.subplot(gs[1,0], sharex=ax)
         for i,r in enumerate(runs):
@@ -182,6 +190,7 @@ if __name__ == '__main__':
         pl.plot(cb_sr.time.values,  cb_sf.LE, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'LE (W m$^{-2}$')
+        format_ax()
 
         pl.subplot(gs[2,0], sharex=ax)
         for i,r in enumerate(runs):
@@ -189,6 +198,7 @@ if __name__ == '__main__':
         pl.plot(cb_sr.time.values, cb_sf.G0, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'G (W m$^{-2}$')
+        format_ax()
 
 
         pl.subplot(gs[0,1])
@@ -212,7 +222,7 @@ if __name__ == '__main__':
         pl.tight_layout()
 
 
-    if False:
+    if True:
         # --------------
         # Surface radiation
         # --------------
@@ -227,6 +237,7 @@ if __name__ == '__main__':
         pl.plot(cb_sr.time.values, -cb_sr.SWD, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$')
+        format_ax()
 
         pl.subplot(gs[1,0], sharex=ax)
         for i,r in enumerate(runs):
@@ -234,6 +245,7 @@ if __name__ == '__main__':
         pl.plot(cb_sr.time.values,  cb_sr.SWU, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$')
+        format_ax()
 
         pl.subplot(gs[2,0], sharex=ax)
         for i,r in enumerate(runs):
@@ -241,6 +253,7 @@ if __name__ == '__main__':
         pl.plot(cb_sr.time.values, -cb_sr.LWD, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$')
+        format_ax()
 
         pl.subplot(gs[3,0], sharex=ax)
         for i,r in enumerate(runs):
@@ -248,6 +261,7 @@ if __name__ == '__main__':
         pl.plot(cb_sr.time.values, cb_sr.LWU, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$')
+        format_ax()
 
         pl.subplot(gs[0,1])
         pl.scatter(-df['swd_CB'], df['swd_LES'], s=1, color=c2)
