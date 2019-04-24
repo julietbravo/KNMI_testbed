@@ -12,23 +12,10 @@ class Read_LES:
     def __init__(self, nc_path, start_date):
         print('Reading LES for {}'.format(start_date))
 
-        date_str = '{0:04d}{1:02d}{2:02d}'.format(start_date.year, start_date.month, start_date.day)
-        self.fp = xr.open_mfdataset('{}/profiles_{}.nc'.format(nc_path, date_str))
-        self.ft = xr.open_mfdataset('{}/tmser_{}.nc'.format(nc_path, date_str))
-
+        date_str  = '{0:04d}{1:02d}{2:02d}'.format(start_date.year, start_date.month, start_date.day)
+        self.fp   = xr.open_mfdataset('{}/profiles_{}.nc'.format(nc_path, date_str))
+        self.ft   = xr.open_mfdataset('{}/tmser_{}.nc'.format(nc_path, date_str))
         self.time = [start_date+timedelta(seconds=int(self.fp.time[t])) for t in range(self.fp.time.size)]
-
-
-#def calc_cloud_bottop(cfrac, z):
-#    bot = np.zeros(ql.shape[0], dtype=np.float)
-#    top = np.zeros(ql.shape[0], dtype=np.float)
-#
-#    eps = 0.005
-#    for t in range(ql.shape[0]):
-#        is_cloud = np.where(cfrac[t,:] > eps)
-#        print(is_cloud)
-
-
 
 
 def lim_and_line(vmin, vmax):
@@ -110,6 +97,9 @@ if __name__ == '__main__':
         cb_ns = xr.open_mfdataset('{0}/cesar_nubiscope*{1:04d}{2:02d}.nc'   .format(CB_path, start.year, start.month), drop_variables=['valid_dates'])
         cb_lwc = xr.open_mfdataset('{0}/{1:04d}{2:02d}*_cabauw_lwc-scaled-adiabatic.nc'.format(CB_path, start.year, start.month))
 
+        # Cabauw soil heat flux calculated as residual term
+        cb_G_res = cb_sf.QN - (cb_sf.H + cb_sf.LE)
+
 
     # Sync times in a Pandas dataframe
     # ------------------
@@ -121,6 +111,7 @@ if __name__ == '__main__':
             data = { 'LE_LES':  r.ft.LE,
                      'H_LES':   r.ft.H,
                      'G_LES':   r.ft.G0,
+                     'Qn_LES':  r.ft.Qnet,
                      'swd_LES': r.fp.swd[:,0],
                      'swu_LES': r.fp.swu[:,0],
                      'lwd_LES': r.fp.lwd[:,0],
@@ -135,6 +126,8 @@ if __name__ == '__main__':
         data = { 'LE_CB':  cb_sf.LE,
                  'H_CB':   cb_sf.H,
                  'G_CB':   cb_sf.G0,
+                 'G2_CB':  cb_G_res,
+                 'Qn_CB':  cb_sf.QN,
                  'swd_CB': cb_sr.SWD,
                  'swu_CB': cb_sr.SWU,
                  'lwd_CB': cb_sr.LWD,
@@ -165,6 +158,29 @@ if __name__ == '__main__':
     c_cb2 = '#377eb8'   # Blue
     c_da  = '#4d4d4d'   # Gray
     c_da2 = '#b2182b'   # DarkRed
+
+
+    if False:
+        # --------------
+        # Check SEB closure observations
+        # --------------
+
+        pl.figure()
+        pl.scatter(cb_sf['QN'], cb_sf['H']+cb_sf['LE']+cb_sf['G0'], s=1, color='r')
+        lim_and_line(-100,600)
+        pl.plot([-50,0], [-100,0], 'k:')
+        pl.xlabel(r'Q$_\mathrm{net}$ (W m$^{-2}$)')
+        pl.ylabel(r'LE+H+G (W m$^{-2}$)')
+
+        pl.figure()
+        pl.subplot(311)
+        pl.plot(np.arange(cb_sf['QN'].size), cb_sf['QN'] - (cb_sf['H']+cb_sf['LE']+cb_sf['G0']))
+
+        pl.subplot(312)
+        pl.plot(np.arange(cb_sf['QN'].size), cb_sf['QN'] - (cb_sf['H']+cb_sf['LE']))
+
+        pl.subplot(313)
+        pl.plot(np.arange(cb_sf['QN'].size), cb_sf['IG0'])
 
 
     if False:
@@ -251,35 +267,45 @@ if __name__ == '__main__':
         # Surface fluxes
         # --------------
 
-        pl.figure(figsize=(10,7))
 
-        gs = gridspec.GridSpec(3, 2, width_ratios=[3.8,1])
+        pl.figure(figsize=(10,8))
+
+        gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
 
         # Time series
         ax=pl.subplot(gs[0,0])
+        pl.plot(cb_sf.time.values, cb_sf.H, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
             pl.plot(r.time, r.ft.H, '-', color=c1)
-        pl.plot(cb_sf.time.values, cb_sf.H, 'o', mfc=c2, mec=c2, ms=2)
         #pl.plot(hm.time, -hm.H)
         pl.xlim(start, end)
         pl.ylabel(r'H (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[1,0], sharex=ax)
+        pl.plot(cb_sr.time.values,  cb_sf.LE, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
             pl.plot(r.time, r.ft.LE, '-', color=c1)
         #pl.plot(hm.time, -hm.LE)
-        pl.plot(cb_sr.time.values,  cb_sf.LE, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'LE (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[2,0], sharex=ax)
+        pl.plot(cb_sr.time.values, cb_sf.G0, 'o', mfc=c2, mec=c2, ms=2)
+        pl.plot(cb_sr.time.values, cb_G_res, 'o', mfc='r', mec='r', ms=1)
         for i,r in enumerate(runs):
             pl.plot(r.time, r.ft.G0, '-', color=c1)
-        pl.plot(cb_sr.time.values, cb_sf.G0, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'G (W m$^{-2}$')
+        format_ax()
+
+        pl.subplot(gs[3,0], sharex=ax)
+        pl.plot(cb_sr.time.values, cb_sf.QN, 'o', mfc=c2, mec=c2, ms=2)
+        for i,r in enumerate(runs):
+            pl.plot(r.time, r.ft.Qnet, '-', color=c1)
+        pl.xlim(start, end)
+        pl.ylabel(r'Q$_\mathrm{net}$ (W m$^{-2}$')
         format_ax()
 
         # Scatter plots
@@ -297,7 +323,14 @@ if __name__ == '__main__':
 
         pl.subplot(gs[2,1])
         pl.scatter(df['G_CB'], df['G_LES'], s=1, color=c2)
+        pl.scatter(df['G2_CB'], df['G_LES'], s=1, color='r')
         lim_and_line2(df['G_CB'], df['G_LES'])
+        pl.xlabel(r'OBS (W m$^{-2}$)')
+        pl.ylabel(r'LES (W m$^{-2}$)')
+
+        pl.subplot(gs[3,1])
+        pl.scatter(df['Qn_CB'], df['Qn_LES'], s=1, color=c2)
+        lim_and_line2(df['Qn_CB'], df['Qn_LES'])
         pl.xlabel(r'OBS (W m$^{-2}$)')
         pl.ylabel(r'LES (W m$^{-2}$)')
 
@@ -315,33 +348,33 @@ if __name__ == '__main__':
         gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
 
         ax=pl.subplot(gs[0,0])
+        pl.plot(cb_sr.time.values, -cb_sr.SWD, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
             pl.plot(r.time, r.fp.swd[:,0], '-', color=c1)
-        pl.plot(cb_sr.time.values, -cb_sr.SWD, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[1,0], sharex=ax)
+        pl.plot(cb_sr.time.values,  cb_sr.SWU, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
             pl.plot(r.time, r.fp.swu[:,0], '-', color=c1)
-        pl.plot(cb_sr.time.values,  cb_sr.SWU, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[2,0], sharex=ax)
+        pl.plot(cb_sr.time.values, -cb_sr.LWD, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
             pl.plot(r.time, r.fp.lwd[:,0], '-', color=c1)
-        pl.plot(cb_sr.time.values, -cb_sr.LWD, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[3,0], sharex=ax)
+        pl.plot(cb_sr.time.values, cb_sr.LWU, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
             pl.plot(r.time, r.fp.lwu[:,0], '-', color=c1)
-        pl.plot(cb_sr.time.values, cb_sr.LWU, 'o', mfc=c2, mec=c2, ms=2)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$')
         format_ax()
