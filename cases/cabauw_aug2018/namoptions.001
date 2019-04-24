@@ -6,6 +6,7 @@ runtime = 86400
 trestart = 999999
 dtmax = 10
 ladaptive = .true.
+peclet = 0.1
 irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
@@ -100,7 +101,7 @@ ce2 = 0.51
 &NAMMICROPHYSICS
 imicro = 2          ! 2 = warm, 5=simpleice
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
-Nc_0 = 500e6        ! cloud droplet conventration
+Nc_0 = 200e6        ! cloud droplet conventration
 /
 
 &NAMRADIATION
