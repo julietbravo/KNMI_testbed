@@ -37,15 +37,21 @@ if __name__ == '__main__':
     host = socket.gethostname()
     if 'cca' in host or 'ccb' in host or 'ecgb' in host:
         # ECMWF CCA/CCB/ECGATE
-        path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA/CCB
-        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	        # CCA/CCB
+        path     = '/scratch/ms/nl/nkbs/LES_forcing'
+        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
         path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_soil_scaled/'
 
     elif 'barts-mbp' in host:
         # Macbook
-        path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'	# Macbook
-        path_e5  = '/Users/bart/meteo/data/ERA5/soil/'		# Macbook
+        path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+        path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
         path_out = '/Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018/'
+
+    elif 'arch' in host:
+        # Home desktop BvS
+        path     = '/home/scratch1/meteo_data/Harmonie_LES_forcing/'
+        path_e5  = '/home/scratch1/meteo_data/ERA5/soil/'
+        path_out = '/home/scratch1/meteo_data/KNMI_testbed/cases/cabauw_aug2018/'
 
     # ------------------------
     # End settings
