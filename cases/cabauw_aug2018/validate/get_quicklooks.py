@@ -2,6 +2,14 @@ import datetime
 import urllib.request
 import os
 
+def trytoget(folder, fname):
+    if not os.path.exists('figures/{}'.format(fname)):
+        try:
+            urllib.request.urlretrieve('{}/{}'.format(folder, fname), 'figures/{}'.format(fname))
+        except:
+            print('Cant find {}'.format(fname))
+
+
 path = 'http://baltink.knmi.nl/~baltink/database/database/'
 
 start = datetime.datetime(2016,8,4)
@@ -17,61 +25,39 @@ while date < end:
     for f in files:
         fname  = '{0:04d}{1:02d}{2:02d}_cabauw_ld40_{3}.png'.format(date.year, date.month, date.day, f)
         folder = '{0}/LD40/{1:04d}/{2:02d}/IMAGES/'.format(path, date.year, date.month)
-        
-        if not os.path.exists('figures/{}'.format(fname)):
-            try:
-                urllib.request.urlretrieve('{}/{}'.format(folder, fname), 'figures/{}'.format(fname))
-            except:
-                print('Cant find {}'.format(fname))
+        trytoget(folder, fname)
 
     # Cloud radar
     # ------------
     fname  = '{0:04d}{1:02d}{2:02d}_35GHz_CT75_dBZe.png'.format(date.year, date.month, date.day)
     folder = '{0}/PDN2/{1:04d}/{2:02d}/IMAGES/'.format(path, date.year, date.month)
-    
-    if not os.path.exists('figures/{}'.format(fname)):
-        try:
-            urllib.request.urlretrieve('{}/{}'.format(folder, fname), 'figures/{}'.format(fname))
-        except:
-            print('Cant find {}'.format(fname))
+    trytoget(folder, fname)
 
     # HATPRO
     # ------------
     fname  = '{0:04d}{1:02d}{2:02d}_hatpro_level1.png'.format(date.year, date.month, date.day)
     folder = '{0}/HATPRO/{1:04d}/{2:02d}/IMAGES/'.format(path, date.year, date.month)
-    
-    if not os.path.exists('figures/{}'.format(fname)):
-        try:
-            urllib.request.urlretrieve('{}/{}'.format(folder, fname), 'figures/{}'.format(fname))
-        except:
-            print('Cant find {}'.format(fname))
+    trytoget(folder, fname)
 
     # Nubiscope
     # ---------
     fname  = '{0:04d}{1:02d}{2:02d}_nubiscope_cloud.png'.format(date.year, date.month, date.day)
     folder = '{0}/NUBISCOPE/{1:04d}/{2:02d}/IMAGES/'.format(path, date.year, date.month)
-    
-    if not os.path.exists('figures/{}'.format(fname)):
-        try:
-            urllib.request.urlretrieve('{}/{}'.format(folder, fname), 'figures/{}'.format(fname))
-        except:
-            print('Cant find {}'.format(fname))
-
+    trytoget(folder, fname)
 
     # Video
     # ---------
     fname  = 'axis_{0:04d}{1:02d}{2:02d}.mp4'.format(date.year, date.month, date.day)
     folder = 'http://knmi-cbsql-w01p.knmi.nl/video/{1:04d}/{2:02d}/axis/'.format(path, date.year, date.month)
-    
-    if not os.path.exists('figures/{}'.format(fname)):
-        try:
-            urllib.request.urlretrieve('{}/{}'.format(folder, fname), 'figures/{}'.format(fname))
-        except:
-            print('Cant find {}'.format(fname))
+    trytoget(folder, fname)
 
+    # Cloudnet
+    # ----------
+    fname1  = '{0:04d}{1:02d}{2:02d}_target_classification.png'.format(date.year, date.month, date.day)
+    fname2  = '{0:04d}{1:02d}{2:02d}_cabauw_classification.nc'.format(date.year, date.month, date.day)
+    folder = '{0}/CRIME/cabauw/products/classification/{1:04d}/'.format(path, date.year, date.month)
 
-#http://knmi-cbsql-w01p.knmi.nl/video/2016/08/axis/axis_20160804.mp4
-
-
+    for fname in [fname1, fname2]:
+        trytoget(folder, fname)
 
     date += dt
