@@ -7,15 +7,43 @@ import pandas as pd
 import numpy as np
 
 from datetime import datetime, timedelta
+from scipy import interpolate
+
+threehours = timedelta(hours=3)
+oneday = timedelta(hours=24)
 
 class Read_LES:
     def __init__(self, nc_path, start_date):
         print('Reading LES for {}'.format(start_date))
 
         date_str  = '{0:04d}{1:02d}{2:02d}'.format(start_date.year, start_date.month, start_date.day)
-        self.fp   = xr.open_mfdataset('{}/profiles_{}.nc'.format(nc_path, date_str))
-        self.ft   = xr.open_mfdataset('{}/tmser_{}.nc'.format(nc_path, date_str))
+
+        # Domain mean statistics
+        self.fp   = xr.open_dataset('{}/profiles_{}.nc'.format(nc_path, date_str))
+        self.ft   = xr.open_dataset('{}/tmser_{}.nc'.format(nc_path, date_str))
+
+        # Column sampled and averaged statistics
+        self.fc   = xr.open_dataset('{}/column.i00097j00097_{}.nc'.format(nc_path, date_str))
+        self.fc['Qnet'] = -(self.fc['swd'][:,0] + self.fc['swu'][:,0] + self.fc['lwd'][:,0] + self.fc['lwu'][:,0])
+
+        # Calculate LWP
+        dz  = self.fp['zm'][1:].values - self.fp['zm'][:-1].values
+        dz  = np.append(dz, dz[-1])
+        dims = self.fp['rhof'].shape
+        self.fc['lwp'] = np.sum(self.fc['ql'] * np.broadcast_to(self.fp['rhof'], dims) * np.broadcast_to(dz, dims), axis=1)
+
         self.time = [start_date+timedelta(seconds=int(self.fp.time[t])) for t in range(self.fp.time.size)]
+
+
+def read_all(start, end, LES_path):
+    runs = []
+    date  = start
+    while date < end:
+        l = Read_LES(LES_path, date)
+        l.fp['rainrate'] /= (l.fp['rhof']*2.45e6)
+        runs.append(l)
+        date += timedelta(hours=24)
+    return runs
 
 
 def lim_and_line(vmin, vmax):
@@ -30,11 +58,15 @@ def lim_and_line2(v1, v2):
     vmin = np.min((v1.min(), v2.min()))
     vmax = np.max((v1.max(), v2.max()))
 
-    pl.xlim(vmin, vmax)
-    pl.ylim(vmin, vmax)
+    vmin = np.floor(vmin)
+    vmax = np.ceil(vmax)
+
+    ax=pl.gca()
     pl.plot([vmin,vmax], [vmin,vmax], 'k:', linewidth=1)
     pl.plot([vmin,vmax], [0,0], 'k:', linewidth=1)
     pl.plot([0,0], [vmin,vmax], 'k:', linewidth=1)
+    ax.set_xlim(vmin, vmax)
+    ax.set_ylim(vmin, vmax)
 
 
 def format_ax():
@@ -45,60 +77,107 @@ def format_ax():
     ax.xaxis.set_major_formatter(fmt)
 
 
+def interp_z(array, heights, goal):
+    """
+    Interpolate `array` at heights `heights` to goal height `goal`
+    """
+    f = interpolate.interp1d(heights, array, fill_value='extrapolate')
+    return f(goal)
+
+
+def interp_zt(array, heights, goal):
+    """
+    Interpolate `array` at heights `heights` to goal height `goal`,
+    when the input heights are time dependent (e.g. Harmonie, ERA5, ..)
+    """
+    nt  = array.shape[0]
+    out = np.empty((nt,goal.size), dtype=np.float)
+    for i in range(nt):
+        if i%100 == 0:
+            print(i,nt)
+        out[i,:] = np.interp(goal, heights[i,:], array[i,:])
+    return out
+
+
+def absval(a, b):
+    return (a**2 + b**2)**0.5
+
+
 if __name__ == '__main__':
     pl.close('all')
 
 
     # Period to read/plot/..
     start = datetime(year=2016, month=8, day=4,  hour=0)
-    end   = datetime(year=2016, month=8, day=19, hour=0)
+    end   = datetime(year=2016, month=8, day=18, hour=0)
 
     # Local file paths
-    LES_path = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_soil_scaled_ccn_sgs'
-    CB_path  = '/Users/bart/meteo/observations/Cabauw'
-    HM_path  = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
-
+    LES_path  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_lambda'
+    CB_path   = '/Users/bart/meteo/observations/Cabauw'
+    HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+    E5_path   = '/Users/bart/meteo/data//LS2D/cabauw/ERA5/'
 
     # Read the LES data
     # -----------------
     if 'runs' not in locals():
-
-        runs = []
-        date  = start
-        while date < end:
-            l = Read_LES(LES_path, date)
-            l.fp['rainrate'] /= (l.fp['rhof']*2.45e6)
-            runs.append(l)
-            date += timedelta(hours=24)
+        runs = read_all(start, end, LES_path)
 
 
     # Read HARMONIE data
-    # -----------------
+    # ------------------
     if 'hm' not in locals():
+        print('Reading HARMONIE')
 
-        iloc = 7+12     # 10x10km Cabauw
+        iloc = 7 #+12     # 7=2.5x2.5, 19=10x10km Cabauw
         files = []
         t = start
         while t <= end:
             files.append('{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/LES_forcing_{1:04d}{2:02d}{3:02d}{4:02d}.nc'\
                     .format(HM_path, t.year, t.month, t.day, t.hour))
-            t += timedelta(hours=3)
+            t += threehours
         hm = xr.open_mfdataset(files)
         hm = hm.loc[{'domain': iloc}]
+
+
+    # Read ERA5 data
+    # --------------
+    if 'e5' not in locals():
+        print('Reading ERA5')
+
+        files = []
+        t = start
+        while t< end:
+            files.append('{0:}/{1:04d}/{2:02d}/{3:02d}/model_an.nc'\
+                    .format(E5_path, t.year, t.month, t.day))
+            t += oneday
+        e5 = xr.open_mfdataset(files)
+        e5 = e5.sel(longitude=4.91, latitude=51.97, method='nearest')
 
 
     # Read Cabauw observations
     # ------------------------
     if 'cb_sf' not in locals():
+        print('Reading Cabauw')
 
-        cb_sm = xr.open_mfdataset('{0}/cesar_surface_mete*{1:04d}{2:02d}.nc'.format(CB_path, start.year, start.month), drop_variables=['valid_dates'])
-        cb_sf = xr.open_mfdataset('{0}/cesar_surface_flux*{1:04d}{2:02d}.nc'.format(CB_path, start.year, start.month), drop_variables=['valid_dates'])
-        cb_sr = xr.open_mfdataset('{0}/cesar_surface_radi*{1:04d}{2:02d}.nc'.format(CB_path, start.year, start.month), drop_variables=['valid_dates'])
-        cb_ns = xr.open_mfdataset('{0}/cesar_nubiscope*{1:04d}{2:02d}.nc'   .format(CB_path, start.year, start.month), drop_variables=['valid_dates'])
-        cb_lwc = xr.open_mfdataset('{0}/{1:04d}{2:02d}*_cabauw_lwc-scaled-adiabatic.nc'.format(CB_path, start.year, start.month))
+        def open_and_sel(name, start, end):
+            f = xr.open_mfdataset(name, drop_variables=['valid_dates'])
+            f = f.sel(time=slice(start, end))
+            return f
+
+        cb_sm  = open_and_sel('{0}/cesar_surface_mete*{1:04d}{2:02d}.nc'.format(CB_path, start.year, start.month), start, end)
+        cb_sf  = open_and_sel('{0}/cesar_surface_flux*{1:04d}{2:02d}.nc'.format(CB_path, start.year, start.month), start, end)
+        cb_sr  = open_and_sel('{0}/cesar_surface_radi*{1:04d}{2:02d}.nc'.format(CB_path, start.year, start.month), start, end)
+        cb_ns  = open_and_sel('{0}/cesar_nubiscope*{1:04d}{2:02d}.nc'   .format(CB_path, start.year, start.month), start, end)
+        cb_lwc = open_and_sel('{0}/{1:04d}{2:02d}*_cabauw_lwc-scaled-adiabatic.nc'.format(CB_path, start.year, start.month), start, end)
+        cb_tm  = open_and_sel('{0}/cesar_tower_meteo*{1:04d}{2:02d}.nc'.format(CB_path, start.year, start.month), start, end)
 
         # Cabauw soil heat flux calculated as residual term
         cb_G_res = cb_sf.QN - (cb_sf.H + cb_sf.LE)
+
+        # Indices of heights
+        cb_k = {}
+        for i in range(cb_tm.z.size):
+            cb_k[int(cb_tm.z[i])] = i
 
 
     # Sync times in a Pandas dataframe
@@ -108,31 +187,50 @@ if __name__ == '__main__':
         # Read selected LES variables in Pandas DataFrame's
         dfs = []
         for r in runs:
-            data = { 'LE_LES':  r.ft.LE,
-                     'H_LES':   r.ft.H,
-                     'G_LES':   r.ft.G0,
-                     'Qn_LES':  r.ft.Qnet,
-                     'swd_LES': r.fp.swd[:,0],
-                     'swu_LES': r.fp.swu[:,0],
-                     'lwd_LES': r.fp.lwd[:,0],
-                     'lwu_LES': r.fp.lwu[:,0],
-                     'cc_LES':  r.ft.cfrac,
-                     'rr_LES':  r.fp.rainrate[:,0],
-                     'lwp_LES': r.ft.lwp_bar}
+            exner = (r.fp['presh'] / 1e5)**(287.05/1004.)
+            T     = (r.fc['thl'] + (2.45e6 / 1004.) * r.fc['ql']) * exner
+            r.fc['T'] = T
+
+            data = { 'LE_LES':   r.fc['LE'],
+                     'H_LES':    r.fc['H'],
+                     'G_LES':    r.fc['G'],
+                     'Qn_LES':   r.fc['Qnet'],
+                     'swd_LES':  r.fc['swd'][:,0],
+                     'swu_LES':  r.fc['swu'][:,0],
+                     'lwd_LES':  r.fc['lwd'][:,0],
+                     'lwu_LES':  r.fc['lwu'][:,0],
+                     'cc_LES':   r.ft['cfrac'],
+                     'rr_LES':   r.fc['rainrate'][:,0]*r.fp.rhobh[:,0],
+                     'lwp_LES':  r.fc['lwp'],
+                     'U010_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 10),  interp_z(r.fp['v'], r.fp['zt'], 10)),
+                     'U200_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 200), interp_z(r.fp['v'], r.fp['zt'], 200)),
+                     'T010_LES': interp_z(r.fc['T'],  r.fc['zt'], 10),
+                     'T200_LES': interp_z(r.fc['T'],  r.fc['zt'], 200),
+                     'q010_LES': interp_z(r.fc['qt'], r.fc['zt'], 10),
+                     'q200_LES': interp_z(r.fc['qt'], r.fc['zt'], 200)
+                   }
+
             dfs.append( pd.DataFrame(data, index=r.time) )
         df_LES = pd.concat(dfs)
 
         # Put Cabauw observations in DataFrame
-        data = { 'LE_CB':  cb_sf.LE,
-                 'H_CB':   cb_sf.H,
-                 'G_CB':   cb_sf.G0,
-                 'G2_CB':  cb_G_res,
-                 'Qn_CB':  cb_sf.QN,
-                 'swd_CB': cb_sr.SWD,
-                 'swu_CB': cb_sr.SWU,
-                 'lwd_CB': cb_sr.LWD,
-                 'lwu_CB': cb_sr.LWU,
-                 'rr_CB':  cb_sm.RAIN}
+        data = { 'LE_CB':   cb_sf['LE'],
+                 'LE2_CB':  cb_sf['LE2'],
+                 'H_CB':    cb_sf['H'],
+                 'G_CB':    cb_sf['G0'],
+                 'Qn_CB':   cb_sf['QN'],
+                 'swd_CB':  cb_sr['SWD'],
+                 'swu_CB':  cb_sr['SWU'],
+                 'lwd_CB':  cb_sr['LWD'],
+                 'lwu_CB':  cb_sr['LWU'],
+                 'rr_CB':   cb_sm['RAIN'],
+                 'U010_CB': cb_tm['F'] [:,cb_k[10] ],
+                 'U200_CB': cb_tm['F'] [:,cb_k[200]],
+                 'T010_CB': cb_tm['TA'][:,cb_k[10] ],
+                 'T200_CB': cb_tm['TA'][:,cb_k[200]],
+                 'q010_CB': cb_tm['Q'] [:,cb_k[10] ],
+                 'q200_CB': cb_tm['Q'] [:,cb_k[200]]
+               }
 
         data2 = {'cc_CB':  cb_ns.cldcover_total/100.}
 
@@ -162,111 +260,188 @@ if __name__ == '__main__':
 
     if False:
         # --------------
-        # Check SEB closure observations
+        # LES vs HARMONIE vs ERA5
         # --------------
 
-        pl.figure()
-        pl.scatter(cb_sf['QN'], cb_sf['H']+cb_sf['LE']+cb_sf['G0'], s=1, color='r')
-        lim_and_line(-100,600)
-        pl.plot([-50,0], [-100,0], 'k:')
-        pl.xlabel(r'Q$_\mathrm{net}$ (W m$^{-2}$)')
-        pl.ylabel(r'LE+H+G (W m$^{-2}$)')
+        # ---- LES ----
+        dfs = []
+        for r in runs:
+            data = { 'U010_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 10),  interp_z(r.fp['v'], r.fp['zt'], 10)),
+                     'U100_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 100), interp_z(r.fp['v'], r.fp['zt'], 100)),
+                     'U200_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 200), interp_z(r.fp['v'], r.fp['zt'], 200)),
+                     'T010_LES': interp_z(r.fp['T'],  r.fp['zt'], 10),
+                     'T100_LES': interp_z(r.fp['T'],  r.fp['zt'], 100),
+                     'T200_LES': interp_z(r.fp['T'],  r.fp['zt'], 200),
+                     'q010_LES': interp_z(r.fp['qt'], r.fp['zt'], 10),
+                     'q100_LES': interp_z(r.fp['qt'], r.fp['zt'], 100),
+                     'q200_LES': interp_z(r.fp['qt'], r.fp['zt'], 200) }
+            dfs.append( pd.DataFrame(data, index=r.time) )
+        df_LES = pd.concat(dfs)
 
-        pl.figure()
-        pl.subplot(311)
-        pl.plot(np.arange(cb_sf['QN'].size), cb_sf['QN'] - (cb_sf['H']+cb_sf['LE']+cb_sf['G0']))
+        # ---- HARMONIE ----
+        if 'z' not in locals():
+            z = np.array((10,100,200))
+            u = interp_zt(hm['u'], hm['z'], z)
+            v = interp_zt(hm['v'], hm['z'], z)
+            T = interp_zt(hm['T'], hm['z'], z)
+            q = interp_zt(hm['q'], hm['z'], z)
 
-        pl.subplot(312)
-        pl.plot(np.arange(cb_sf['QN'].size), cb_sf['QN'] - (cb_sf['H']+cb_sf['LE']))
+        data = { 'U010_HAM': absval(u[:,0], v[:,0]),
+                 'U100_HAM': absval(u[:,1], v[:,1]),
+                 'U200_HAM': absval(u[:,2], v[:,2]),
+                 'T010_HAM': T[:,0],
+                 'T100_HAM': T[:,1],
+                 'T200_HAM': T[:,2],
+                 'q010_HAM': q[:,0],
+                 'q100_HAM': q[:,1],
+                 'q200_HAM': q[:,2] }
 
-        pl.subplot(313)
-        pl.plot(np.arange(cb_sf['QN'].size), cb_sf['IG0'])
+        df_HAM = pd.DataFrame(data, index=hm.time)
+        df_HAM.index = df_HAM.index.round('1min')
+
+        # ---- ERA5 ----
+        if 'z' not in locals():
+            z = np.array((10,100,200))
+            u = interp_zt(hm['u'], hm['z'], z)
+            v = interp_zt(hm['v'], hm['z'], z)
+            T = interp_zt(hm['T'], hm['z'], z)
+            q = interp_zt(hm['q'], hm['z'], z)
+
+        data = { 'U010_HAM': absval(u[:,0], v[:,0]),
+                 'U100_HAM': absval(u[:,1], v[:,1]),
+                 'U200_HAM': absval(u[:,2], v[:,2]),
+                 'T010_HAM': T[:,0],
+                 'T100_HAM': T[:,1],
+                 'T200_HAM': T[:,2],
+                 'q010_HAM': q[:,0],
+                 'q100_HAM': q[:,1],
+                 'q200_HAM': q[:,2] }
+
+        df_HAM = pd.DataFrame(data, index=hm.time)
+        df_HAM.index = df_HAM.index.round('1min')
+
+
 
 
     if False:
         # --------------
-        # Cloud statistics
-        # --------------
-        def rmean(x, N=20):
-            return np.convolve(x, np.ones((N,))/N, mode='same')
-
-
-        pl.figure()
-        pl.plot(df_LES.index, df_LES.lwp_LES, color=c1)
-        pl.plot(cb_lwc.time, rmean(cb_lwc.lwp), color=c2)
-        pl.xlim(start, end)
-
-
-        pl.figure()
-        ax=pl.subplot(311)
-        for i,r in enumerate(runs):
-            pl.pcolormesh(r.time, r.fp.zt, r.fp.cfrac.T, vmin=0, vmax=1, cmap=pl.cm.tab20c_r)
-        pl.colorbar()
-
-        pl.subplot(312, sharex=ax)
-        for i,r in enumerate(runs):
-            pl.pcolormesh(r.time, r.fp.zt, r.fp.ql.T*1000, vmin=0, vmax=0.25, cmap=pl.cm.tab20c_r)
-        pl.colorbar()
-
-        pl.subplot(313, sharex=ax)
-        for i,r in enumerate(runs):
-            pl.pcolormesh(r.time, r.fp.zt, np.log(r.fp.sv002.T+1e-12), cmap=pl.cm.tab20c_r)
-        pl.colorbar()
-
-
-    if False:
-        # --------------
-        # Surface meteo
+        # Atmospheric variables
         # --------------
 
-        pl.figure(figsize=(10,4.8))
+        # ---- Wind ----
+        pl.figure(figsize=(10,5))
         gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
         ax=pl.subplot(gs[0,0])
+        pl.plot(cb_tm.time, cb_tm['F'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.ft.cfrac, '-', color=c1)
-        pl.plot(cb_ns.time.values, cb_ns.cldcover_total/100., 'o', mfc=c2, mec=c2, ms=2)
-        pl.plot([start, end], [0,0], 'k:')
+            pl.plot(r.time, absval(interp_z(r.fp['u'], r.fp['zt'], 10),  interp_z(r.fp['v'], r.fp['zt'], 10)), '-', color=c1)
         pl.xlim(start, end)
-        pl.ylim(0,1)
-        pl.ylabel(r'$cc$ (-)')
+        pl.ylabel(r'U (m s$^{-1}$')
+        format_ax()
 
-        pl.subplot(gs[1,0], sharex=ax)
+        ax=pl.subplot(gs[1,0])
+        pl.plot(cb_tm.time, cb_tm['F'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.fp.rainrate[:,0]*3600, '-', color=c1)
-        pl.plot(cb_sm.time.values, cb_sm.RAIN*6, 'o', mfc=c2, mec=c2, ms=2)
-        pl.plot([start, end], [0,0], 'k:')
+            pl.plot(r.time, absval(interp_z(r.fp['u'], r.fp['zt'], 200),  interp_z(r.fp['v'], r.fp['zt'], 200)), '-', color=c1)
         pl.xlim(start, end)
-        pl.ylim(0,1)
-        pl.ylabel(r'$rr$ (mm h$^{-1}$)')
+        pl.ylabel(r'U (m s$^{-1}$')
+        format_ax()
 
-        ax=pl.subplot(gs[0,1])
-        pl.scatter(df['cc_CB'], df['cc_LES'], s=1, color=c2)
-        lim_and_line2(df['cc_CB'], df['cc_LES'])
-        pl.xlabel(r'OBS (-)')
-        pl.ylabel(r'LES (-)')
+        pl.subplot(gs[0,1])
+        pl.scatter(df['U010_CB'], df['U010_LES'], s=1, color=c2)
+        lim_and_line2(df['U010_CB'], df['U010_LES'])
+        pl.xlabel(r'OBS (W m$^{-2}$)')
+        pl.ylabel(r'LES (W m$^{-2}$)')
 
-        ax=pl.subplot(gs[1,1])
-        pl.scatter(df['rr_CB']*6, df['rr_LES']*3600, s=1, color=c2)
-        lim_and_line(0,2)
-        pl.xlabel(r'OBS (mm h$^{-1}$)')
-        pl.ylabel(r'LES (mm h$^{-1}$)')
+        pl.subplot(gs[1,1])
+        pl.scatter(df['U200_CB'], df['U200_LES'], s=1, color=c2)
+        lim_and_line2(df['U200_CB'], df['U200_LES'])
+        pl.xlabel(r'OBS (W m$^{-2}$)')
+        pl.ylabel(r'LES (W m$^{-2}$)')
 
         pl.tight_layout()
+        pl.savefig('wind_tser_scatter.pdf')
 
 
-        pl.figure()
-        pl.plot(df.index, np.cumsum(df['rr_LES'])*600, color=c1, label='LES')
-        pl.plot(df.index, np.cumsum(df['rr_CB']), color=c2, label='Cabauw')
-        pl.ylabel('cumulative sum(rr) (mm)')
-        pl.legend()
+        # ---- Temperature ----
+        pl.figure(figsize=(10,5))
+        gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
+
+        ax=pl.subplot(gs[0,0])
+        pl.plot(cb_tm.time, cb_tm['TA'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
+        for i,r in enumerate(runs):
+            pl.plot(r.time, interp_z(r.fp['T'], r.fp['zt'], 10), '-', color=c1)
+        pl.xlim(start, end)
+        pl.ylabel(r'T$_\mathrm{10m}$ (K)')
+        format_ax()
+
+        ax=pl.subplot(gs[1,0])
+        pl.plot(cb_tm.time, cb_tm['TA'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
+        for i,r in enumerate(runs):
+            pl.plot(r.time, interp_z(r.fp['T'], r.fp['zt'], 200), '-', color=c1)
+        pl.xlim(start, end)
+        pl.ylabel(r'T$_\mathrm{200m}$ (K)')
+        format_ax()
+
+        pl.subplot(gs[0,1])
+        pl.scatter(df['T010_CB'], df['T010_LES'], s=1, color=c2)
+        lim_and_line(280,295)
+        pl.xlabel(r'OBS (K)')
+        pl.ylabel(r'LES (K)')
+
+        pl.subplot(gs[1,1])
+        pl.scatter(df['T200_CB'], df['T200_LES'], s=1, color=c2)
+        lim_and_line(280,295)
+        pl.xlabel(r'OBS (K)')
+        pl.ylabel(r'LES (K)')
+
+        pl.tight_layout()
+        pl.savefig('temperature_tser_scatter.pdf')
+
+
+        # ---- Specific humidity ----
+        pl.figure(figsize=(10,5))
+        gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
+
+        ax=pl.subplot(gs[0,0])
+        pl.plot(cb_tm.time, cb_tm['Q'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
+        for i,r in enumerate(runs):
+            pl.plot(r.time, interp_z(r.fp['qt']*1e3, r.fp['zt'], 10), '-', color=c1)
+        pl.xlim(start, end)
+        pl.ylabel(r'q$_\mathrm{10m}$ (g kg$^{-1}$)')
+        format_ax()
+
+        ax=pl.subplot(gs[1,0])
+        pl.plot(cb_tm.time, cb_tm['Q'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
+        for i,r in enumerate(runs):
+            pl.plot(r.time, interp_z(r.fp['qt']*1e3, r.fp['zt'], 200), '-', color=c1)
+        pl.xlim(start, end)
+        pl.ylabel(r'q$_\mathrm{200m}$ (g kg$^{-1}$)')
+        format_ax()
+
+        pl.subplot(gs[0,1])
+        pl.scatter(df['q010_CB'], df['q010_LES']*1000, s=1, color=c2)
+        lim_and_line(5,13)
+        pl.xlabel(r'OBS (g kg$^{-1}$)')
+        pl.ylabel(r'LES (g kg$^{-1}$)')
+
+        pl.subplot(gs[1,1])
+        pl.scatter(df['q200_CB'], df['q200_LES']*1000, s=1, color=c2)
+        lim_and_line(5,13)
+        pl.xlabel(r'OBS (g kg$^{-1}$)')
+        pl.ylabel(r'LES (g kg$^{-1}$)')
+
+        pl.tight_layout()
+        pl.savefig('spechum_tser_scatter.pdf')
+
+
 
 
     if True:
         # --------------
         # Surface fluxes
         # --------------
-
 
         pl.figure(figsize=(10,8))
 
@@ -276,8 +451,7 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[0,0])
         pl.plot(cb_sf.time.values, cb_sf.H, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.ft.H, '-', color=c1)
-        #pl.plot(hm.time, -hm.H)
+            pl.plot(r.time, r.fc.H, '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'H (W m$^{-2}$')
         format_ax()
@@ -285,17 +459,15 @@ if __name__ == '__main__':
         pl.subplot(gs[1,0], sharex=ax)
         pl.plot(cb_sr.time.values,  cb_sf.LE, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.ft.LE, '-', color=c1)
-        #pl.plot(hm.time, -hm.LE)
+            pl.plot(r.time, r.fc.LE, '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'LE (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[2,0], sharex=ax)
         pl.plot(cb_sr.time.values, cb_sf.G0, 'o', mfc=c2, mec=c2, ms=2)
-        pl.plot(cb_sr.time.values, cb_G_res, 'o', mfc='r', mec='r', ms=1)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.ft.G0, '-', color=c1)
+            pl.plot(r.time, r.fc.G, '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'G (W m$^{-2}$')
         format_ax()
@@ -303,7 +475,7 @@ if __name__ == '__main__':
         pl.subplot(gs[3,0], sharex=ax)
         pl.plot(cb_sr.time.values, cb_sf.QN, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.ft.Qnet, '-', color=c1)
+            pl.plot(r.time, r.fc.Qnet, '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'Q$_\mathrm{net}$ (W m$^{-2}$')
         format_ax()
@@ -311,31 +483,32 @@ if __name__ == '__main__':
         # Scatter plots
         pl.subplot(gs[0,1])
         pl.scatter(df['H_CB'], df['H_LES'], s=1, color=c2)
-        lim_and_line2(df['H_CB'], df['H_LES'])
+        lim_and_line2(df['H_CB'].values, df['H_LES'].values)
         pl.xlabel(r'OBS (W m$^{-2}$)')
         pl.ylabel(r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[1,1])
         pl.scatter(df['LE_CB'], df['LE_LES'], s=1, color=c2)
-        lim_and_line2(df['LE_CB'], df['LE_LES'])
+        lim_and_line2(df['LE_CB'].values, df['LE_LES'].values)
         pl.xlabel(r'OBS (W m$^{-2}$)')
         pl.ylabel(r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[2,1])
         pl.scatter(df['G_CB'], df['G_LES'], s=1, color=c2)
-        pl.scatter(df['G2_CB'], df['G_LES'], s=1, color='r')
-        lim_and_line2(df['G_CB'], df['G_LES'])
+        lim_and_line2(df['G_CB'].values, df['G_LES'].values)
         pl.xlabel(r'OBS (W m$^{-2}$)')
         pl.ylabel(r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[3,1])
         pl.scatter(df['Qn_CB'], df['Qn_LES'], s=1, color=c2)
-        lim_and_line2(df['Qn_CB'], df['Qn_LES'])
+        lim_and_line2(df['Qn_CB'].values, df['Qn_LES'].values)
         pl.xlabel(r'OBS (W m$^{-2}$)')
         pl.ylabel(r'LES (W m$^{-2}$)')
 
         pl.tight_layout()
         pl.savefig('surface_flux_tser_scatter.pdf')
+
+
 
 
     if False:
@@ -350,7 +523,8 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[0,0])
         pl.plot(cb_sr.time.values, -cb_sr.SWD, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.fp.swd[:,0], '-', color=c1)
+            #pl.plot(r.time, r.fp.swd[:,0], '-', color=c1)  # Domain mean
+            pl.plot(r.time, r.fc.swd[:,0], '-', color=c1)   # Column
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$')
         format_ax()
@@ -358,7 +532,8 @@ if __name__ == '__main__':
         pl.subplot(gs[1,0], sharex=ax)
         pl.plot(cb_sr.time.values,  cb_sr.SWU, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.fp.swu[:,0], '-', color=c1)
+            #pl.plot(r.time, r.fp.swu[:,0], '-', color=c1)
+            pl.plot(r.time, r.fc.swu[:,0], '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$')
         format_ax()
@@ -366,7 +541,8 @@ if __name__ == '__main__':
         pl.subplot(gs[2,0], sharex=ax)
         pl.plot(cb_sr.time.values, -cb_sr.LWD, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.fp.lwd[:,0], '-', color=c1)
+            #pl.plot(r.time, r.fp.lwd[:,0], '-', color=c1)
+            pl.plot(r.time, r.fc.lwd[:,0], '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$')
         format_ax()
@@ -374,7 +550,8 @@ if __name__ == '__main__':
         pl.subplot(gs[3,0], sharex=ax)
         pl.plot(cb_sr.time.values, cb_sr.LWU, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, r.fp.lwu[:,0], '-', color=c1)
+            #pl.plot(r.time, r.fp.lwu[:,0], '-', color=c1)
+            pl.plot(r.time, r.fc.lwu[:,0], '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$')
         format_ax()
@@ -409,12 +586,56 @@ if __name__ == '__main__':
 
     if False:
         # --------------
-        # Closure SEB
+        # Surface meteo
         # --------------
 
-        pl.figure(figsize=(10,8))
+        pl.figure(figsize=(10,4.8))
+        gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
-        gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
+        ax=pl.subplot(gs[0,0])
+        for i,r in enumerate(runs):
+            pl.plot(r.time, r.ft.cfrac, '-', color=c1)
+        pl.plot(cb_ns.time.values, cb_ns.cldcover_total/100., 'o', mfc=c2, mec=c2, ms=2)
+        pl.plot([start, end], [0,0], 'k:')
+        pl.xlim(start, end)
+        pl.ylim(0,1)
+        pl.ylabel(r'$cc$ (-)')
 
+        pl.subplot(gs[1,0], sharex=ax)
+        for i,r in enumerate(runs):
+            pl.plot(r.time, r.fc.rainrate[:,0]*r.fp.rhobh[:,0]*3600, '-', color=c1)
+        pl.plot(cb_sm.time.values, cb_sm.RAIN*6, 'o', mfc=c2, mec=c2, ms=2)
+        pl.plot([start, end], [0,0], 'k:')
+        pl.xlim(start, end)
+        pl.ylim(0,1)
+        pl.ylabel(r'$rr$ (mm h$^{-1}$)')
+
+        ax=pl.subplot(gs[0,1])
+        pl.scatter(df['cc_CB'], df['cc_LES'], s=1, color=c2)
+        lim_and_line2(df['cc_CB'], df['cc_LES'])
+        pl.xlabel(r'OBS (-)')
+        pl.ylabel(r'LES (-)')
+
+        ax=pl.subplot(gs[1,1])
+        pl.scatter(df['rr_CB']*6, df['rr_LES']*3600, s=1, color=c2)
+        lim_and_line(0,2)
+        pl.xlabel(r'OBS (mm h$^{-1}$)')
+        pl.ylabel(r'LES (mm h$^{-1}$)')
+
+        pl.tight_layout()
+        pl.savefig('clouds_rain_tser_scatter.pdf')
+
+
+    if False:
+        # --------------
+        # Check SEB closure observations
+        # --------------
+
+        pl.figure()
+        pl.scatter(cb_sf['QN'], cb_sf['H']+cb_sf['LE']+cb_sf['G0'], s=1, color='r')
+        lim_and_line(-100,600)
+        pl.plot([-50,0], [-100,0], 'k:')
+        pl.xlabel(r'Q$_\mathrm{net}$ (W m$^{-2}$)')
+        pl.ylabel(r'LE+H+G (W m$^{-2}$)')
 
 
