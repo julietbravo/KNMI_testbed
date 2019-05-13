@@ -24,7 +24,7 @@ class Read_LES:
 
         # Column sampled and averaged statistics
         self.fc   = xr.open_dataset('{}/column.i00097j00097_{}.nc'.format(nc_path, date_str))
-        self.fc['Qnet'] = -(self.fc['swd'][:,0] + self.fc['swu'][:,0] + self.fc['lwd'][:,0] + self.fc['lwu'][:,0])
+        self.fc['Qnet'] = (('time'), -(self.fc['swd'][:,0] + self.fc['swu'][:,0] + self.fc['lwd'][:,0] + self.fc['lwu'][:,0]))
 
         # Calculate LWP
         dz  = self.fp['zm'][1:].values - self.fp['zm'][:-1].values
@@ -99,23 +99,51 @@ def interp_zt(array, heights, goal):
     return out
 
 
+def calc_swd(lon, lat, hour, doy):
+    """
+    Calculate theoretical shortwave incoming radiation,
+    from (time) index of a Pandas dataframe
+    """
+    lon    = -lon
+    sda    = 0.409 * np.cos(2. * np.pi * (doy - 173.) / 365.)
+    sinlea = np.sin(2. * np.pi * lat / 360.) * np.sin(sda) - \
+             np.cos(2. * np.pi * lat / 360.) * np.cos(sda) * \
+             np.cos(2. * np.pi * (hour*3600.) / 86400. - 2. * np.pi * lon / 360.)
+    sinlea = np.maximum(sinlea, 1e-9)
+    Tr     = (0.6 + 0.2 * sinlea)
+    swin   = 1368. * Tr * sinlea
+
+    return swin
+
+
 def absval(a, b):
     return (a**2 + b**2)**0.5
 
+def calc_rmse(a, b):
+    return np.sqrt(np.mean((a-b)**2))
 
 if __name__ == '__main__':
     pl.close('all')
-
 
     # Period to read/plot/..
     start = datetime(year=2016, month=8, day=4,  hour=0)
     end   = datetime(year=2016, month=8, day=18, hour=0)
 
     # Local file paths
+    # ---- Macbook ----
+    """
     LES_path  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_lambda'
     CB_path   = '/Users/bart/meteo/observations/Cabauw'
-    HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
-    E5_path   = '/Users/bart/meteo/data//LS2D/cabauw/ERA5/'
+    HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing'
+    E5_path   = '/Users/bart/meteo/data//LS2D/cabauw/ERA5'
+    """
+
+    # ---- KNMI Desktop ----
+    LES_path  = '/nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018'
+    CB_path   = '/nobackup/users/stratum/Cabauw'
+    HM_path   = '/nobackup/users/stratum/DOWA/LES_forcing'
+    E5_path   = '/nobackup/users/stratum/ERA5/LS2D/cabauw/ERA5'
+
 
     # Read the LES data
     # -----------------
@@ -199,7 +227,7 @@ if __name__ == '__main__':
                      'swu_LES':  r.fc['swu'][:,0],
                      'lwd_LES':  r.fc['lwd'][:,0],
                      'lwu_LES':  r.fc['lwu'][:,0],
-                     'cc_LES':   r.ft['cfrac'],
+                     #'cc_LES':   r.ft['cfrac'],     # Was ist loss mit cfrac?
                      'rr_LES':   r.fc['rainrate'][:,0]*r.fp.rhobh[:,0],
                      'lwp_LES':  r.fc['lwp'],
                      'U010_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 10),  interp_z(r.fp['v'], r.fp['zt'], 10)),
@@ -237,6 +265,7 @@ if __name__ == '__main__':
         df_CB = pd.DataFrame(data, index=cb_sf.time)
         df_CB.index = df_CB.index.round('1min')
 
+
         df_CB2 = pd.DataFrame(data2, index=cb_ns.time)
         df_CB2.index = df_CB2.index.round('1min')
 
@@ -247,6 +276,12 @@ if __name__ == '__main__':
         df = pd.concat([df_LES, df_CB], axis=1)
         df.dropna(inplace=True)
 
+        # Theoretical shortwave incoming radiation
+        hour = df.index.hour + df.index.minute/60.
+        doy  = df.index.dayofyear
+        df['swd_theory'] = calc_swd(4.9, 51.97, hour, doy)
+        df['is_night'] = df['swd_theory'] < 0.1
+
 
     # Plot settings
     c1 = '#4d4d4d'   # Green
@@ -256,6 +291,31 @@ if __name__ == '__main__':
     c_cb2 = '#377eb8'   # Blue
     c_da  = '#4d4d4d'   # Gray
     c_da2 = '#b2182b'   # DarkRed
+
+
+    def scatter_stat(obs, model, label, xlabel, ylabel, night_mask, ax=None):
+        # Statistics
+        rmse_all = calc_rmse(obs, model)
+        diff_all = (model-obs).mean()
+
+        rmse_night = calc_rmse(obs[night_mask], model[night_mask])
+        diff_night = (model[night_mask]-obs[night_mask]).mean()
+
+        rmse_day = calc_rmse(obs[~night_mask], model[~night_mask])
+        diff_day = (model[~night_mask]-obs[~night_mask]).mean()
+
+        print('---------------------------')
+        print(label)
+        print('ALL:   RMSE = {0:6.1f}, DIFF = {1:6.1f}'.format(rmse_all, diff_all))
+        print('DAY:   RMSE = {0:6.1f}, DIFF = {1:6.1f}'.format(rmse_day, diff_day))
+        print('NIGHT: RMSE = {0:6.1f}, DIFF = {1:6.1f}'.format(rmse_night, diff_night))
+
+
+        pl.scatter(obs, model, s=1, color=c2)
+        lim_and_line2(obs, model)
+        pl.xlabel(xlabel)
+        pl.ylabel(ylabel)
+
 
 
     if False:
@@ -442,11 +502,10 @@ if __name__ == '__main__':
         # --------------
         # Surface fluxes
         # --------------
-
         pl.figure(figsize=(10,8))
-
         gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
 
+        # Time series
         # Time series
         ax=pl.subplot(gs[0,0])
         pl.plot(cb_sf.time.values, cb_sf.H, 'o', mfc=c2, mec=c2, ms=2)
@@ -482,36 +541,22 @@ if __name__ == '__main__':
 
         # Scatter plots
         pl.subplot(gs[0,1])
-        pl.scatter(df['H_CB'], df['H_LES'], s=1, color=c2)
-        lim_and_line2(df['H_CB'].values, df['H_LES'].values)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['H_CB'], df['H_LES'], 'H (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.subplot(gs[1,1])
-        pl.scatter(df['LE_CB'], df['LE_LES'], s=1, color=c2)
-        lim_and_line2(df['LE_CB'].values, df['LE_LES'].values)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['LE_CB'], df['LE_LES'], 'LE (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.subplot(gs[2,1])
-        pl.scatter(df['G_CB'], df['G_LES'], s=1, color=c2)
-        lim_and_line2(df['G_CB'].values, df['G_LES'].values)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['G_CB'], df['G_LES'], 'G (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.subplot(gs[3,1])
-        pl.scatter(df['Qn_CB'], df['Qn_LES'], s=1, color=c2)
-        lim_and_line2(df['Qn_CB'].values, df['Qn_LES'].values)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['Qn_CB'], df['Qn_LES'], 'Qnet (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.tight_layout()
         pl.savefig('surface_flux_tser_scatter.pdf')
 
 
-
-
-    if False:
+    if True:
         # --------------
         # Surface radiation
         # --------------
@@ -523,7 +568,6 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[0,0])
         pl.plot(cb_sr.time.values, -cb_sr.SWD, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            #pl.plot(r.time, r.fp.swd[:,0], '-', color=c1)  # Domain mean
             pl.plot(r.time, r.fc.swd[:,0], '-', color=c1)   # Column
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$')
@@ -532,7 +576,6 @@ if __name__ == '__main__':
         pl.subplot(gs[1,0], sharex=ax)
         pl.plot(cb_sr.time.values,  cb_sr.SWU, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            #pl.plot(r.time, r.fp.swu[:,0], '-', color=c1)
             pl.plot(r.time, r.fc.swu[:,0], '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$')
@@ -541,7 +584,6 @@ if __name__ == '__main__':
         pl.subplot(gs[2,0], sharex=ax)
         pl.plot(cb_sr.time.values, -cb_sr.LWD, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            #pl.plot(r.time, r.fp.lwd[:,0], '-', color=c1)
             pl.plot(r.time, r.fc.lwd[:,0], '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$')
@@ -550,35 +592,22 @@ if __name__ == '__main__':
         pl.subplot(gs[3,0], sharex=ax)
         pl.plot(cb_sr.time.values, cb_sr.LWU, 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            #pl.plot(r.time, r.fp.lwu[:,0], '-', color=c1)
             pl.plot(r.time, r.fc.lwu[:,0], '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[0,1])
-        pl.scatter(-df['swd_CB'], df['swd_LES'], s=1, color=c2)
-        lim_and_line(-800,0)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(-df['swd_CB'], df['swd_LES'], 'SWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.subplot(gs[1,1])
-        pl.scatter(df['swu_CB'], df['swu_LES'], s=1, color=c2)
-        lim_and_line(0,200)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['swu_CB'], df['swu_LES'], 'SWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.subplot(gs[2,1])
-        pl.scatter(-df['lwd_CB'], df['lwd_LES'], s=1, color=c2)
-        lim_and_line(-420,-280)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(-df['lwd_CB'], df['lwd_LES'], 'LWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.subplot(gs[3,1])
-        pl.scatter(df['lwu_CB'], df['lwu_LES'], s=1, color=c2)
-        lim_and_line(350,460)
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['lwu_CB'], df['lwu_LES'], 'LWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
 
         pl.tight_layout()
         pl.savefig('radiation_tser_scatter.pdf')
