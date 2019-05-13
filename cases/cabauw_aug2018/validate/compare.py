@@ -7,7 +7,11 @@ import pandas as pd
 import numpy as np
 
 from datetime import datetime, timedelta
-from scipy import interpolate
+from scipy import interpolate, stats
+
+# Custom module (from LS2D)
+from IFS_tools import IFS_tools
+
 
 threehours = timedelta(hours=3)
 oneday = timedelta(hours=24)
@@ -54,12 +58,13 @@ def lim_and_line(vmin, vmax):
     pl.plot([0,0], [vmin,vmax], 'k:', linewidth=1)
 
 
-def lim_and_line2(v1, v2):
+def lim_and_line2(v1, v2, round_lims=True):
     vmin = np.min((v1.min(), v2.min()))
     vmax = np.max((v1.max(), v2.max()))
 
-    vmin = np.floor(vmin)
-    vmax = np.ceil(vmax)
+    if round_lims:
+        vmin = np.floor(vmin)
+        vmax = np.ceil(vmax)
 
     ax=pl.gca()
     pl.plot([vmin,vmax], [vmin,vmax], 'k:', linewidth=1)
@@ -90,11 +95,10 @@ def interp_zt(array, heights, goal):
     Interpolate `array` at heights `heights` to goal height `goal`,
     when the input heights are time dependent (e.g. Harmonie, ERA5, ..)
     """
+    print('Coffee time :-)')
     nt  = array.shape[0]
     out = np.empty((nt,goal.size), dtype=np.float)
     for i in range(nt):
-        if i%100 == 0:
-            print(i,nt)
         out[i,:] = np.interp(goal, heights[i,:], array[i,:])
     return out
 
@@ -119,8 +123,6 @@ def calc_swd(lon, lat, hour, doy):
 def absval(a, b):
     return (a**2 + b**2)**0.5
 
-def calc_rmse(a, b):
-    return np.sqrt(np.mean((a-b)**2))
 
 if __name__ == '__main__':
     pl.close('all')
@@ -174,12 +176,22 @@ if __name__ == '__main__':
 
         files = []
         t = start
-        while t< end:
+        while t < end:
             files.append('{0:}/{1:04d}/{2:02d}/{3:02d}/model_an.nc'\
                     .format(E5_path, t.year, t.month, t.day))
             t += oneday
         e5 = xr.open_mfdataset(files)
         e5 = e5.sel(longitude=4.91, latitude=51.97, method='nearest')
+
+        # Calculate heights of model levels
+        e5['zf'] = (('time','level'), np.zeros((e5.dims['time'], e5.dims['level'])))
+        for t in range(e5.dims['time']):
+            Tv = IFS_tools.calc_virtual_temp(e5['t'][t,:].values,    e5['q'][t,:].values,
+                                              e5['clwc'][t,:].values, e5['ciwc'][t,:].values)
+            ps = np.exp(e5['lnsp'][t,0].values)
+            ph = IFS_tools.calc_half_level_pressure(ps)
+            z  = IFS_tools.calc_full_level_Zg(ph, Tv)
+            e5['zf'][t,:] = z[::-1]
 
 
     # Read Cabauw observations
@@ -292,95 +304,167 @@ if __name__ == '__main__':
     c_da  = '#4d4d4d'   # Gray
     c_da2 = '#b2182b'   # DarkRed
 
+    class Stats:
+        def __init__(self, obs, model):
 
-    def scatter_stat(obs, model, label, xlabel, ylabel, night_mask, ax=None):
-        # Statistics
-        rmse_all = calc_rmse(obs, model)
-        diff_all = (model-obs).mean()
-
-        rmse_night = calc_rmse(obs[night_mask], model[night_mask])
-        diff_night = (model[night_mask]-obs[night_mask]).mean()
-
-        rmse_day = calc_rmse(obs[~night_mask], model[~night_mask])
-        diff_day = (model[~night_mask]-obs[~night_mask]).mean()
-
-        print('---------------------------')
-        print(label)
-        print('ALL:   RMSE = {0:6.1f}, DIFF = {1:6.1f}'.format(rmse_all, diff_all))
-        print('DAY:   RMSE = {0:6.1f}, DIFF = {1:6.1f}'.format(rmse_day, diff_day))
-        print('NIGHT: RMSE = {0:6.1f}, DIFF = {1:6.1f}'.format(rmse_night, diff_night))
+            self.mse   = np.mean((model-obs)**2)
+            self.rmse  = np.sqrt(self.mse)
+            self.diff  = (model-obs).mean()
+            self.slope, self.intercept, self.rvalue, self.pvalue, self.stderr = stats.linregress(obs, model)
 
 
-        pl.scatter(obs, model, s=1, color=c2)
+    def scatter_stat(obs, model, label, xlabel, ylabel, night_mask):
+
+        # Statistics (full day, day and night)
+        full  = Stats(obs, model)
+        night = Stats(obs[ night_mask], model[ night_mask])
+        day   = Stats(obs[~night_mask], model[~night_mask])
+
+        label='rmse ={0:6.1f},\n diff ={1:6.1f},\n r ={2:6.4f}'.format(full.rmse, full.diff, full.rvalue)
+
+        pl.scatter(obs, model, s=1, color=c2, label=label)
+        lim_and_line2(obs, model)
+        pl.xlabel(xlabel)
+        pl.ylabel(ylabel)
+        pl.legend(fontsize=8, loc=4)
+
+
+    def pretty_align(label, names, values):
+        str_out = '{0:^12s}\n'.format(label)
+        for name, value in zip(names, values):
+            str_out += '{0:>4s} = {1:<+7.2f}\n'.format(name, value)
+        str_out = str_out[:-2]
+        return str_out
+
+
+    def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, print_stat=False, ax=None):
+
+        # Statistics (full day, day and night)
+        full  = Stats(obs, model)
+        night = Stats(obs[ night_mask], model[ night_mask])
+        day   = Stats(obs[~night_mask], model[~night_mask])
+
+        p1=pl.scatter(obs[~night_mask], model[~night_mask], s=1, color='r')
+        p2=pl.scatter(obs[night_mask], model[night_mask], s=1, color='k')
+
         lim_and_line2(obs, model)
         pl.xlabel(xlabel)
         pl.ylabel(ylabel)
 
+        label1 = pretty_align('Day',   ['RMSE','diff'], [day.rmse, day.diff])
+        label2 = pretty_align('Night', ['RMSE','diff'], [night.rmse, night.diff])
+
+        print(label1)
+
+        l1 = pl.legend([p1], [label1], loc=2, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
+        l2 = pl.legend([p2], [label2], loc=4, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
+        pl.gca().add_artist(l1)
+        for text in l1.get_texts():
+            text.set_color("r")
 
 
-    if False:
+
+
+    if True:
         # --------------
-        # LES vs HARMONIE vs ERA5
+        # LES vs. HARMONIE vs. ERA5 vs. Cabauw vs. ....
         # --------------
+
+        # Height to consider. Note: Cabauw data is not automatically
+        # interpolated to other heights...
+        heights = np.array((10,20,40,80,140,200))
 
         # ---- LES ----
         dfs = []
         for r in runs:
-            data = { 'U010_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 10),  interp_z(r.fp['v'], r.fp['zt'], 10)),
-                     'U100_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 100), interp_z(r.fp['v'], r.fp['zt'], 100)),
-                     'U200_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 200), interp_z(r.fp['v'], r.fp['zt'], 200)),
-                     'T010_LES': interp_z(r.fp['T'],  r.fp['zt'], 10),
-                     'T100_LES': interp_z(r.fp['T'],  r.fp['zt'], 100),
-                     'T200_LES': interp_z(r.fp['T'],  r.fp['zt'], 200),
-                     'q010_LES': interp_z(r.fp['qt'], r.fp['zt'], 10),
-                     'q100_LES': interp_z(r.fp['qt'], r.fp['zt'], 100),
-                     'q200_LES': interp_z(r.fp['qt'], r.fp['zt'], 200) }
+            data = {}
+            for z in heights:
+                data['U{0:03d}_LES'.format(z)] = absval(interp_z(r.fc['u'], r.fc['zt'], z), interp_z(r.fc['v'], r.fc['zt'], z))
+                data['T{0:03d}_LES'.format(z)] = interp_z(r.fc['T'], r.fc['zt'], z)
+                data['q{0:03d}_LES'.format(z)] = interp_z(r.fc['qt'], r.fc['zt'], z)*1000
             dfs.append( pd.DataFrame(data, index=r.time) )
         df_LES = pd.concat(dfs)
 
         # ---- HARMONIE ----
-        if 'z' not in locals():
-            z = np.array((10,100,200))
-            u = interp_zt(hm['u'], hm['z'], z)
-            v = interp_zt(hm['v'], hm['z'], z)
-            T = interp_zt(hm['T'], hm['z'], z)
-            q = interp_zt(hm['q'], hm['z'], z)
+        # Interpolate model levels to fixed heights
+        if 'u_tmp1' not in locals():
+            u_tmp1 = interp_zt(hm['u'], hm['z'], heights)
+            v_tmp1 = interp_zt(hm['v'], hm['z'], heights)
+            T_tmp1 = interp_zt(hm['T'], hm['z'], heights)
+            q_tmp1 = interp_zt(hm['q'], hm['z'], heights)
 
-        data = { 'U010_HAM': absval(u[:,0], v[:,0]),
-                 'U100_HAM': absval(u[:,1], v[:,1]),
-                 'U200_HAM': absval(u[:,2], v[:,2]),
-                 'T010_HAM': T[:,0],
-                 'T100_HAM': T[:,1],
-                 'T200_HAM': T[:,2],
-                 'q010_HAM': q[:,0],
-                 'q100_HAM': q[:,1],
-                 'q200_HAM': q[:,2] }
+        data = {}
+        for k,z in enumerate(heights):
+            data['U{0:03d}_HAM'.format(z)] = absval(u_tmp1[:,k], v_tmp1[:,k])
+            data['T{0:03d}_HAM'.format(z)] = T_tmp1[:,k]
+            data['q{0:03d}_HAM'.format(z)] = q_tmp1[:,k]*1000.
 
         df_HAM = pd.DataFrame(data, index=hm.time)
         df_HAM.index = df_HAM.index.round('1min')
 
         # ---- ERA5 ----
-        if 'z' not in locals():
-            z = np.array((10,100,200))
-            u = interp_zt(hm['u'], hm['z'], z)
-            v = interp_zt(hm['v'], hm['z'], z)
-            T = interp_zt(hm['T'], hm['z'], z)
-            q = interp_zt(hm['q'], hm['z'], z)
+        # Interpolate model levels to fixed heights
+        if 'u_tmp2' not in locals():
+            u_tmp2 = interp_zt(e5['u'][:,::-1], e5['zf'][:,::-1], heights)
+            v_tmp2 = interp_zt(e5['v'][:,::-1], e5['zf'][:,::-1], heights)
+            T_tmp2 = interp_zt(e5['t'][:,::-1], e5['zf'][:,::-1], heights)
+            q_tmp2 = interp_zt(e5['q'][:,::-1], e5['zf'][:,::-1], heights)
 
-        data = { 'U010_HAM': absval(u[:,0], v[:,0]),
-                 'U100_HAM': absval(u[:,1], v[:,1]),
-                 'U200_HAM': absval(u[:,2], v[:,2]),
-                 'T010_HAM': T[:,0],
-                 'T100_HAM': T[:,1],
-                 'T200_HAM': T[:,2],
-                 'q010_HAM': q[:,0],
-                 'q100_HAM': q[:,1],
-                 'q200_HAM': q[:,2] }
+        data = {}
+        for k,z in enumerate(heights):
+            data['U{0:03d}_ERA'.format(z)] = absval(u_tmp2[:,k], v_tmp2[:,k])
+            data['T{0:03d}_ERA'.format(z)] = T_tmp2[:,k]
+            data['q{0:03d}_ERA'.format(z)] = q_tmp2[:,k]*1000.
 
-        df_HAM = pd.DataFrame(data, index=hm.time)
-        df_HAM.index = df_HAM.index.round('1min')
+        df_ERA = pd.DataFrame(data, index=e5.time)
+        df_ERA.index = df_ERA.index.round('1min')
+
+        # ---- Cabauw ----
+        data = {}
+        cb_k = {200:0, 140:1, 80:2, 40:3, 20:4, 10:5}
+
+        for k,z in enumerate(heights):
+            kk = cb_k[int(z)]
+
+            data['U{0:03d}_CB'.format(z)] = cb_tm['F'] [:,kk]
+            data['T{0:03d}_CB'.format(z)] = cb_tm['TA'][:,kk]
+            data['q{0:03d}_CB'.format(z)] = cb_tm['Q'] [:,kk]
+
+        df_CB = pd.DataFrame(data, index=cb_tm.time)
+        df_CB.index = df_CB.index.round('1min')
+
+        # ---- Merge all data frames, and drop missing rows to sync times ----
+        df2 = pd.concat([df_LES, df_HAM, df_ERA, df_CB], axis=1)
+        df2.dropna(inplace=True)
+
+        # Add day/night flag based on incoming shortwave radiation
+        hour = df2.index.hour + df2.index.minute/60.
+        doy  = df2.index.dayofyear
+        df2['swd_theory'] = calc_swd(4.9, 51.97, hour, doy)
+        df2['is_night'] = df2['swd_theory'] < 0.1
 
 
+
+    if True:
+        # --------------
+        # LES vs Harmonie vs ERA5 vs Cabauw
+        # --------------
+
+        vars = ['q','T','U']
+        units = [r'g kg$^\mathrm{-1}$', 'K', r'm s$^\mathrm{-1}$']
+
+        for var,unit in zip(vars, units):
+
+            pl.figure(figsize=(9,8)); sp=1
+            for z in [10,80,200]:
+                for model in ['HAM','ERA','LES']:
+
+                    pl.subplot(3,3,sp); sp+=1
+                    pl.title(r'${}_\mathrm{{{}m}}$'.format(var,z), loc='left')
+                    scatter_stat2(df2['{0:}{1:03d}_CB'.format(var,z)], df2['{0:}{1:03d}_{2:}'.format(var,z,model)],
+                            '{0:}_{1:}m ({2:})'.format(var, z, unit), r'OBS ({})'.format(unit), r'{0:} ({1:})'.format(model,unit), df2['is_night'])
+
+            pl.tight_layout()
 
 
     if False:
