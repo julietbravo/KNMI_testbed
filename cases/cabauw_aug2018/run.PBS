@@ -14,6 +14,6 @@ prgenvswitchto intel
 module load netcdf4
 
 # Switch to working directory
-cd /Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018//20160804
+cd /nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018//20160804
 
 aprun -n 96 ./dales4 namoptions.001 > dales4.out

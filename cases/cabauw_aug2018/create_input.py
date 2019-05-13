@@ -28,8 +28,8 @@ if __name__ == '__main__':
     iloc    = 7+12    # Location in DDH files (7=Cabauw, 7+12 = 10x10km average Cabauw)
     n_accum = 1       # Number of time steps to accumulate in the forcings
 
-    start = datetime.datetime(year=2016, month=8, day=4)
-    end   = datetime.datetime(year=2016, month=8, day=19)
+    start = datetime.datetime(year=2016, month=8, day=4, hour=12)
+    end   = datetime.datetime(year=2016, month=8, day=4, hour=21)
     dt    = datetime.timedelta(hours=24)
     eps   = datetime.timedelta(hours=1)
 
@@ -37,15 +37,24 @@ if __name__ == '__main__':
     host = socket.gethostname()
     if 'cca' in host or 'ccb' in host or 'ecgb' in host:
         # ECMWF CCA/CCB/ECGATE
-        path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA/CCB
-        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	        # CCA/CCB
+        path     = '/scratch/ms/nl/nkbs/LES_forcing'
+        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
         path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_soil_scaled/'
 
     elif 'barts-mbp' in host:
         # Macbook
-        path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'	# Macbook
-        path_e5  = '/Users/bart/meteo/data/ERA5/soil/'		# Macbook
+        path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+        path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
         path_out = '/Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018/'
+
+    elif 'knmi' in host:
+        # KNMI desktop
+        path     = '/nobackup/users/stratum/DOWA/LES_forcing/'
+        path_e5  = '/nobackup/users/stratum/ERA5/soil/'
+        path_out = '/nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018/'
+
+    else:
+        sys.exit('Unknown compute system!')
 
     # ------------------------
     # End settings
@@ -136,7 +145,8 @@ if __name__ == '__main__':
                 else:
                     f.write(line)
 
-        to_copy = ['namoptions.001','rrtmg_lw.nc','rrtmg_sw.nc','dales4','run.PBS']
+        #to_copy = ['namoptions.001','rrtmg_lw.nc','rrtmg_sw.nc','dales4','run.PBS']
+        to_copy = ['namoptions.001','rrtmg_lw.nc','rrtmg_sw.nc','run.PBS']
         to_move = ['backrad.inp.001.nc','lscale.inp.001','ls_flux.inp.001',\
                    'ls_fluxsv.inp.001','nudge.inp.001','prof.inp.001','scalar.inp.001']
 

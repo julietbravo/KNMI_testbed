@@ -11,22 +11,22 @@ irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-nprocx=12
-nprocy=8
+nprocx=2
+nprocy=1
 /
 
 &DOMAIN
-itot = 192
-jtot = 192
+itot = 4
+jtot = 4
 kmax  = 160
 
-xsize = 15000
-ysize = 15000
+xsize = 1600
+ysize = 1600
 
-xlat  = 51.9700012207
-xlon  = 4.90000009537
-xday  = 231
-xtime  = 0
+xlat  = 51.970001220703125
+xlon  = 4.900000095367432
+xday  = 217
+xtime  = 12
 /
 
 &PHYSICS
@@ -56,9 +56,9 @@ cvegav = 1
 albedoav = 0.25     ! Fig. 4.9 MvT
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav  = 288.469726562
-tsoilav  =  287.1078186   290.73117065  289.76901245  288.46972656
-phiwav  =  0.356002    0.3669855   0.37825772  0.42369252
+tsoildeepav  = 287.9371957714172
+tsoilav  = 292.67040469 290.81582061 290.39228202 287.93719577
+phiwav  = 0.39856291 0.38377988 0.3883398  0.4261426 
 
 gammasat  = 2.87e-06
 nvg  = 1.1
@@ -192,4 +192,10 @@ lyz=.false.
 lcross = .false.
 dtav = 10
 crossheight = 1
+/
+
+&NAMCOLUMNSTAT
+lcolumnstat = .true.
+column_x = 200 600 1000 1400
+column_y = 200 600 1000 1400
 /
