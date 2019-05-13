@@ -28,8 +28,8 @@ if __name__ == '__main__':
     iloc    = 7+12    # Location in DDH files (7=Cabauw, 7+12 = 10x10km average Cabauw)
     n_accum = 1       # Number of time steps to accumulate in the forcings
 
-    start = datetime.datetime(year=2016, month=8, day=4, hour=12)
-    end   = datetime.datetime(year=2016, month=8, day=4, hour=21)
+    start = datetime.datetime(year=2016, month=8, day=4)
+    end   = datetime.datetime(year=2016, month=8, day=19)
     dt    = datetime.timedelta(hours=24)
     eps   = datetime.timedelta(hours=1)
 
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
         path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_soil_scaled/'
 
-    elif 'barts-mbp' in host:
+    elif 'barts-mbp' in host or 'Barts-MacBook-Pro.local' in host:
         # Macbook
         path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
         path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
