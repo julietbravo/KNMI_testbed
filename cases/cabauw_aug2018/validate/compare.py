@@ -230,8 +230,8 @@ if __name__ == '__main__':
                      #'cc_LES':   r.ft['cfrac'],     # Was ist loss mit cfrac?
                      'rr_LES':   r.fc['rainrate'][:,0]*r.fp.rhobh[:,0],
                      'lwp_LES':  r.fc['lwp'],
-                     'U010_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 10),  interp_z(r.fp['v'], r.fp['zt'], 10)),
-                     'U200_LES': absval(interp_z(r.fp['u'], r.fp['zt'], 200), interp_z(r.fp['v'], r.fp['zt'], 200)),
+                     'U010_LES': absval(interp_z(r.fc['u'], r.fc['zt'], 10),  interp_z(r.fc['v'], r.fc['zt'], 10)),
+                     'U200_LES': absval(interp_z(r.fc['u'], r.fc['zt'], 200), interp_z(r.fc['v'], r.fc['zt'], 200)),
                      'T010_LES': interp_z(r.fc['T'],  r.fc['zt'], 10),
                      'T200_LES': interp_z(r.fc['T'],  r.fc['zt'], 200),
                      'q010_LES': interp_z(r.fc['qt'], r.fc['zt'], 10),
@@ -385,7 +385,7 @@ if __name__ == '__main__':
 
     if False:
         # --------------
-        # Atmospheric variables
+        # Atmospheric variables (wind, temp, moisture)
         # --------------
 
         # ---- Wind ----
@@ -395,30 +395,24 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[0,0])
         pl.plot(cb_tm.time, cb_tm['F'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, absval(interp_z(r.fp['u'], r.fp['zt'], 10),  interp_z(r.fp['v'], r.fp['zt'], 10)), '-', color=c1)
+            pl.plot(r.time, absval(interp_z(r.fc['u'], r.fc['zt'], 10),  interp_z(r.fc['v'], r.fc['zt'], 10)), '-', color=c1)
         pl.xlim(start, end)
-        pl.ylabel(r'U (m s$^{-1}$')
+        pl.ylabel(r'U$_\mathrm{10m}$ (m s$^{-1}$')
         format_ax()
 
         ax=pl.subplot(gs[1,0])
         pl.plot(cb_tm.time, cb_tm['F'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, absval(interp_z(r.fp['u'], r.fp['zt'], 200),  interp_z(r.fp['v'], r.fp['zt'], 200)), '-', color=c1)
+            pl.plot(r.time, absval(interp_z(r.fc['u'], r.fc['zt'], 200),  interp_z(r.fc['v'], r.fc['zt'], 200)), '-', color=c1)
         pl.xlim(start, end)
-        pl.ylabel(r'U (m s$^{-1}$')
+        pl.ylabel(r'U$_\mathrm{200m}$ (m s$^{-1}$')
         format_ax()
 
         pl.subplot(gs[0,1])
-        pl.scatter(df['U010_CB'], df['U010_LES'], s=1, color=c2)
-        lim_and_line2(df['U010_CB'], df['U010_LES'])
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['U010_CB'], df['U010_LES'], 'U_10m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)', df['is_night'])
 
         pl.subplot(gs[1,1])
-        pl.scatter(df['U200_CB'], df['U200_LES'], s=1, color=c2)
-        lim_and_line2(df['U200_CB'], df['U200_LES'])
-        pl.xlabel(r'OBS (W m$^{-2}$)')
-        pl.ylabel(r'LES (W m$^{-2}$)')
+        scatter_stat(df['U200_CB'], df['U200_LES'], 'U_200m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)', df['is_night'])
 
         pl.tight_layout()
         pl.savefig('wind_tser_scatter.pdf')
@@ -431,7 +425,7 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[0,0])
         pl.plot(cb_tm.time, cb_tm['TA'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fp['T'], r.fp['zt'], 10), '-', color=c1)
+            pl.plot(r.time, interp_z(r.fc['T'], r.fc['zt'], 10), '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'T$_\mathrm{10m}$ (K)')
         format_ax()
@@ -439,22 +433,16 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[1,0])
         pl.plot(cb_tm.time, cb_tm['TA'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fp['T'], r.fp['zt'], 200), '-', color=c1)
+            pl.plot(r.time, interp_z(r.fc['T'], r.fc['zt'], 200), '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'T$_\mathrm{200m}$ (K)')
         format_ax()
 
         pl.subplot(gs[0,1])
-        pl.scatter(df['T010_CB'], df['T010_LES'], s=1, color=c2)
-        lim_and_line(280,295)
-        pl.xlabel(r'OBS (K)')
-        pl.ylabel(r'LES (K)')
+        scatter_stat(df['T010_CB'], df['T010_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)', df['is_night'])
 
         pl.subplot(gs[1,1])
-        pl.scatter(df['T200_CB'], df['T200_LES'], s=1, color=c2)
-        lim_and_line(280,295)
-        pl.xlabel(r'OBS (K)')
-        pl.ylabel(r'LES (K)')
+        scatter_stat(df['T200_CB'], df['T200_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)', df['is_night'])
 
         pl.tight_layout()
         pl.savefig('temperature_tser_scatter.pdf')
@@ -467,7 +455,7 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[0,0])
         pl.plot(cb_tm.time, cb_tm['Q'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fp['qt']*1e3, r.fp['zt'], 10), '-', color=c1)
+            pl.plot(r.time, interp_z(r.fc['qt']*1e3, r.fc['zt'], 10), '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'q$_\mathrm{10m}$ (g kg$^{-1}$)')
         format_ax()
@@ -475,30 +463,22 @@ if __name__ == '__main__':
         ax=pl.subplot(gs[1,0])
         pl.plot(cb_tm.time, cb_tm['Q'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
         for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fp['qt']*1e3, r.fp['zt'], 200), '-', color=c1)
+            pl.plot(r.time, interp_z(r.fc['qt']*1e3, r.fc['zt'], 200), '-', color=c1)
         pl.xlim(start, end)
         pl.ylabel(r'q$_\mathrm{200m}$ (g kg$^{-1}$)')
         format_ax()
 
         pl.subplot(gs[0,1])
-        pl.scatter(df['q010_CB'], df['q010_LES']*1000, s=1, color=c2)
-        lim_and_line(5,13)
-        pl.xlabel(r'OBS (g kg$^{-1}$)')
-        pl.ylabel(r'LES (g kg$^{-1}$)')
+        scatter_stat(df['q010_CB'], df['q010_LES']*1000, 'q_10m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)', df['is_night'])
 
         pl.subplot(gs[1,1])
-        pl.scatter(df['q200_CB'], df['q200_LES']*1000, s=1, color=c2)
-        lim_and_line(5,13)
-        pl.xlabel(r'OBS (g kg$^{-1}$)')
-        pl.ylabel(r'LES (g kg$^{-1}$)')
+        scatter_stat(df['q200_CB'], df['q200_LES']*1000, 'q_200m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)', df['is_night'])
 
         pl.tight_layout()
         pl.savefig('spechum_tser_scatter.pdf')
 
 
-
-
-    if True:
+    if False:
         # --------------
         # Surface fluxes
         # --------------
@@ -556,7 +536,7 @@ if __name__ == '__main__':
         pl.savefig('surface_flux_tser_scatter.pdf')
 
 
-    if True:
+    if False:
         # --------------
         # Surface radiation
         # --------------
