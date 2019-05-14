@@ -12,7 +12,6 @@ from scipy import interpolate, stats
 # Custom module (from LS2D)
 from IFS_tools import IFS_tools
 
-
 threehours = timedelta(hours=3)
 oneday = timedelta(hours=24)
 
@@ -50,7 +49,63 @@ def read_all(start, end, LES_path):
     return runs
 
 
+def absval(a, b):
+    return (a**2 + b**2)**0.5
+
+
+def interp_z(array, heights, goal):
+    """
+    Interpolate `array` at heights `heights` to goal height `goal`
+    """
+
+    f = interpolate.interp1d(heights, array, fill_value='extrapolate')
+    return f(goal)
+
+
+def interp_zt(array, heights, goal):
+    """
+    Interpolate `array` at heights `heights` to goal height `goal`,
+    when the input heights are time dependent (e.g. Harmonie, ERA5, ..)
+    """
+
+    print('Coffee time :-)')
+    nt  = array.shape[0]
+    out = np.empty((nt,goal.size), dtype=np.float)
+    for i in range(nt):
+        out[i,:] = np.interp(goal, heights[i,:], array[i,:])
+    return out
+
+
+def calc_swd(lon, lat, hour, doy):
+    """
+    Calculate theoretical shortwave incoming radiation,
+    from (time) index of a Pandas dataframe
+    """
+
+    lon    = -lon
+    sda    = 0.409 * np.cos(2. * np.pi * (doy - 173.) / 365.)
+    sinlea = np.sin(2. * np.pi * lat / 360.) * np.sin(sda) - \
+             np.cos(2. * np.pi * lat / 360.) * np.cos(sda) * \
+             np.cos(2. * np.pi * (hour*3600.) / 86400. - 2. * np.pi * lon / 360.)
+    sinlea = np.maximum(sinlea, 1e-9)
+    Tr     = (0.6 + 0.2 * sinlea)
+    swin   = 1368. * Tr * sinlea
+
+    return swin
+
+
+# ---------------------
+#
+# Help function for calculating/plotting (of statistics)
+#
+# ---------------------
+
 def lim_and_line(vmin, vmax):
+    """
+    Set the x and y axis limits to `vmin, vmax`,
+    and add 1:1  and x=0 and y=0 lines
+    """
+
     pl.xlim(vmin, vmax)
     pl.ylim(vmin, vmax)
     pl.plot([vmin,vmax], [vmin,vmax], 'k:', linewidth=1)
@@ -59,6 +114,11 @@ def lim_and_line(vmin, vmax):
 
 
 def lim_and_line2(v1, v2, round_lims=True):
+    """
+    Automaticcaly set the x and y axis limits,
+    and add 1:1  and x=0 and y=0 lines
+    """
+
     vmin = np.min((v1.min(), v2.min()))
     vmax = np.max((v1.max(), v2.max()))
 
@@ -75,6 +135,10 @@ def lim_and_line2(v1, v2, round_lims=True):
 
 
 def format_ax():
+    """
+    Format date/time x-axis
+    """
+
     ax = pl.gca()
     h24 = mdates.HourLocator(interval=48)
     fmt = mdates.DateFormatter('%d-%m')
@@ -82,46 +146,82 @@ def format_ax():
     ax.xaxis.set_major_formatter(fmt)
 
 
-def interp_z(array, heights, goal):
+class Stats:
     """
-    Interpolate `array` at heights `heights` to goal height `goal`
+    Simple statistics class (RMSE, mean diff, ...)
     """
-    f = interpolate.interp1d(heights, array, fill_value='extrapolate')
-    return f(goal)
+    def __init__(self, obs, model):
+
+        self.mse   = np.mean((model-obs)**2)
+        self.rmse  = np.sqrt(self.mse)
+        self.diff  = (model-obs).mean()
+        self.slope, self.intercept, self.rvalue, self.pvalue, self.stderr = stats.linregress(obs, model)
 
 
-def interp_zt(array, heights, goal):
+def scatter_stat(obs, model, label, xlabel, ylabel, night_mask):
     """
-    Interpolate `array` at heights `heights` to goal height `goal`,
-    when the input heights are time dependent (e.g. Harmonie, ERA5, ..)
+    Scatter plot of `model` vs `obs`
     """
-    print('Coffee time :-)')
-    nt  = array.shape[0]
-    out = np.empty((nt,goal.size), dtype=np.float)
-    for i in range(nt):
-        out[i,:] = np.interp(goal, heights[i,:], array[i,:])
-    return out
+
+    pl.scatter(obs, model, s=1, color=c2)
+    lim_and_line2(obs, model)
+    pl.xlabel(xlabel)
+    pl.ylabel(ylabel)
 
 
-def calc_swd(lon, lat, hour, doy):
+def pretty_align(label, names, values):
     """
-    Calculate theoretical shortwave incoming radiation,
-    from (time) index of a Pandas dataframe
+    Align legend items in rows at `=` character
     """
-    lon    = -lon
-    sda    = 0.409 * np.cos(2. * np.pi * (doy - 173.) / 365.)
-    sinlea = np.sin(2. * np.pi * lat / 360.) * np.sin(sda) - \
-             np.cos(2. * np.pi * lat / 360.) * np.cos(sda) * \
-             np.cos(2. * np.pi * (hour*3600.) / 86400. - 2. * np.pi * lon / 360.)
-    sinlea = np.maximum(sinlea, 1e-9)
-    Tr     = (0.6 + 0.2 * sinlea)
-    swin   = 1368. * Tr * sinlea
 
-    return swin
+    str_out = '{0:^12s}\n'.format(label)
+    for name, value in zip(names, values):
+        str_out += '{0:>4s} = {1:<+7.2f}\n'.format(name, value)
+    str_out = str_out[:-2]  # Trim the last '\n'
+    return str_out
 
 
-def absval(a, b):
-    return (a**2 + b**2)**0.5
+def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, xlim=None, ylim=None):
+    """
+    Complex version of `scatter_stat` which calculates / adds statistics,
+    calculated over full run, and day and night periods
+    """
+
+    # Get current axes and figure objects
+    fig = pl.gcf()
+    ax  = pl.gca()
+
+    # Statistics (full day, day and night)
+    full  = Stats(obs, model)
+    day   = Stats(obs[~night_mask], model[~night_mask])
+    night = Stats(obs[ night_mask], model[ night_mask])
+
+    # Scatter day and night in different colors
+    p1=pl.scatter(obs[~night_mask], model[~night_mask], s=1, color='r')
+    p2=pl.scatter(obs[ night_mask], model[ night_mask], s=1, color='k')
+
+    lim_and_line2(obs, model)
+    pl.xlabel(xlabel)
+    pl.ylabel(ylabel)
+
+    # Add statistics to legend
+    label1 = pretty_align('Day',   ['RMSE', 'diff'], [day.rmse, day.diff])
+    label2 = pretty_align('Night', ['RMSE', 'diff'], [night.rmse, night.diff])
+
+    l1 = pl.legend([p1], [label1], loc=2, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
+    l2 = pl.legend([p2], [label2], loc=4, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
+    fig.add_artist(l1)
+    for text in l1.get_texts():
+        text.set_color("r")
+
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    return ax.get_xlim(), ax.get_ylim()
+
+
 
 
 if __name__ == '__main__':
@@ -133,18 +233,18 @@ if __name__ == '__main__':
 
     # Local file paths
     # ---- Macbook ----
-    """
     LES_path  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_lambda'
     CB_path   = '/Users/bart/meteo/observations/Cabauw'
     HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing'
     E5_path   = '/Users/bart/meteo/data//LS2D/cabauw/ERA5'
-    """
 
     # ---- KNMI Desktop ----
+    """
     LES_path  = '/nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018'
     CB_path   = '/nobackup/users/stratum/Cabauw'
     HM_path   = '/nobackup/users/stratum/DOWA/LES_forcing'
     E5_path   = '/nobackup/users/stratum/ERA5/LS2D/cabauw/ERA5'
+    """
 
 
     # Read the LES data
@@ -222,7 +322,7 @@ if __name__ == '__main__':
 
     # Sync times in a Pandas dataframe
     # ------------------
-    if 'dfs' not in locals():
+    if 'df' not in locals():
 
         # Read selected LES variables in Pandas DataFrame's
         dfs = []
@@ -295,82 +395,12 @@ if __name__ == '__main__':
         df['is_night'] = df['swd_theory'] < 0.1
 
 
-    # Plot settings
-    c1 = '#4d4d4d'   # Green
-    c2 = '#4daf4a'    # Blue
 
-    c_cb  = '#4daf4a'   # Green
-    c_cb2 = '#377eb8'   # Blue
-    c_da  = '#4d4d4d'   # Gray
-    c_da2 = '#b2182b'   # DarkRed
+    # LES vs. HARMONIE vs. ERA5 vs. Cabauw vs. ....
+    # --------------
+    if 'df2' not in locals():
 
-    class Stats:
-        def __init__(self, obs, model):
-
-            self.mse   = np.mean((model-obs)**2)
-            self.rmse  = np.sqrt(self.mse)
-            self.diff  = (model-obs).mean()
-            self.slope, self.intercept, self.rvalue, self.pvalue, self.stderr = stats.linregress(obs, model)
-
-
-    def scatter_stat(obs, model, label, xlabel, ylabel, night_mask):
-
-        # Statistics (full day, day and night)
-        full  = Stats(obs, model)
-        night = Stats(obs[ night_mask], model[ night_mask])
-        day   = Stats(obs[~night_mask], model[~night_mask])
-
-        label='rmse ={0:6.1f},\n diff ={1:6.1f},\n r ={2:6.4f}'.format(full.rmse, full.diff, full.rvalue)
-
-        pl.scatter(obs, model, s=1, color=c2, label=label)
-        lim_and_line2(obs, model)
-        pl.xlabel(xlabel)
-        pl.ylabel(ylabel)
-        pl.legend(fontsize=8, loc=4)
-
-
-    def pretty_align(label, names, values):
-        str_out = '{0:^12s}\n'.format(label)
-        for name, value in zip(names, values):
-            str_out += '{0:>4s} = {1:<+7.2f}\n'.format(name, value)
-        str_out = str_out[:-2]
-        return str_out
-
-
-    def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, print_stat=False, ax=None):
-
-        # Statistics (full day, day and night)
-        full  = Stats(obs, model)
-        night = Stats(obs[ night_mask], model[ night_mask])
-        day   = Stats(obs[~night_mask], model[~night_mask])
-
-        p1=pl.scatter(obs[~night_mask], model[~night_mask], s=1, color='r')
-        p2=pl.scatter(obs[night_mask], model[night_mask], s=1, color='k')
-
-        lim_and_line2(obs, model)
-        pl.xlabel(xlabel)
-        pl.ylabel(ylabel)
-
-        label1 = pretty_align('Day',   ['RMSE','diff'], [day.rmse, day.diff])
-        label2 = pretty_align('Night', ['RMSE','diff'], [night.rmse, night.diff])
-
-        print(label1)
-
-        l1 = pl.legend([p1], [label1], loc=2, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
-        l2 = pl.legend([p2], [label2], loc=4, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
-        pl.gca().add_artist(l1)
-        for text in l1.get_texts():
-            text.set_color("r")
-
-
-
-
-    if True:
-        # --------------
-        # LES vs. HARMONIE vs. ERA5 vs. Cabauw vs. ....
-        # --------------
-
-        # Height to consider. Note: Cabauw data is not automatically
+        # Heights to consider. Note: Cabauw data is not automatically
         # interpolated to other heights...
         heights = np.array((10,20,40,80,140,200))
 
@@ -444,27 +474,94 @@ if __name__ == '__main__':
         df2['is_night'] = df2['swd_theory'] < 0.1
 
 
+    # Plot settings
+    c1 = '#4d4d4d'      # Green
+    c2 = '#4daf4a'      # Blue
+
+    c_cb  = '#4daf4a'   # Green
+    c_cb2 = '#377eb8'   # Blue
+    c_da  = '#4d4d4d'   # Gray
+    c_da2 = '#b2182b'   # DarkRed
+
 
     if True:
         # --------------
         # LES vs Harmonie vs ERA5 vs Cabauw
         # --------------
 
-        vars = ['q','T','U']
-        units = [r'g kg$^\mathrm{-1}$', 'K', r'm s$^\mathrm{-1}$']
+        if False:
+            # Scatter plots with statistics
 
-        for var,unit in zip(vars, units):
+            vars = ['q','T','U']
+            units = [r'g kg$^\mathrm{-1}$', 'K', r'm s$^\mathrm{-1}$']
 
-            pl.figure(figsize=(9,8)); sp=1
-            for z in [10,80,200]:
-                for model in ['HAM','ERA','LES']:
+            for var,unit in zip(vars, units):
 
-                    pl.subplot(3,3,sp); sp+=1
-                    pl.title(r'${}_\mathrm{{{}m}}$'.format(var,z), loc='left')
-                    scatter_stat2(df2['{0:}{1:03d}_CB'.format(var,z)], df2['{0:}{1:03d}_{2:}'.format(var,z,model)],
-                            '{0:}_{1:}m ({2:})'.format(var, z, unit), r'OBS ({})'.format(unit), r'{0:} ({1:})'.format(model,unit), df2['is_night'])
+                pl.figure(figsize=(9,8)); sp=1
 
-            pl.tight_layout()
+                for z in [10,80,200]:
+                    for model, name in zip(['HAM','ERA','LES'], ['HARMONIE','ERA5','LES']):
+
+                        if (sp-1)%3 == 0:
+                            xlim = None
+                            ylim = None
+
+                        pl.subplot(3,3,sp); sp+=1
+                        pl.title(r'${}_\mathrm{{{}m}}$'.format(var,z), loc='left')
+                        xlim, ylim = scatter_stat2(df2['{0:}{1:03d}_CB'.format(var,z)], df2['{0:}{1:03d}_{2:}'.format(var,z,model)],
+                                    '{0:}_{1:}m ({2:})'.format(var, z, unit), r'Cabauw ({})'.format(unit), r'{0:} ({1:})'.format(name,unit),
+                                    df2['is_night'], xlim, ylim)
+
+                pl.tight_layout()
+
+
+        if True:
+            # Line plots of statistics vs height
+
+            heights = np.array((10,20,40,80,140,200))
+            is_night = df2['is_night']
+
+            fig,ax = pl.subplots(nrows=3, ncols=2)
+
+            for i,var in enumerate(['U','T','q']):
+
+                for model,name,color in zip(['HAM','ERA','LES'], ['HARMONIE','ERA5','LES'], [c_cb, c_cb2, c_da2]):
+
+                    rmse_all = np.zeros_like(heights, dtype=np.float)
+                    diff_all = np.zeros_like(heights, dtype=np.float)
+
+                    rmse_day = np.zeros_like(heights, dtype=np.float)
+                    diff_day = np.zeros_like(heights, dtype=np.float)
+
+                    rmse_night = np.zeros_like(heights, dtype=np.float)
+                    diff_night = np.zeros_like(heights, dtype=np.float)
+
+                    for k,z in enumerate(heights):
+                        v1 = '{0}{1:03d}_CB'.format(var,z)
+                        v2 = '{0}{1:03d}_{2}'.format(var,z,model)
+
+                        stat = Stats(df2[v1], df2[v2])
+                        rmse_all[k] = stat.rmse
+                        diff_all[k] = stat.diff
+
+                        stat = Stats(df2[v1][~is_night], df2[v2][~is_night])
+                        rmse_day[k] = stat.rmse
+                        diff_day[k] = stat.diff
+
+                        stat = Stats(df2[v1][is_night], df2[v2][is_night])
+                        rmse_night[k] = stat.rmse
+                        diff_night[k] = stat.diff
+
+                    ax[i,0].plot(heights, rmse_day, '-', color=color, label=name)
+                    ax[i,1].plot(heights, diff_day, '-', color=color, label=name)
+
+                    ax[i,0].plot(heights, rmse_night, '--', color=color, label=name)
+                    ax[i,1].plot(heights, diff_night, '--', color=color, label=name)
+
+                    ax[i,1].plot([0,200], [0,0], 'k:')
+
+            pl.legend()
+
 
 
     if False:
