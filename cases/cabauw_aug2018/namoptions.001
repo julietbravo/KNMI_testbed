@@ -56,9 +56,9 @@ cvegav = 1
 albedoav = 0.23     ! Fred;
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav  = 288.469726562
-tsoilav  =  287.1078186   290.73117065  289.76901245  288.46972656
-phiwav  =  0.356002    0.3669855   0.37825772  0.42369252
+tsoildeepav  = 287.9371957714172
+tsoilav  = 292.67040469 290.81582061 290.39228202 287.93719577
+phiwav  = 0.39856291 0.38377988 0.3883398  0.4261426 
 
 gammasat  = 2.87e-06
 nvg  = 1.1
@@ -206,8 +206,5 @@ dtav = 10
 crossheight = 1
 /
 
-&NAMFIELDDUMP
-lfielddump = .false.
-dtav = 300
-ldiracc = .true.
-/
+
+
