@@ -1,7 +1,7 @@
 #!/bin/ksh
 #PBS -S /usr/bin/ksh
 #PBS -q np
-#PBS -N LES_CB_1
+#PBS -N LES_3
 #PBS -m a
 #PBS -l walltime=24:10:00
 
@@ -13,7 +13,6 @@
 prgenvswitchto intel
 module load netcdf4
 
-# Switch to working directory
-cd /nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018//20160804
+cd /nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018/cabauwNBL_20160804_20160818_alpha_z0/20160805
 
-aprun -n 96 ./dales4 namoptions.001 > dales4.out
+aprun -n 96 ./dales4 namoptions.002 > dales4.out

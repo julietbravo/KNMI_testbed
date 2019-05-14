@@ -627,6 +627,7 @@ def create_nudging_profiles(nc_data, grid, nudgefactor, t0, t1, iloc, docstring,
                     ('thl (K)',      thetal  [::interval,:]),
                     ('qt (kg kg-1)', qt      [::interval,:])])
 
+    print('nudge.inp', expnr)
     write_time_profiles('nudge.inp.{0:03d}'.format(expnr), time_sec[::interval], output, grid.kmax, docstring)
 
 
