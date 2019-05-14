@@ -233,18 +233,18 @@ if __name__ == '__main__':
 
     # Local file paths
     # ---- Macbook ----
+    """
     LES_path  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_lambda'
     CB_path   = '/Users/bart/meteo/observations/Cabauw'
     HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing'
     E5_path   = '/Users/bart/meteo/data//LS2D/cabauw/ERA5'
+    """
 
     # ---- KNMI Desktop ----
-    """
     LES_path  = '/nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018'
     CB_path   = '/nobackup/users/stratum/Cabauw'
     HM_path   = '/nobackup/users/stratum/DOWA/LES_forcing'
     E5_path   = '/nobackup/users/stratum/ERA5/LS2D/cabauw/ERA5'
-    """
 
 
     # Read the LES data
@@ -484,7 +484,7 @@ if __name__ == '__main__':
     c_da2 = '#b2182b'   # DarkRed
 
 
-    if True:
+    if False:
         # --------------
         # LES vs Harmonie vs ERA5 vs Cabauw
         # --------------
@@ -521,7 +521,7 @@ if __name__ == '__main__':
             heights = np.array((10,20,40,80,140,200))
             is_night = df2['is_night']
 
-            fig,ax = pl.subplots(nrows=3, ncols=2)
+            fig,ax = pl.subplots(nrows=3, ncols=2, figsize=(10,7))
 
             for i,var in enumerate(['U','T','q']):
 
@@ -552,15 +552,28 @@ if __name__ == '__main__':
                         rmse_night[k] = stat.rmse
                         diff_night[k] = stat.diff
 
-                    ax[i,0].plot(heights, rmse_day, '-', color=color, label=name)
-                    ax[i,1].plot(heights, diff_day, '-', color=color, label=name)
+                    ax[i,0].plot(heights, rmse_day, '-', color=color, label='{}-day'.format(name))
+                    ax[i,1].plot(heights, diff_day, '-', color=color, label='{}-day'.format(name))
 
-                    ax[i,0].plot(heights, rmse_night, '--', color=color, label=name)
-                    ax[i,1].plot(heights, diff_night, '--', color=color, label=name)
+                    ax[i,0].plot(heights, rmse_night, '--', color=color, label='{}-night'.format(name))
+                    ax[i,1].plot(heights, diff_night, '--', color=color, label='{}-night'.format(name))
 
                     ax[i,1].plot([0,200], [0,0], 'k:')
 
-            pl.legend()
+
+            ax[0,0].set_ylabel(r'RMSE U (m s$^{-1}$)')
+            ax[1,0].set_ylabel(r'RMSE T (K)')
+            ax[2,0].set_ylabel(r'RMSE q (g kg$^{-1}$)')
+            ax[0,1].set_ylabel(r'diff U (m s$^{-1}$)')
+            ax[1,1].set_ylabel(r'diff T (K)')
+            ax[2,1].set_ylabel(r'diff q (g kg$^{-1}$)')
+
+            ax[2,0].set_xlabel('z (m)') 
+            ax[2,1].set_xlabel('z (m)') 
+
+            ax[0,0].legend(ncol=2, fontsize=10)
+
+            pl.tight_layout()
 
 
 
@@ -717,7 +730,7 @@ if __name__ == '__main__':
         pl.savefig('surface_flux_tser_scatter.pdf')
 
 
-    if False:
+    if True:
         # --------------
         # Surface radiation
         # --------------
