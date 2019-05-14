@@ -46,7 +46,8 @@ l_vg  = .true.      ! Van Genuchten parameterisation
 z0mav = 0.05        ! Fig. 4.8 MvT
 z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
 Cskinav = 0
-lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
+!lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
+lambdaskinav = 10  ! ECMWF
 Qnetav = 0          ! Why needed?
 Wlav = 0            ! Water on leaves
 rsminav = 100
@@ -174,12 +175,6 @@ dtav   = 600
 timeav = 600.
 /
 
-&NAMFIELDDUMP
-lfielddump = .false.
-dtav = 300
-ldiracc = .true.
-/
-
 &NAMCROSSSECTION
 lcross = .true.
 dtav = 600
@@ -188,8 +183,27 @@ lxz=.false.
 lyz=.false.
 /
 
+&NAMCOLUMNSTAT
+lcolumnstat = .true.
+column_x = 2500 12500 2500 12500 7500
+column_y = 2500 2500 12500 12500 7500
+dtsamp = 15
+dtav = 600
+/
+
+
+
+
+
+
 &NAMLSMCROSSSECTION
 lcross = .false.
 dtav = 10
 crossheight = 1
+/
+
+&NAMFIELDDUMP
+lfielddump = .false.
+dtav = 300
+ldiracc = .true.
 /
