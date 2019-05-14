@@ -39,7 +39,7 @@ if __name__ == '__main__':
         # ECMWF CCA/CCB/ECGATE
         path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA/CCB
         path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	        # CCA/CCB
-        path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_soil_scaled/'
+        path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_alpha_z0'
 
     elif 'barts-mbp' in host:
         # Macbook

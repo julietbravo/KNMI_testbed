@@ -43,18 +43,17 @@ timerad = 60        ! Interval (sec) of radiation calls
 &NAMSURFACE
 isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
 l_vg  = .true.      ! Van Genuchten parameterisation
-z0mav = 0.05        ! Fig. 4.8 MvT
-z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
+z0mav = 0.075       ! Fred; mean regional roughness heat
+z0hav = 0.003       ! Fred;
 Cskinav = 0
-!lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
-lambdaskinav = 10  ! ECMWF
+lambdaskinav = 10   ! ECMWF
 Qnetav = 0          ! Why needed?
 Wlav = 0            ! Water on leaves
 rsminav = 100
 rssoilminav = 50
 LAIav = 2.5         ! Fig. 4.6 MvT
 cvegav = 1
-albedoav = 0.25     ! Fig. 4.9 MvT
+albedoav = 0.23     ! Fred;
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
 tsoildeepav  = 288.469726562
@@ -69,6 +68,11 @@ phir  = 0.01
 phi  = 0.52
 phiwp  = 0.279
 phifc  = 0.448
+
+!z0mav = 0.05        ! Fig. 4.8 MvT
+!z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
+!albedoav = 0.25     ! Fig. 4.9 MvT
+!lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
 /
 
 &DYNAMICS
