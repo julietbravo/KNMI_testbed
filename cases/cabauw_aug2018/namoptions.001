@@ -11,22 +11,22 @@ irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-nprocx=2
-nprocy=1
+nprocx=12
+nprocy=8
 /
 
 &DOMAIN
-itot = 4
-jtot = 4
+itot = 192
+jtot = 192
 kmax  = 160
 
-xsize = 1600
-ysize = 1600
+xsize = 15000
+ysize = 15000
 
-xlat  = 51.970001220703125
-xlon  = 4.900000095367432
-xday  = 217
-xtime  = 12
+xlat  = 51.9700012207
+xlon  = 4.90000009537
+xday  = 231
+xtime  = 0
 /
 
 &PHYSICS
@@ -43,17 +43,17 @@ timerad = 60        ! Interval (sec) of radiation calls
 &NAMSURFACE
 isurf = 1           ! 1 = LSM, 2 = Ts+q=qsat(Ts), 4 = thl+qt flux, calculate u*
 l_vg  = .true.      ! Van Genuchten parameterisation
-z0mav = 0.05        ! Fig. 4.8 MvT
-z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
+z0mav = 0.075       ! Fred; mean regional roughness heat
+z0hav = 0.003       ! Fred;
 Cskinav = 0
-lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
+lambdaskinav = 10   ! ECMWF
 Qnetav = 0          ! Why needed?
 Wlav = 0            ! Water on leaves
 rsminav = 100
 rssoilminav = 50
 LAIav = 2.5         ! Fig. 4.6 MvT
 cvegav = 1
-albedoav = 0.25     ! Fig. 4.9 MvT
+albedoav = 0.23     ! Fred;
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
 tsoildeepav  = 287.9371957714172
@@ -68,6 +68,11 @@ phir  = 0.01
 phi  = 0.52
 phiwp  = 0.279
 phifc  = 0.448
+
+!z0mav = 0.05        ! Fig. 4.8 MvT
+!z0hav = 0.001       ! z0m / 6.4e3, Eq. 4.2 MvT
+!albedoav = 0.25     ! Fig. 4.9 MvT
+!lambdaskinav = 1.5  ! Fig. 4.11 MvT; night !! Note BvS: 1.5 is very low....
 /
 
 &DYNAMICS
@@ -174,12 +179,6 @@ dtav   = 600
 timeav = 600.
 /
 
-&NAMFIELDDUMP
-lfielddump = .false.
-dtav = 300
-ldiracc = .true.
-/
-
 &NAMCROSSSECTION
 lcross = .true.
 dtav = 600
@@ -188,14 +187,24 @@ lxz=.false.
 lyz=.false.
 /
 
+&NAMCOLUMNSTAT
+lcolumnstat = .true.
+column_x = 2500 12500 2500 12500 7500
+column_y = 2500 2500 12500 12500 7500
+dtsamp = 15
+dtav = 600
+/
+
+
+
+
+
+
 &NAMLSMCROSSSECTION
 lcross = .false.
 dtav = 10
 crossheight = 1
 /
 
-&NAMCOLUMNSTAT
-lcolumnstat = .true.
-column_x = 200 600 1000 1400
-column_y = 200 600 1000 1400
-/
+
+

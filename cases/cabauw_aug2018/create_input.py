@@ -37,9 +37,9 @@ if __name__ == '__main__':
     host = socket.gethostname()
     if 'cca' in host or 'ccb' in host or 'ecgb' in host:
         # ECMWF CCA/CCB/ECGATE
-        path     = '/scratch/ms/nl/nkbs/LES_forcing'
-        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
-        path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_soil_scaled/'
+        path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA/CCB
+        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	        # CCA/CCB
+        path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/cabauw_20160804_20160818_alpha_z0'
 
     elif 'barts-mbp' in host or 'Barts-MacBook-Pro.local' in host:
         # Macbook
