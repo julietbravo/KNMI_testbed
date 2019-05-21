@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # --------------------
 
     expnr   = 2     # DALES experiment number
-    expname = 'cabauwNBL_20160804_20160818_alpha_z0'
+    expname = 'cabauw_20160804_20160818_NBL'
     iloc    = 7+12    # Location in DDH files (7=Cabauw, 7+12 = 10x10km average Cabauw)
     n_accum = 1       # Number of time steps to accumulate in the forcings
 
@@ -40,8 +40,8 @@ if __name__ == '__main__':
 
     elif expnr == 2:
         # 8 hour runs (cold start), Small domain, high resolution, starting at 17 UTC
-        start  = datetime.datetime(year=2016, month=8, day=3, hour=17)
-        end    = datetime.datetime(year=2016, month=8, day=19)
+        start  = datetime.datetime(year=2016, month=8, day=4, hour=17)
+        end    = datetime.datetime(year=2016, month=8, day=19, hour=17)
         dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
         t_exp  = datetime.timedelta(hours=12)   # Length of experiment
         eps    = datetime.timedelta(hours=1)
@@ -133,6 +133,7 @@ if __name__ == '__main__':
 
         # Update namelist
         namelist = 'namoptions.{0:03d}'.format(expnr)
+        replace_namelist_value(namelist, 'iexpnr',   '{0:03d}'.format(expnr))
         replace_namelist_value(namelist, 'runtime',  t_exp.total_seconds())
         replace_namelist_value(namelist, 'trestart', t_exp.total_seconds())
         replace_namelist_value(namelist, 'xlat',     lat)
@@ -165,11 +166,11 @@ if __name__ == '__main__':
 
         # Copy/move files to work directory
         exp_str = '{0:03d}'.format(expnr)
-        to_copy = ['namoptions.{}'.format(exp_str), 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'run.PBS']
+        to_copy = ['namoptions.{}'.format(exp_str), 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'dales4']
         to_move = ['backrad.inp.{}.nc'.format(exp_str), 'lscale.inp.{}'.format(exp_str),\
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
                    'nudge.inp.{}'.format(exp_str), 'prof.inp.{}'.format(exp_str),\
-                   'scalar.inp.{}'.format(exp_str)]
+                   'scalar.inp.{}'.format(exp_str), 'run.PBS']
 
         for f in to_move:
             shutil.move(f, '{}/{}'.format(wdir, f))

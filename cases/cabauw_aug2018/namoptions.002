@@ -1,5 +1,5 @@
 &RUN
-iexpnr = 001
+iexpnr  = 002
 lwarmstart = .false.
 startfile  = 'initd00h01m000.001'
 runtime  = 43200.0
@@ -23,9 +23,9 @@ kmax  = 160
 xsize = 384
 ysize = 384
 
-xlat  = 51.970001220703125
-xlon  = 4.900000095367432
-xday  = 218
+xlat  = 51.9700012207
+xlon  = 4.90000009537
+xday  = 231
 xtime  = 17
 /
 
@@ -56,9 +56,9 @@ cvegav = 1
 albedoav = 0.23     ! Fred;
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav  = 288.00591532397084
-tsoilav  = 293.48596204 291.79490907 290.34940154 288.00591532
-phiwav  = 0.38454588 0.38083689 0.38734595 0.4259228 
+tsoildeepav  = 288.488433838
+tsoilav  =  294.78262329  291.73330688  289.77548218  288.48843384
+phiwav  =  0.34667668  0.36112222  0.37587363  0.42351797
 
 gammasat  = 2.87e-06
 nvg  = 1.1
