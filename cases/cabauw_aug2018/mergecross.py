@@ -9,32 +9,32 @@ def merge_cross(base, variable, expnr, npx, npy, itot, jtot, ktot, ntime):
         mode = 'xz'
     elif 'xy' in base:
         mode = 'xy'
-    
+
     if mode == 'xy':
         chx = int(itot / npx)
         chy = int(jtot / npy)
     elif mode == 'xz':
         chx = int(itot / npx)
         chy = 1
-    
+
     # Process cross-sections of each MPI task
     for i in range(npx):
         n = 1 if 'span' in base else npy
         for j in range(n):
             print('Processing i={}/{}, j={}/{}'.format(i+1,npx,j+1,npy))
-    
+
             # Input file name
             fname = '{0:}.x{1:03d}y{2:03d}.{3:03d}.nc'.format(base, i, j, expnr)
-    
+
             # Slices in x and y dimensions
             sx = np.s_[i*chx:(i+1)*chx]
             sy = np.s_[j*chy:(j+1)*chy]
-    
+
             # Create new NetCDF file if first MPI task
             if i==0 and j==0:
                 src = nc4.Dataset(fname)
                 dst = nc4.Dataset('{0:}.{1:}.{2:03d}.nc'.format(base, variable, expnr), 'w')
-    
+
                 # Copy NetCDF attributes and dimensions
                 for name in src.ncattrs():
                     dst.setncattr(name, src.getncattr(name))
@@ -47,20 +47,20 @@ def merge_cross(base, variable, expnr, npx, npy, itot, jtot, ktot, ntime):
                         dst.createDimension(name, jtot)
                     elif name[0] == 'z':
                         dst.createDimension(name, ktot)
-    
+
                 # Create variables
                 for name, var in src.variables.items():
                     if name == 'time' or name[0] == 'x' or name[0] == 'y' or name[0] == 'z' or name.replace(mode, '') == variable:
                         dst.createVariable(name, var.datatype, var.dimensions)
-    
+
                 # Copy time
                 dst.variables['time'][:]= src.variables['time'][::ntime]
-    
+
                 src.close()
-    
+
             # Read NetCDF file and write to merged NetCDF
             src = nc4.Dataset(fname)
-    
+
             # Loop over, and copy data
             for name, var in src.variables.items():
                 if name != 'time':
@@ -76,7 +76,7 @@ def merge_cross(base, variable, expnr, npx, npy, itot, jtot, ktot, ntime):
                                 dst.variables[name][:,sy,sx] = src.variables[name][::ntime]
                             elif mode == 'xz':
                                 dst.variables[name][:,:,sx] = src.variables[name][::ntime]
-    
+
     dst.close()
 
 
@@ -100,6 +100,6 @@ if __name__ == '__main__':
     # Some default values (if missing)
     skip = 1 if args.skip is None else args.skip
 
-    # Merge cross-section 
+    # Merge cross-section
     merge_cross(args.crosstype, args.crossname, args.expnr, args.nprocx, args.nprocy,
-                args.itot, args.jtot, args.ktot, skip) 
+                args.itot, args.jtot, args.ktot, skip)

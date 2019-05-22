@@ -24,5 +24,26 @@ def create_runscript(expname, ntasks, workdir, expnr):
     f.close()
 
 
+def create_postscript(workdir, expnr, itot, jtot, ktot, nprocx, nprocy):
+    f = open('post.PBS', 'w')
+    f.write('#!/bin/ksh\n')
+    f.write('#PBS -S /usr/bin/ksh\n')
+    f.write('#PBS -q ns\n')
+    f.write('#PBS -N post\n')
+    f.write('#PBS -m a\n')
+    f.write('#PBS -l walltime=06:00:00\n\n')
+
+    # Switch to working directory
+    f.write('cd {}\n\n'.format(workdir))
+
+    settings = '{} {} {} {} {} {}'.format(expnr, nprocx, nprocy, itot, jtot, ktot)
+
+    f.write('python mergecross.py crossxy lwp {}'.format(settings))
+    f.write('python mergecross.py crossxy rwp {}'.format(settings))
+
+    f.close()
+
+
 if __name__ == '__main__':
     create_runscript('asdf', 96, '/home/asdf/asdf', 1)
+    create_postscript('/', 1, 192, 192, 160, 12, 8)
