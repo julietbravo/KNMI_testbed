@@ -1,9 +1,10 @@
 &RUN
-iexpnr = 001
-lwarmstart = .false.
+iexpnr  = 001
+lwarmstart  = .true.
+lresettime = .true.
 startfile  = 'initd00h01m000.001'
-runtime = 86400
-trestart = 86400
+runtime  = 86400.0
+trestart  = 86400.0
 dtmax = 10
 ladaptive = .true.
 peclet = 0.1
@@ -23,9 +24,9 @@ kmax  = 160
 xsize = 15000
 ysize = 15000
 
-xlat  = 51.9700012207
-xlon  = 4.90000009537
-xday  = 231
+xlat  = 51.970001220703125
+xlon  = 4.900000095367432
+xday  = 218
 xtime  = 0
 /
 
@@ -56,9 +57,9 @@ cvegav = 1
 albedoav = 0.23     ! Fred;
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav  = 287.9371957714172
-tsoilav  = 292.67040469 290.81582061 290.39228202 287.93719577
-phiwav  = 0.39856291 0.38377988 0.3883398  0.4261426 
+tsoildeepav  = 287.9113702808246
+tsoilav  = 290.06369135 291.06327673 290.44368241 287.91137028
+phiwav  = 0.39911791 0.38288221 0.3876849  0.42622018
 
 gammasat  = 2.87e-06
 nvg  = 1.1

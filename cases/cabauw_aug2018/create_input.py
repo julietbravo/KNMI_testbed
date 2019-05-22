@@ -17,7 +17,13 @@ from IFS_soil import *
 from create_runscript import create_runscript
 
 def execute(task):
-    subprocess.call(task, shell=True, executable='/bin/bash')
+    # Execute `task` and return return code
+    return subprocess.call(task, shell=True, executable='/bin/bash')
+
+def fbool(flg):
+    # Convert Python bool to Fortran bool
+    return '.true.' if flg else '.false.'
+
 
 if __name__ == '__main__':
 
@@ -25,10 +31,11 @@ if __name__ == '__main__':
     # Settings
     # --------------------
 
-    expnr   = 1       # DALES experiment number
-    expname = 'cabauw_20160804_20160818_restart'
-    iloc    = 7+12    # Location in DDH files (7=Cabauw, 7+12 = 10x10km average Cabauw)
-    n_accum = 1       # Number of time steps to accumulate in the forcings
+    expname   = 'cabauw_20160804_20160818_restart'
+    expnr     = 1       # DALES experiment number
+    iloc      = 7+12    # Location in DDH/NetCDF files (7+12 = 10x10km average Cabauw)
+    n_accum   = 1       # Number of time steps to accumulate in the forcings
+    warmstart = True    # Run each day/run as a warm start from previous exp
 
     if expnr == 1:
         # 24 hour runs (cold or warm starts), starting at 00 UTC.
@@ -59,7 +66,7 @@ if __name__ == '__main__':
 
     elif 'barts-mbp' in host or 'Barts-MacBook-Pro.local' in host:
         # Macbook
-        path     = '/Users/bart/meteo/data/Harmonie_LES_forcing/'
+        path     = '/Users/bart/meteo/data/HARMONIE_LES_forcing/'
         path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
         path_out = '/Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018/{}'.format(expname)
 
@@ -76,13 +83,24 @@ if __name__ == '__main__':
     # End settings
     # ------------------------
 
+    # Create stretched vertical grid for LES
+    if expnr == 1:
+        # Grid for full diurnal cycle
+        grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+    elif expnr == 2:
+        # High resolution grid for nocturnal runs
+        grid = Grid_stretched(kmax=160, dz0=2, nloc1=120, nbuf1=30, dz1=10)
+    #grid.plot()
 
     date = start
     n = 1
     while date < end:
+        # In case of warm starts, first one is still a cold one..
+        start_is_warm = warmstart and n>1
+        start_is_cold = not start_is_warm
 
-        # Round start date to the 3-hourly Harmonie cycles
-        offset = 0 if date.hour%3 == 0 else datetime.timedelta(hours=-date.hour%3)
+        # Round start date (first NetCDF file to read) to the 3-hourly HARMONIE cycles
+        offset = datetime.timedelta(hours=0) if date.hour%3 == 0 else datetime.timedelta(hours=-date.hour%3)
 
         # Get list of NetCDF files which need to be processed, and open them with xarray
         nc_files = get_file_list(path, date+offset, date+t_exp+eps)
@@ -96,42 +114,35 @@ if __name__ == '__main__':
         lat       = float(nc_data.central_lat[0,iloc].values)
         lon       = float(nc_data.central_lon[0,iloc].values)
         docstring = '{0} ({1:.2f}N, {2:.2f}E): {3} to {4}'.format(domain, lat, lon, date, date + t_exp)
-        print(docstring)
 
-        # Create stretched vertical grid for LES
-        if expnr == 1:
-            # Grid for full diurnal cycle
-            grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
-        elif expnr == 2:
-            # High resolution grid for nocturnal runs
-            grid = Grid_stretched(kmax=160, dz0=2, nloc1=120, nbuf1=30, dz1=10)
-        #grid.plot()
-
-        # Create and write the initial vertical profiles (prof.inp)
-        create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)
+        if start_is_cold:
+            # Create and write the initial vertical profiles (prof.inp)
+            create_initial_profiles(nc_data, grid, t0, t1, iloc, docstring, expnr)
 
         # Create and write the surface and atmospheric forcings (ls_flux.inp, ls_fluxsv.inp, lscale.inp)
         create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, n_accum, expnr, harmonie_rad=False)
 
         # Write the nudging profiles (nudge.inp)
-        nudgefac = np.ones_like(grid.z)
+        nudgefac = np.ones_like(grid.z)     # ??
         create_nudging_profiles(nc_data, grid, nudgefac, t0, t1, iloc, docstring, 1, expnr)
 
-        # Create NetCDF file with reference profiles for RRTMG
+        # Create NetCDF file with reference/background profiles for RRTMG
         create_backrad(nc_data, t0, iloc, expnr)
 
-        # Get the soil temperature and moisture from ERA5
-        tsoil   = get_Tsoil_ERA5  (date, 4.9, 51.97, path_e5)
-        phisoil = get_phisoil_ERA5(date, 4.9, 51.97, path_e5)
+        if start_is_cold:
+            # Get the soil temperature and moisture from ERA5
+            tsoil   = get_Tsoil_ERA5  (date, 4.9, 51.97, path_e5)
+            phisoil = get_phisoil_ERA5(date, 4.9, 51.97, path_e5)
 
-        # Option to re-scale soil moisture content
-        soil_in  = soil_med_fine      # ERA5 grid point soil type
-        soil_out = soil_fine          # ~Cabauw soil type
-        old_phisoil = phisoil.copy()
-        phisoil = soil_in.rescale(old_phisoil, soil_out)
+            # Option to re-scale soil moisture content
+            soil_in     = soil_med_fine      # ERA5 grid point soil type
+            soil_out    = soil_fine          # ~Cabauw soil type
+            old_phisoil = phisoil.copy()
+            phisoil     = soil_in.rescale(old_phisoil, soil_out)
 
         # Update namelist
         namelist = 'namoptions.{0:03d}'.format(expnr)
+        replace_namelist_value(namelist, 'lwarmstart', fbool(start_is_warm))
         replace_namelist_value(namelist, 'iexpnr',   '{0:03d}'.format(expnr))
         replace_namelist_value(namelist, 'runtime',  t_exp.total_seconds())
         replace_namelist_value(namelist, 'trestart', t_exp.total_seconds())
@@ -141,9 +152,11 @@ if __name__ == '__main__':
         replace_namelist_value(namelist, 'xday',     date.timetuple().tm_yday)
         replace_namelist_value(namelist, 'xtime',    date.hour)
         replace_namelist_value(namelist, 'kmax',     grid.kmax)
-        replace_namelist_value(namelist, 'tsoilav',  array_to_string(tsoil))
-        replace_namelist_value(namelist, 'phiwav',   array_to_string(phisoil))
-        replace_namelist_value(namelist, 'tsoildeepav', tsoil[-1])  #????
+
+        if start_is_cold:
+            replace_namelist_value(namelist, 'tsoilav',  array_to_string(tsoil))
+            replace_namelist_value(namelist, 'phiwav',   array_to_string(phisoil))
+            replace_namelist_value(namelist, 'tsoildeepav', tsoil[-1])  #????
 
         print('Setting soil properties for {} (input={})'.format(soil_out.name, soil_in.name))
         replace_namelist_value(namelist, 'gammasat', soil_out.gammasat)
@@ -165,20 +178,47 @@ if __name__ == '__main__':
 
         # Copy/move files to work directory
         exp_str = '{0:03d}'.format(expnr)
-        to_copy = ['namoptions.{}'.format(exp_str), 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'dales4']
+        to_copy = ['namoptions.{}'.format(exp_str), 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'dales4',
+                   'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str)]
         to_move = ['backrad.inp.{}.nc'.format(exp_str), 'lscale.inp.{}'.format(exp_str),\
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
-                   'nudge.inp.{}'.format(exp_str), 'prof.inp.{}'.format(exp_str),\
-                   'scalar.inp.{}'.format(exp_str), 'run.PBS']
+                   'nudge.inp.{}'.format(exp_str), 'run.PBS']
 
         for f in to_move:
             shutil.move(f, '{}/{}'.format(wdir, f))
         for f in to_copy:
             shutil.copy(f, '{}/{}'.format(wdir, f))
 
-        # Submit task!
-        execute('qsub {}/run.PBS'.format(wdir))
+        if start_is_warm:
+            # Copy restart file from `prev_wdir` to the current working directory)
+            nl = Read_namelist('namoptions.{0:03d}'.format(expnr))
+
+            hh = int(t_exp.total_seconds()/3600)
+            mm = int(t_exp.total_seconds()-(hh*3600))
+
+            for i in range(nl['run']['nprocx']):
+                for j in range(nl['run']['nprocy']):
+                    for ftype in ['d','s']:
+
+                        f_in  = '{0}/init{1}{2:03d}h{3:02d}mx{4:03d}y{5:04d}.{6:03d}'\
+                                    .format(prev_wdir, ftype, hh, mm, i, j, expnr)
+                        f_out = '{0}/init{1}000h00mx{2:03d}y{3:04d}.{4:03d}'\
+                                    .format(wdir, ftype, i, j, expnr)
+
+                        if not os.path.exists(f_in):
+                            raise Exception('Restart file {} missing!'.format(f_in))
+
+                        shutil.copy(f_in, f_out)
+
+        # Submit task, accounting for job dependencies
+        if start_is_warm:
+            id = execute('qsub -W depend=afterok:{} {}/run.PBS'.format(id, wdir))
+        else:
+            id = execute('qsub {}/run.PBS'.format(wdir))
+
+        print('Job-ID={}'.format(id))
 
         # Advance time...
         date += dt_exp
         n += 1
+        prev_wdir = wdir
