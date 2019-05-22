@@ -194,7 +194,7 @@ if __name__ == '__main__':
         # Copy/move files to work directory
         exp_str = '{0:03d}'.format(expnr)
         to_copy = ['namoptions.{}'.format(exp_str), 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'dales4',
-                   'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str)]
+                   'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str), 'mergecross.py']
         to_move = ['backrad.inp.{}.nc'.format(exp_str), 'lscale.inp.{}'.format(exp_str),\
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
                    'nudge.inp.{}'.format(exp_str), 'run.PBS']
@@ -226,13 +226,6 @@ if __name__ == '__main__':
 
         # Submit task, accounting for job dependencies
         if start_is_warm:
-<<<<<<< HEAD
-            id = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_id, wdir))
-            print('Submitted task: {} (depends on: {})'.format(id, prev_id))
-        else:
-            id = execute_ret('qsub {}/run.PBS'.format(wdir))
-            print('Submitted task: {}'.format(id))
-=======
             tid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_tid, wdir))
             print('Submitted run: {} (depends on: {})'.format(tid, prev_tid))
         else:
@@ -244,8 +237,6 @@ if __name__ == '__main__':
                           nl['domain']['kmax'], nl['run']['nprocx'], nl['run']['nprocy'])
         pid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(tid, wdir))
         print('Submitted postprocessing: {} (depends on: {})'.format(pid, tid))
-
->>>>>>> 93e05b33de3be69d5d5f6812e828ae861a7e91d4
 
         # Advance time...
         date += dt_exp
