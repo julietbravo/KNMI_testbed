@@ -14,7 +14,7 @@ sys.path.append(src_dir)
 
 from DALES_tools import *
 from IFS_soil import *
-from create_runscript import create_runscript
+from create_runscript import create_runscript, create_postscript
 
 def execute(task):
     # Execute `task` and return return code
@@ -66,8 +66,8 @@ if __name__ == '__main__':
     host = socket.gethostname()
     if 'cca' in host or 'ccb' in host or 'ecgb' in host:
         # ECMWF CCA/CCB/ECGATE
-        path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA/CCB
-        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	        # CCA/CCB
+        path     = '/scratch/ms/nl/nkbs/LES_forcing'
+        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
         path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/{}'.format(expname)
 
     elif 'barts-mbp' in host or 'Barts-MacBook-Pro.local' in host:
@@ -179,13 +179,16 @@ if __name__ == '__main__':
         replace_namelist_value(namelist, 'phiwp',    soil_out.phi_wp)
         replace_namelist_value(namelist, 'phifc',    soil_out.phi_fc)
 
+        # Read back namelist
+        nl = Read_namelist('namoptions.{0:03d}'.format(expnr))
+
         # Copy/move files to work directory
         wdir = '{0}/{1:04d}{2:02d}{3:02d}'.format(path_out, date.year, date.month, date.day)
         if not os.path.exists(wdir):
             os.makedirs(wdir)
 
         # Create SLURM runscript
-	print('Creating runscript')
+        print('Creating runscript')
         create_runscript('LES_{}'.format(n), 96, wdir, expnr)
 
         # Copy/move files to work directory
@@ -196,16 +199,15 @@ if __name__ == '__main__':
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
                    'nudge.inp.{}'.format(exp_str), 'run.PBS']
 
-	print('Copying/moving input files')
+        print('Copying/moving input files')
         for f in to_move:
             shutil.move(f, '{}/{}'.format(wdir, f))
         for f in to_copy:
             shutil.copy(f, '{}/{}'.format(wdir, f))
 
         if start_is_warm:
-            print('Creating symlinks to restart files')
             # Link restart files from `prev_wdir` to the current working directory)
-            nl = Read_namelist('namoptions.{0:03d}'.format(expnr))
+            print('Creating symlinks to restart files')
 
             hh = int(t_exp.total_seconds()/3600)
             mm = int(t_exp.total_seconds()-(hh*3600))
@@ -224,11 +226,26 @@ if __name__ == '__main__':
 
         # Submit task, accounting for job dependencies
         if start_is_warm:
+<<<<<<< HEAD
             id = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_id, wdir))
             print('Submitted task: {} (depends on: {})'.format(id, prev_id))
         else:
             id = execute_ret('qsub {}/run.PBS'.format(wdir))
             print('Submitted task: {}'.format(id))
+=======
+            tid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_tid, wdir))
+            print('Submitted run: {} (depends on: {})'.format(tid, prev_tid))
+        else:
+            tid = execute_ret('qsub {}/run.PBS'.format(wdir))
+            print('Submitted run: {}'.format(tid))
+
+        # Submit post-processing task
+        create_postscript(wdir, expnr, nl['domain']['itot'], nl['domain']['jtot'],
+                          nl['domain']['kmax'], nl['run']['nprocx'], nl['run']['nprocy'])
+        pid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(tid, wdir))
+        print('Submitted postprocessing: {} (depends on: {})'.format(pid, tid))
+
+>>>>>>> 93e05b33de3be69d5d5f6812e828ae861a7e91d4
 
         # Advance time...
         date += dt_exp
