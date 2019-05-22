@@ -2,7 +2,7 @@
 iexpnr  = 001
 lwarmstart  = .true.
 lresettime = .true.
-startfile  = 'initd00h01m000.001'
+startfile  = 'initd000h00mx000y000.001'
 runtime  = 86400.0
 trestart  = 86400.0
 dtmax = 10
@@ -12,20 +12,22 @@ irandom = 1
 randthl = 0.01
 randqt = 2.5e-5
 nsv = 2
-nprocx=12
-nprocy=8
+nprocx = 12
+nprocy = 8
 /
 
 &DOMAIN
-itot = 192
-jtot = 192
+itot = 96
+jtot = 96
+!itot = 192
+!jtot = 192
 kmax  = 160
 
 xsize = 15000
 ysize = 15000
 
-xlat  = 51.970001220703125
-xlon  = 4.900000095367432
+xlat  = 51.9700012207
+xlon  = 4.90000009537
 xday  = 218
 xtime  = 0
 /
@@ -57,9 +59,9 @@ cvegav = 1
 albedoav = 0.23     ! Fred;
 gDav = 0
 rootfav = 0.40 0.30 0.30 0.00
-tsoildeepav  = 287.9113702808246
-tsoilav  = 290.06369135 291.06327673 290.44368241 287.91137028
-phiwav  = 0.39911791 0.38288221 0.3876849  0.42622018
+tsoildeepav  = 287.911376953
+tsoilav  =  290.06369019  291.06326294  290.44369507  287.91137695
+phiwav  =  0.39911792  0.38288224  0.38768491  0.42622018
 
 gammasat  = 2.87e-06
 nvg  = 1.1

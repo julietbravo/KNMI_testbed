@@ -20,6 +20,11 @@ def execute(task):
     # Execute `task` and return return code
     return subprocess.call(task, shell=True, executable='/bin/bash')
 
+def execute_ret(call):
+    # Execute task and return stdout of process
+    sp = subprocess.Popen(call, shell=True, executable='/bin/bash', stdout=subprocess.PIPE)
+    return sp.stdout.read().decode("utf-8").rstrip('\n')  # jikes!
+
 def fbool(flg):
     # Convert Python bool to Fortran bool
     return '.true.' if flg else '.false.'
@@ -40,7 +45,8 @@ if __name__ == '__main__':
     if expnr == 1:
         # 24 hour runs (cold or warm starts), starting at 00 UTC.
         start  = datetime.datetime(year=2016, month=8, day=4)
-        end    = datetime.datetime(year=2016, month=8, day=19)
+        end    = datetime.datetime(year=2016, month=8, day=6)
+        #end    = datetime.datetime(year=2016, month=8, day=19)
         dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
         t_exp  = datetime.timedelta(hours=24)   # Length of experiment
         eps    = datetime.timedelta(hours=1)
@@ -60,8 +66,8 @@ if __name__ == '__main__':
     host = socket.gethostname()
     if 'cca' in host or 'ccb' in host or 'ecgb' in host:
         # ECMWF CCA/CCB/ECGATE
-        path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA/CCB
-        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	        # CCA/CCB
+        path     = '/scratch/ms/nl/nkbs/LES_forcing'
+        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
         path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/{}'.format(expname)
 
     elif 'barts-mbp' in host or 'Barts-MacBook-Pro.local' in host:
@@ -95,6 +101,10 @@ if __name__ == '__main__':
     date = start
     n = 1
     while date < end:
+        print('-----------------------')
+        print('Starting new experiment')
+        print('-----------------------')
+
         # In case of warm starts, first one is still a cold one..
         start_is_warm = warmstart and n>1
         start_is_cold = not start_is_warm
@@ -174,6 +184,7 @@ if __name__ == '__main__':
             os.makedirs(wdir)
 
         # Create SLURM runscript
+        print('Creating runscript')
         create_runscript('LES_{}'.format(n), 96, wdir, expnr)
 
         # Copy/move files to work directory
@@ -184,13 +195,15 @@ if __name__ == '__main__':
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
                    'nudge.inp.{}'.format(exp_str), 'run.PBS']
 
+        print('Copying/moving input files')
         for f in to_move:
             shutil.move(f, '{}/{}'.format(wdir, f))
         for f in to_copy:
             shutil.copy(f, '{}/{}'.format(wdir, f))
 
         if start_is_warm:
-            # Copy restart file from `prev_wdir` to the current working directory)
+            print('Creating symlinks to restart files')
+            # Link restart files from `prev_wdir` to the current working directory)
             nl = Read_namelist('namoptions.{0:03d}'.format(expnr))
 
             hh = int(t_exp.total_seconds()/3600)
@@ -205,20 +218,19 @@ if __name__ == '__main__':
                         f_out = '{0}/init{1}000h00mx{2:03d}y{3:04d}.{4:03d}'\
                                     .format(wdir, ftype, i, j, expnr)
 
-                        if not os.path.exists(f_in):
-                            raise Exception('Restart file {} missing!'.format(f_in))
-
-                        shutil.copy(f_in, f_out)
+                        if not os.path.islink(f_out):
+                            os.symlink(f_in, f_out)
 
         # Submit task, accounting for job dependencies
         if start_is_warm:
-            id = execute('qsub -W depend=afterok:{} {}/run.PBS'.format(id, wdir))
+            tid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_tid, wdir))
+            print('Submitted task: {} (depends on: {})'.format(tid, prev_tid))
         else:
-            id = execute('qsub {}/run.PBS'.format(wdir))
-
-        print('Job-ID={}'.format(id))
+            tid = execute_ret('qsub {}/run.PBS'.format(wdir))
+            print('Submitted task: {}'.format(tid))
 
         # Advance time...
         date += dt_exp
         n += 1
         prev_wdir = wdir
+        prev_tid = tid
