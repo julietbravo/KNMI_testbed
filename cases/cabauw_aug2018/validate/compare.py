@@ -16,7 +16,7 @@ threehours = timedelta(hours=3)
 oneday = timedelta(hours=24)
 
 class Read_LES:
-    def __init__(self, nc_path, start_date):
+    def __init__(self, nc_path, start_date, start_hour):
         print('Reading LES for {}'.format(start_date))
 
         date_str  = '{0:04d}{1:02d}{2:02d}'.format(start_date.year, start_date.month, start_date.day)
@@ -35,14 +35,17 @@ class Read_LES:
         dims = self.fp['rhof'].shape
         self.fc['lwp'] = np.sum(self.fc['ql'] * np.broadcast_to(self.fp['rhof'], dims) * np.broadcast_to(dz, dims), axis=1)
 
-        self.time = [start_date+timedelta(seconds=int(self.fp.time[t])) for t in range(self.fp.time.size)]
+        self.time = [start_date+timedelta(hours=start_hour)+timedelta(seconds=int(self.fp.time[t])) for t in range(self.fp.time.size)]
+
+        # Cloud fraction in the time series is set at fill_value if cc=0 (why?) -> change NaNs to zeros
+        self.ft['cfrac'] = self.ft['cfrac'].fillna(0)
 
 
-def read_all(start, end, LES_path):
+def read_all(start, end, start_hour, LES_path):
     runs = []
     date  = start
     while date < end:
-        l = Read_LES(LES_path, date)
+        l = Read_LES(LES_path, date, start_hour)
         l.fp['rainrate'] /= (l.fp['rhof']*2.45e6)
         runs.append(l)
         date += timedelta(hours=24)
@@ -158,7 +161,7 @@ class Stats:
         self.slope, self.intercept, self.rvalue, self.pvalue, self.stderr = stats.linregress(obs, model)
 
 
-def scatter_stat(obs, model, label, xlabel, ylabel, night_mask):
+def scatter_stat(obs, model, label, xlabel, ylabel):
     """
     Scatter plot of `model` vs `obs`
     """
@@ -176,12 +179,12 @@ def pretty_align(label, names, values):
 
     str_out = '{0:^12s}\n'.format(label)
     for name, value in zip(names, values):
-        str_out += '{0:>4s} = {1:<+7.2f}\n'.format(name, value)
+        str_out += '{0:<4s} = {1:<+7.2f}\n'.format(name, value)
     str_out = str_out[:-2]  # Trim the last '\n'
     return str_out
 
 
-def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, xlim=None, ylim=None):
+def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, c_day, c_nig, xlim=None, ylim=None):
     """
     Complex version of `scatter_stat` which calculates / adds statistics,
     calculated over full run, and day and night periods
@@ -197,8 +200,8 @@ def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, xlim=None, ylim
     night = Stats(obs[ night_mask], model[ night_mask])
 
     # Scatter day and night in different colors
-    p1=pl.scatter(obs[~night_mask], model[~night_mask], s=1, color='r')
-    p2=pl.scatter(obs[ night_mask], model[ night_mask], s=1, color='k')
+    p1=pl.scatter(obs[~night_mask], model[~night_mask], s=1, color=c_day)
+    p2=pl.scatter(obs[ night_mask], model[ night_mask], s=1, color=c_nig)
 
     lim_and_line2(obs, model)
     pl.xlabel(xlabel)
@@ -211,8 +214,12 @@ def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, xlim=None, ylim
     l1 = pl.legend([p1], [label1], loc=2, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
     l2 = pl.legend([p2], [label2], loc=4, handlelength=0, handletextpad=0, prop={'family': 'monospace', 'size': 8})
     fig.add_artist(l1)
+
+    # Text color of legend
     for text in l1.get_texts():
-        text.set_color("r")
+        text.set_color(c_day)
+    for text in l2.get_texts():
+        text.set_color(c_nig)
 
     if xlim is not None:
         ax.set_xlim(*xlim)
@@ -230,27 +237,32 @@ if __name__ == '__main__':
     # Period to read/plot/..
     start = datetime(year=2016, month=8, day=4,  hour=0)
     end   = datetime(year=2016, month=8, day=18, hour=0)
+    start_hour = 0
 
     # Local file paths
+    base = 'cabauw_20160804_20160818'
+    #case = 'NBL'
+    case = 'alpha_z0'
+
     # ---- Macbook ----
-    """
-    LES_path  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_lambda'
+    LES_path  = '/Users/bart/meteo/data/KNMI_testbed/{}_{}'.format(base, case)
     CB_path   = '/Users/bart/meteo/observations/Cabauw'
     HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing'
     E5_path   = '/Users/bart/meteo/data//LS2D/cabauw/ERA5'
-    """
 
     # ---- KNMI Desktop ----
-    LES_path  = '/nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018'
+    """
+    LES_path  = '/nobackup/users/stratum/KNMI_testbed/cases/{}_{}'.format(base, case)
     CB_path   = '/nobackup/users/stratum/Cabauw'
     HM_path   = '/nobackup/users/stratum/DOWA/LES_forcing'
     E5_path   = '/nobackup/users/stratum/ERA5/LS2D/cabauw/ERA5'
+    """
 
 
     # Read the LES data
     # -----------------
     if 'runs' not in locals():
-        runs = read_all(start, end, LES_path)
+        runs = read_all(start, end, start_hour, LES_path)
 
 
     # Read HARMONIE data
@@ -339,7 +351,7 @@ if __name__ == '__main__':
                      'swu_LES':  r.fc['swu'][:,0],
                      'lwd_LES':  r.fc['lwd'][:,0],
                      'lwu_LES':  r.fc['lwu'][:,0],
-                     #'cc_LES':   r.ft['cfrac'],     # Was ist loss mit cfrac?
+                     'cc_LES':   r.ft['cfrac'],
                      'rr_LES':   r.fc['rainrate'][:,0]*r.fp.rhobh[:,0],
                      'lwp_LES':  r.fc['lwp'],
                      'U010_LES': absval(interp_z(r.fc['u'], r.fc['zt'], 10),  interp_z(r.fc['v'], r.fc['zt'], 10)),
@@ -410,7 +422,7 @@ if __name__ == '__main__':
             data = {}
             for z in heights:
                 data['U{0:03d}_LES'.format(z)] = absval(interp_z(r.fc['u'], r.fc['zt'], z), interp_z(r.fc['v'], r.fc['zt'], z))
-                data['T{0:03d}_LES'.format(z)] = interp_z(r.fc['T'], r.fc['zt'], z)
+                data['T{0:03d}_LES'.format(z)] = interp_z(r.fc['T'],  r.fc['zt'], z)
                 data['q{0:03d}_LES'.format(z)] = interp_z(r.fc['qt'], r.fc['zt'], z)*1000
             dfs.append( pd.DataFrame(data, index=r.time) )
         df_LES = pd.concat(dfs)
@@ -483,13 +495,32 @@ if __name__ == '__main__':
     c_da  = '#4d4d4d'   # Gray
     c_da2 = '#b2182b'   # DarkRed
 
+    c_day = '#b2182b'   # DarkRed
+    c_nig = '#4daf4a'   # Green
+
+    lw = 1.4
+
+
+
 
     if False:
+        # -------------
+        # Cloud statistics
+        # -------------
+
+        pl.figure()
+
+
+
+
+
+
+    if True:
         # --------------
         # LES vs Harmonie vs ERA5 vs Cabauw
         # --------------
 
-        if False:
+        if True:
             # Scatter plots with statistics
 
             vars = ['q','T','U']
@@ -510,7 +541,9 @@ if __name__ == '__main__':
                         pl.title(r'${}_\mathrm{{{}m}}$'.format(var,z), loc='left')
                         xlim, ylim = scatter_stat2(df2['{0:}{1:03d}_CB'.format(var,z)], df2['{0:}{1:03d}_{2:}'.format(var,z,model)],
                                     '{0:}_{1:}m ({2:})'.format(var, z, unit), r'Cabauw ({})'.format(unit), r'{0:} ({1:})'.format(name,unit),
-                                    df2['is_night'], xlim, ylim)
+                                    df2['is_night'], c_day, c_nig, xlim, ylim)
+
+
 
                 pl.tight_layout()
 
@@ -552,24 +585,23 @@ if __name__ == '__main__':
                         rmse_night[k] = stat.rmse
                         diff_night[k] = stat.diff
 
-                    ax[i,0].plot(heights, rmse_day, '-', color=color, label='{}-day'.format(name))
-                    ax[i,1].plot(heights, diff_day, '-', color=color, label='{}-day'.format(name))
-
-                    ax[i,0].plot(heights, rmse_night, '--', color=color, label='{}-night'.format(name))
-                    ax[i,1].plot(heights, diff_night, '--', color=color, label='{}-night'.format(name))
-
-                    ax[i,1].plot([0,200], [0,0], 'k:')
+                    ax[i,0].plot(rmse_day,   heights, '-', color=color, label='{}-day'.format(name))
+                    ax[i,1].plot(diff_day,   heights, '-', color=color, label='{}-day'.format(name))
+                                                    
+                    ax[i,0].plot(rmse_night, heights, '-', color=color, dashes=[4,2], label='{}-night'.format(name))
+                    ax[i,1].plot(diff_night, heights, '-', color=color, dashes=[4,2], label='{}-night'.format(name))
 
 
-            ax[0,0].set_ylabel(r'RMSE U (m s$^{-1}$)')
-            ax[1,0].set_ylabel(r'RMSE T (K)')
-            ax[2,0].set_ylabel(r'RMSE q (g kg$^{-1}$)')
-            ax[0,1].set_ylabel(r'diff U (m s$^{-1}$)')
-            ax[1,1].set_ylabel(r'diff T (K)')
-            ax[2,1].set_ylabel(r'diff q (g kg$^{-1}$)')
+            ax[0,0].set_xlabel(r'RMSE U (m s$^{-1}$)')
+            ax[1,0].set_xlabel(r'RMSE T (K)')
+            ax[2,0].set_xlabel(r'RMSE q (g kg$^{-1}$)')
+            ax[0,1].set_xlabel(r'diff U (m s$^{-1}$)')
+            ax[1,1].set_xlabel(r'diff T (K)')
+            ax[2,1].set_xlabel(r'diff q (g kg$^{-1}$)')
 
-            ax[2,0].set_xlabel('z (m)') 
-            ax[2,1].set_xlabel('z (m)') 
+            ax[0,0].set_ylabel('z (m)') 
+            ax[1,0].set_ylabel('z (m)') 
+            ax[2,0].set_ylabel('z (m)') 
 
             ax[0,0].legend(ncol=2, fontsize=10)
 
@@ -587,26 +619,24 @@ if __name__ == '__main__':
         gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
         ax=pl.subplot(gs[0,0])
-        pl.plot(cb_tm.time, cb_tm['F'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, absval(interp_z(r.fc['u'], r.fc['zt'], 10),  interp_z(r.fc['v'], r.fc['zt'], 10)), '-', color=c1)
+        pl.plot(df.index, df['U010_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['U010_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
-        pl.ylabel(r'U$_\mathrm{10m}$ (m s$^{-1}$')
+        pl.ylabel(r'$U_\mathrm{10m}$ (m s$^{-1}$')
         format_ax()
-
+        
         ax=pl.subplot(gs[1,0])
-        pl.plot(cb_tm.time, cb_tm['F'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, absval(interp_z(r.fc['u'], r.fc['zt'], 200),  interp_z(r.fc['v'], r.fc['zt'], 200)), '-', color=c1)
+        pl.plot(df.index, df['U200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['U200_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
-        pl.ylabel(r'U$_\mathrm{200m}$ (m s$^{-1}$')
+        pl.ylabel(r'$U_\mathrm{200m}$ (m s$^{-1}$')
         format_ax()
 
         pl.subplot(gs[0,1])
-        scatter_stat(df['U010_CB'], df['U010_LES'], 'U_10m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)', df['is_night'])
+        scatter_stat(df['U010_CB'], df['U010_LES'], 'U_10m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
 
         pl.subplot(gs[1,1])
-        scatter_stat(df['U200_CB'], df['U200_LES'], 'U_200m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)', df['is_night'])
+        scatter_stat(df['U200_CB'], df['U200_LES'], 'U_200m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
 
         pl.tight_layout()
         pl.savefig('wind_tser_scatter.pdf')
@@ -617,26 +647,24 @@ if __name__ == '__main__':
         gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
         ax=pl.subplot(gs[0,0])
-        pl.plot(cb_tm.time, cb_tm['TA'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fc['T'], r.fc['zt'], 10), '-', color=c1)
+        pl.plot(df.index, df['T010_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['T010_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'T$_\mathrm{10m}$ (K)')
         format_ax()
 
         ax=pl.subplot(gs[1,0])
-        pl.plot(cb_tm.time, cb_tm['TA'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fc['T'], r.fc['zt'], 200), '-', color=c1)
+        pl.plot(df.index, df['T200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['T200_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'T$_\mathrm{200m}$ (K)')
         format_ax()
 
         pl.subplot(gs[0,1])
-        scatter_stat(df['T010_CB'], df['T010_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)', df['is_night'])
+        scatter_stat(df['T010_CB'], df['T010_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
 
         pl.subplot(gs[1,1])
-        scatter_stat(df['T200_CB'], df['T200_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)', df['is_night'])
+        scatter_stat(df['T200_CB'], df['T200_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
 
         pl.tight_layout()
         pl.savefig('temperature_tser_scatter.pdf')
@@ -647,26 +675,24 @@ if __name__ == '__main__':
         gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
         ax=pl.subplot(gs[0,0])
-        pl.plot(cb_tm.time, cb_tm['Q'][:,cb_k[10]], 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fc['qt']*1e3, r.fc['zt'], 10), '-', color=c1)
+        pl.plot(df.index, df['q010_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['q010_LES']*1000, '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'q$_\mathrm{10m}$ (g kg$^{-1}$)')
         format_ax()
 
         ax=pl.subplot(gs[1,0])
-        pl.plot(cb_tm.time, cb_tm['Q'][:,cb_k[200]], 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, interp_z(r.fc['qt']*1e3, r.fc['zt'], 200), '-', color=c1)
+        pl.plot(df.index, df['q200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['q200_LES']*1000, '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'q$_\mathrm{200m}$ (g kg$^{-1}$)')
         format_ax()
 
         pl.subplot(gs[0,1])
-        scatter_stat(df['q010_CB'], df['q010_LES']*1000, 'q_10m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)', df['is_night'])
+        scatter_stat(df['q010_CB'], df['q010_LES']*1000, 'q_10m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
 
         pl.subplot(gs[1,1])
-        scatter_stat(df['q200_CB'], df['q200_LES']*1000, 'q_200m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)', df['is_night'])
+        scatter_stat(df['q200_CB'], df['q200_LES']*1000, 'q_200m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
 
         pl.tight_layout()
         pl.savefig('spechum_tser_scatter.pdf')
@@ -682,55 +708,51 @@ if __name__ == '__main__':
         # Time series
         # Time series
         ax=pl.subplot(gs[0,0])
-        pl.plot(cb_sf.time.values, cb_sf.H, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.H, '-', color=c1)
+        pl.plot(df.index, df['H_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['H_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'H (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[1,0], sharex=ax)
-        pl.plot(cb_sr.time.values,  cb_sf.LE, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.LE, '-', color=c1)
+        pl.plot(df.index, df['LE_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['LE_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'LE (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[2,0], sharex=ax)
-        pl.plot(cb_sr.time.values, cb_sf.G0, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.G, '-', color=c1)
+        pl.plot(df.index, df['G_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['G_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'G (W m$^{-2}$')
         format_ax()
 
         pl.subplot(gs[3,0], sharex=ax)
-        pl.plot(cb_sr.time.values, cb_sf.QN, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.Qnet, '-', color=c1)
+        pl.plot(df.index, df['Qn_CB'], 'o', mec=c2, mfc=c2, ms=2)
+        pl.plot(df.index, df['Qn_LES'], '-', color=c1, linewidth=lw)
         pl.xlim(start, end)
         pl.ylabel(r'Q$_\mathrm{net}$ (W m$^{-2}$')
         format_ax()
 
         # Scatter plots
         pl.subplot(gs[0,1])
-        scatter_stat(df['H_CB'], df['H_LES'], 'H (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(df['H_CB'], df['H_LES'], 'H (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[1,1])
-        scatter_stat(df['LE_CB'], df['LE_LES'], 'LE (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(df['LE_CB'], df['LE_LES'], 'LE (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[2,1])
-        scatter_stat(df['G_CB'], df['G_LES'], 'G (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(df['G_CB'], df['G_LES'], 'G (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[3,1])
-        scatter_stat(df['Qn_CB'], df['Qn_LES'], 'Qnet (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(df['Qn_CB'], df['Qn_LES'], 'Qnet (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.tight_layout()
         pl.savefig('surface_flux_tser_scatter.pdf')
 
 
-    if True:
+    if False:
         # --------------
         # Surface radiation
         # --------------
@@ -772,16 +794,16 @@ if __name__ == '__main__':
         format_ax()
 
         pl.subplot(gs[0,1])
-        scatter_stat(-df['swd_CB'], df['swd_LES'], 'SWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(-df['swd_CB'], df['swd_LES'], 'SWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[1,1])
-        scatter_stat(df['swu_CB'], df['swu_LES'], 'SWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(df['swu_CB'], df['swu_LES'], 'SWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[2,1])
-        scatter_stat(-df['lwd_CB'], df['lwd_LES'], 'LWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(-df['lwd_CB'], df['lwd_LES'], 'LWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.subplot(gs[3,1])
-        scatter_stat(df['lwu_CB'], df['lwu_LES'], 'LWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', df['is_night'])
+        scatter_stat(df['lwu_CB'], df['lwu_LES'], 'LWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
 
         pl.tight_layout()
         pl.savefig('radiation_tser_scatter.pdf')

@@ -25,13 +25,13 @@ if __name__ == '__main__':
     # Settings
     # --------------------
 
-    expnr   = 2     # DALES experiment number
-    expname = 'cabauw_20160804_20160818_NBL'
+    expnr   = 1       # DALES experiment number
+    expname = 'cabauw_20160804_20160818_restart'
     iloc    = 7+12    # Location in DDH files (7=Cabauw, 7+12 = 10x10km average Cabauw)
     n_accum = 1       # Number of time steps to accumulate in the forcings
 
     if expnr == 1:
-        # 24 hour runs (cold starts), starting at 00 UTC.
+        # 24 hour runs (cold or warm starts), starting at 00 UTC.
         start  = datetime.datetime(year=2016, month=8, day=4)
         end    = datetime.datetime(year=2016, month=8, day=19)
         dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
@@ -47,6 +47,7 @@ if __name__ == '__main__':
         eps    = datetime.timedelta(hours=1)
     else:
         raise Exception('Undefined experiment number')
+
 
     # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
     host = socket.gethostname()
@@ -75,6 +76,7 @@ if __name__ == '__main__':
     # End settings
     # ------------------------
 
+
     date = start
     n = 1
     while date < end:
@@ -83,7 +85,7 @@ if __name__ == '__main__':
         offset = 0 if date.hour%3 == 0 else datetime.timedelta(hours=-date.hour%3)
 
         # Get list of NetCDF files which need to be processed, and open them with xarray
-        nc_files = get_file_list(path, date + offset, date + t_exp + eps)
+        nc_files = get_file_list(path, date+offset, date+t_exp+eps)
         nc_data  = xr.open_mfdataset(nc_files)
 
         # Get start and end indices in `nc_data`
@@ -103,9 +105,6 @@ if __name__ == '__main__':
         elif expnr == 2:
             # High resolution grid for nocturnal runs
             grid = Grid_stretched(kmax=160, dz0=2, nloc1=120, nbuf1=30, dz1=10)
-
-        #grid = Grid_stretched(kmax=100, dz0=20, nloc1=40, nbuf1=10, dz1=200)    # debug
-        #grid = Grid_stretched(kmax=48,  dz0=20, nloc1=40, nbuf1=10, dz1=200)    # real debug
         #grid.plot()
 
         # Create and write the initial vertical profiles (prof.inp)
