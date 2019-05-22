@@ -66,8 +66,8 @@ if __name__ == '__main__':
     host = socket.gethostname()
     if 'cca' in host or 'ccb' in host or 'ecgb' in host:
         # ECMWF CCA/CCB/ECGATE
-        path     = '/scratch/ms/nl/nkbs/LES_forcing'
-        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
+        path     = '/scratch/ms/nl/nkbs/LES_forcing'	# CCA/CCB
+        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'	        # CCA/CCB
         path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/{}'.format(expname)
 
     elif 'barts-mbp' in host or 'Barts-MacBook-Pro.local' in host:
@@ -92,7 +92,8 @@ if __name__ == '__main__':
     # Create stretched vertical grid for LES
     if expnr == 1:
         # Grid for full diurnal cycle
-        grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+        #grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+        grid = Grid_stretched(kmax=64, dz0=30, nloc1=40, nbuf1=20, dz1=150)
     elif expnr == 2:
         # High resolution grid for nocturnal runs
         grid = Grid_stretched(kmax=160, dz0=2, nloc1=120, nbuf1=30, dz1=10)
@@ -184,7 +185,7 @@ if __name__ == '__main__':
             os.makedirs(wdir)
 
         # Create SLURM runscript
-        print('Creating runscript')
+	print('Creating runscript')
         create_runscript('LES_{}'.format(n), 96, wdir, expnr)
 
         # Copy/move files to work directory
@@ -195,7 +196,7 @@ if __name__ == '__main__':
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
                    'nudge.inp.{}'.format(exp_str), 'run.PBS']
 
-        print('Copying/moving input files')
+	print('Copying/moving input files')
         for f in to_move:
             shutil.move(f, '{}/{}'.format(wdir, f))
         for f in to_copy:
@@ -211,11 +212,11 @@ if __name__ == '__main__':
 
             for i in range(nl['run']['nprocx']):
                 for j in range(nl['run']['nprocy']):
-                    for ftype in ['d','s']:
+                    for ftype in ['d','s','l']:
 
-                        f_in  = '{0}/init{1}{2:03d}h{3:02d}mx{4:03d}y{5:04d}.{6:03d}'\
+                        f_in  = '{0}/init{1}{2:03d}h{3:02d}mx{4:03d}y{5:03d}.{6:03d}'\
                                     .format(prev_wdir, ftype, hh, mm, i, j, expnr)
-                        f_out = '{0}/init{1}000h00mx{2:03d}y{3:04d}.{4:03d}'\
+                        f_out = '{0}/init{1}000h00mx{2:03d}y{3:03d}.{4:03d}'\
                                     .format(wdir, ftype, i, j, expnr)
 
                         if not os.path.islink(f_out):
@@ -223,14 +224,14 @@ if __name__ == '__main__':
 
         # Submit task, accounting for job dependencies
         if start_is_warm:
-            tid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_tid, wdir))
-            print('Submitted task: {} (depends on: {})'.format(tid, prev_tid))
+            id = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_id, wdir))
+            print('Submitted task: {} (depends on: {})'.format(id, prev_id))
         else:
-            tid = execute_ret('qsub {}/run.PBS'.format(wdir))
-            print('Submitted task: {}'.format(tid))
+            id = execute_ret('qsub {}/run.PBS'.format(wdir))
+            print('Submitted task: {}'.format(id))
 
         # Advance time...
         date += dt_exp
         n += 1
         prev_wdir = wdir
-        prev_tid = tid
+        prev_id = id
