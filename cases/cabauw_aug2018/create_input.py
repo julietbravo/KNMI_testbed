@@ -197,7 +197,7 @@ if __name__ == '__main__':
                    'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str), 'mergecross.py']
         to_move = ['backrad.inp.{}.nc'.format(exp_str), 'lscale.inp.{}'.format(exp_str),\
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
-                   'nudge.inp.{}'.format(exp_str), 'run.PBS']
+                   'nudge.inp.{}'.format(exp_str), 'run.PBS', 'post.PBS']
 
         print('Copying/moving input files')
         for f in to_move:
@@ -235,11 +235,11 @@ if __name__ == '__main__':
         # Submit post-processing task
         create_postscript(wdir, expnr, nl['domain']['itot'], nl['domain']['jtot'],
                           nl['domain']['kmax'], nl['run']['nprocx'], nl['run']['nprocy'])
-        pid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(tid, wdir))
+        pid = execute_ret('qsub -W depend=afterok:{} {}/post.PBS'.format(tid, wdir))
         print('Submitted postprocessing: {} (depends on: {})'.format(pid, tid))
 
         # Advance time...
         date += dt_exp
         n += 1
         prev_wdir = wdir
-        prev_id = id
+        prev_tid = tid
