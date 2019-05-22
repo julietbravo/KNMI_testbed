@@ -81,26 +81,25 @@ def merge_cross(base, variable, expnr, npx, npy, itot, jtot, ktot, ntime):
 
 
 if __name__ == '__main__':
-    # Only executed is script is directly called
 
-    import sys
+    import argparse
 
-    if len(sys.argv) != 10:
-        print('Usage: \"python mergecross.py crossname varname expnr nprocx nprocy itot jtot ktot ntime\"')
-        print('E.g.:  \"python mergecross.py crossxy lwp 1 12 8 192 192 160 1\"')
-    else:    
+    # Parse input arguments
+    p = argparse.ArgumentParser()
+    p.add_argument('crosstype', type=str, help='Cross-section type (\"crossxy\", \"crossxz\")')
+    p.add_argument('crossname', type=str, help='Variable name (e.g. \"lwp\", \"thl\"), witout \"xy\", \"xz\", ..')
+    p.add_argument('expnr',     type=int, help='DALES experiment number')
+    p.add_argument('nprocx',    type=int, help='Number of MPI tasks in x-direction')
+    p.add_argument('nprocy',    type=int, help='Number of MPI tasks in y-direction')
+    p.add_argument('itot',      type=int, help='Number of grid points in x-direction')
+    p.add_argument('jtot',      type=int, help='Number of grid points in y-direction')
+    p.add_argument('ktot',      type=int, help='Number of grid points in z-direction')
+    p.add_argument('--skip',    type=int, help='Only process every \"skip\"-th cross-section in time')
+    args = p.parse_args()
 
-        base  = str(sys.argv[1])
-        var   = str(sys.argv[2])
-        exp   = int(sys.argv[3])
-        npx   = int(sys.argv[4])
-        npy   = int(sys.argv[5])
-        itot  = int(sys.argv[6])
-        jtot  = int(sys.argv[7])
-        ktot  = int(sys.argv[8])
-        ntime = int(sys.argv[9])
+    # Some default values (if missing)
+    skip = 1 if args.skip is None else args.skip
 
-
-
-
-        merge_cross(base, var, exp, npx, npy, itot, jtot, ktot, ntime) 
+    # Merge cross-section 
+    merge_cross(args.crosstype, args.crossname, args.expnr, args.nprocx, args.nprocy,
+                args.itot, args.jtot, args.ktot, skip) 
