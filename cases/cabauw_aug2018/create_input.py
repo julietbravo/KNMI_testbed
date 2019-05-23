@@ -45,8 +45,7 @@ if __name__ == '__main__':
     if expnr == 1:
         # 24 hour runs (cold or warm starts), starting at 00 UTC.
         start  = datetime.datetime(year=2016, month=8, day=4)
-        end    = datetime.datetime(year=2016, month=8, day=6)
-        #end    = datetime.datetime(year=2016, month=8, day=19)
+        end    = datetime.datetime(year=2016, month=8, day=19)
         dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
         t_exp  = datetime.timedelta(hours=24)   # Length of experiment
         eps    = datetime.timedelta(hours=1)
@@ -92,8 +91,8 @@ if __name__ == '__main__':
     # Create stretched vertical grid for LES
     if expnr == 1:
         # Grid for full diurnal cycle
-        #grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
-        grid = Grid_stretched(kmax=64, dz0=30, nloc1=40, nbuf1=20, dz1=150)
+        grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+        #grid = Grid_stretched(kmax=64, dz0=30, nloc1=40, nbuf1=20, dz1=150)
     elif expnr == 2:
         # High resolution grid for nocturnal runs
         grid = Grid_stretched(kmax=160, dz0=2, nloc1=120, nbuf1=30, dz1=10)
@@ -206,12 +205,20 @@ if __name__ == '__main__':
             shutil.copy(f, '{}/{}'.format(wdir, f))
 
         if start_is_warm:
-            # Link restart files from `prev_wdir` to the current working directory)
+            # Link base state and restart files from `prev_wdir` to the current working directory)
             print('Creating symlinks to restart files')
 
             hh = int(t_exp.total_seconds()/3600)
             mm = int(t_exp.total_seconds()-(hh*3600))
 
+            # Link base state profile
+            f_in  = '{0}/baseprof.inp.{1:03d}'.format(prev_wdir, expnr)
+            f_out = '{0}/baseprof.inp.{1:03d}'.format(wdir, expnr)
+
+            if not os.path.exists(f_out):
+                os.symlink(f_in, f_out)
+
+            # Link restart files
             for i in range(nl['run']['nprocx']):
                 for j in range(nl['run']['nprocy']):
                     for ftype in ['d','s','l']:
@@ -221,7 +228,7 @@ if __name__ == '__main__':
                         f_out = '{0}/init{1}000h00mx{2:03d}y{3:03d}.{4:03d}'\
                                     .format(wdir, ftype, i, j, expnr)
 
-                        if not os.path.islink(f_out):
+                        if not os.path.exists(f_out):
                             os.symlink(f_in, f_out)
 
         # Submit task, accounting for job dependencies
