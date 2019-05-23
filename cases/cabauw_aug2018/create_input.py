@@ -14,20 +14,44 @@ sys.path.append(src_dir)
 
 from DALES_tools import *
 from IFS_soil import *
-from create_runscript import create_runscript, create_postscript
+from pbs_scripts import create_runscript, create_postscript
 
-def execute(task):
-    # Execute `task` and return return code
+def execute_c(task):
+    """
+    Execute `task` and return return code
+    """
     return subprocess.call(task, shell=True, executable='/bin/bash')
 
-def execute_ret(call):
-    # Execute task and return stdout of process
+
+def execute_r(call):
+    """
+    Execute `task` and return output of the process (most useful here for getting the PBS job-ID)
+    """
     sp = subprocess.Popen(call, shell=True, executable='/bin/bash', stdout=subprocess.PIPE)
     return sp.stdout.read().decode("utf-8").rstrip('\n')  # jikes!
 
-def fbool(flg):
-    # Convert Python bool to Fortran bool
-    return '.true.' if flg else '.false.'
+
+def submit(script, workdir, dependency=None):
+    """
+    Submit a runscript (`script`) in work directory `workdir`
+    If `dependency` is not None, the task is submitted but
+    waits for dependency to finish
+    """
+    if dependency is None:
+        tid = execute_r('qsub {}/{}'.format(workdir, script))
+        print('Submitted {}: {}'.format(script, tid))
+    else:
+        tid = execute_r('qsub -W depend=afterok:{} {}/{}'.format(dependency, workdir, script))
+        print('Submitted {}: {} (depends on: {})'.format(script, tid, dependency))
+    return tid
+
+
+def fbool(flag):
+    """
+    Convert a Python bool to Fortran bool
+    """
+    return '.true.' if flag==True else '.false.'
+
 
 
 if __name__ == '__main__':
@@ -45,8 +69,7 @@ if __name__ == '__main__':
     if expnr == 1:
         # 24 hour runs (cold or warm starts), starting at 00 UTC.
         start  = datetime.datetime(year=2016, month=8, day=4)
-        end    = datetime.datetime(year=2016, month=8, day=6)
-        #end    = datetime.datetime(year=2016, month=8, day=19)
+        end    = datetime.datetime(year=2016, month=8, day=19)
         dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
         t_exp  = datetime.timedelta(hours=24)   # Length of experiment
         eps    = datetime.timedelta(hours=1)
@@ -92,8 +115,8 @@ if __name__ == '__main__':
     # Create stretched vertical grid for LES
     if expnr == 1:
         # Grid for full diurnal cycle
-        #grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
-        grid = Grid_stretched(kmax=64, dz0=30, nloc1=40, nbuf1=20, dz1=150)
+        grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
+        #grid = Grid_stretched(kmax=64, dz0=30, nloc1=40, nbuf1=20, dz1=150)    # Debug
     elif expnr == 2:
         # High resolution grid for nocturnal runs
         grid = Grid_stretched(kmax=160, dz0=2, nloc1=120, nbuf1=30, dz1=10)
@@ -117,7 +140,7 @@ if __name__ == '__main__':
         nc_files = get_file_list(path, date+offset, date+t_exp+eps)
         nc_data  = xr.open_mfdataset(nc_files)
 
-        # Get start and end indices in `nc_data`
+        # Get indices of start/end date/time in `nc_data`
         t0, t1 = get_start_end_indices(date, date + t_exp + eps, nc_data.time.values)
 
         # Docstring for DALES input files
@@ -134,7 +157,7 @@ if __name__ == '__main__':
         create_ls_forcings(nc_data, grid, t0, t1, iloc, docstring, n_accum, expnr, harmonie_rad=False)
 
         # Write the nudging profiles (nudge.inp)
-        nudgefac = np.ones_like(grid.z)     # ??
+        nudgefac = np.ones_like(grid.z)     # ?? -> set to zero in ABL?
         create_nudging_profiles(nc_data, grid, nudgefac, t0, t1, iloc, docstring, 1, expnr)
 
         # Create NetCDF file with reference/background profiles for RRTMG
@@ -183,13 +206,14 @@ if __name__ == '__main__':
         nl = Read_namelist('namoptions.{0:03d}'.format(expnr))
 
         # Copy/move files to work directory
-        wdir = '{0}/{1:04d}{2:02d}{3:02d}'.format(path_out, date.year, date.month, date.day)
-        if not os.path.exists(wdir):
-            os.makedirs(wdir)
+        workdir = '{0}/{1:04d}{2:02d}{3:02d}'.format(path_out, date.year, date.month, date.day)
+        if not os.path.exists(workdir):
+            os.makedirs(workdir)
 
         # Create SLURM runscript
         print('Creating runscript')
-        create_runscript('LES_{}'.format(n), 96, wdir, expnr)
+        ntasks = nl['run']['nprocx']*nl['run']['nprocy']
+        create_runscript ('L{0:03d}_{1}'.format(expnr, n), ntasks, walltime=24, work_dir=workdir, expnr=expnr)
 
         # Copy/move files to work directory
         exp_str = '{0:03d}'.format(expnr)
@@ -201,12 +225,12 @@ if __name__ == '__main__':
 
         print('Copying/moving input files')
         for f in to_move:
-            shutil.move(f, '{}/{}'.format(wdir, f))
+            shutil.move(f, '{}/{}'.format(workdir, f))
         for f in to_copy:
-            shutil.copy(f, '{}/{}'.format(wdir, f))
+            shutil.copy(f, '{}/{}'.format(workdir, f))
 
         if start_is_warm:
-            # Link restart files from `prev_wdir` to the current working directory)
+            # Link restart files from `prev_workdir` to the current working directory
             print('Creating symlinks to restart files')
 
             hh = int(t_exp.total_seconds()/3600)
@@ -217,29 +241,28 @@ if __name__ == '__main__':
                     for ftype in ['d','s','l']:
 
                         f_in  = '{0}/init{1}{2:03d}h{3:02d}mx{4:03d}y{5:03d}.{6:03d}'\
-                                    .format(prev_wdir, ftype, hh, mm, i, j, expnr)
+                                    .format(prev_workdir, ftype, hh, mm, i, j, expnr)
                         f_out = '{0}/init{1}000h00mx{2:03d}y{3:03d}.{4:03d}'\
-                                    .format(wdir, ftype, i, j, expnr)
+                                    .format(workdir, ftype, i, j, expnr)
 
                         if not os.path.islink(f_out):
                             os.symlink(f_in, f_out)
 
-        # Submit task, accounting for job dependencies
+        # Submit task, accounting for job dependencies in case of warm start
         if start_is_warm:
-            tid = execute_ret('qsub -W depend=afterok:{} {}/run.PBS'.format(prev_tid, wdir))
-            print('Submitted run: {} (depends on: {})'.format(tid, prev_tid))
+            run_id = submit('run.PBS', workdir, dependency=prev_run_id)
         else:
-            tid = execute_ret('qsub {}/run.PBS'.format(wdir))
-            print('Submitted run: {}'.format(tid))
+            run_id = submit('run.PBS', workdir)
 
-        # Submit post-processing task
-        create_postscript(wdir, expnr, nl['domain']['itot'], nl['domain']['jtot'],
-                          nl['domain']['kmax'], nl['run']['nprocx'], nl['run']['nprocy'])
-        pid = execute_ret('qsub -W depend=afterok:{} {}/post.PBS'.format(tid, wdir))
-        print('Submitted postprocessing: {} (depends on: {})'.format(pid, tid))
+        # Create and submit post-processing task
+        create_postscript('P{0:03d}_{1}'.format(expnr, n), walltime=24, work_dir=workdir, expnr=expnr,
+                itot=nl['domain']['itot'], jtot=nl['domain']['jtot'], ktot=nl['domain']['kmax'], 
+                nprocx=nl['run']['nprocx'], nprocy=nl['run']['nprocy'])
 
-        # Advance time...
+        post_id = submit('post.PBS', workdir, dependency=run_id)
+
+        # Advance time and store some settings
         date += dt_exp
         n += 1
-        prev_wdir = wdir
-        prev_tid = tid
+        prev_workdir = workdir
+        prev_run_id = run_id

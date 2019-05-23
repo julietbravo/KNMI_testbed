@@ -3,6 +3,16 @@ import numpy as np
 
 
 def merge_cross(base, variable, expnr, npx, npy, itot, jtot, ktot, ntime):
+    """
+    Merge DALES cross-sections (written per MPI task) into one NetCDF file
+    Arguments:
+        base     : cross-section type (crossxy, crossxz)
+        variable : variable to merge (e.g. lwp, thl, .., so minus the `crossxy` part)
+        expnr    : DALES experiment number
+        np{xy}   : Number of MPI processes in x- and y-direction
+        {ijk}tot : Grid dimensions
+        ntime    : Write every `ntime`th cross-section
+    """
 
     # Determine some settings
     if 'xz' in base:
