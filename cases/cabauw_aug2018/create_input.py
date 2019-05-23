@@ -230,12 +230,20 @@ if __name__ == '__main__':
             shutil.copy(f, '{}/{}'.format(workdir, f))
 
         if start_is_warm:
-            # Link restart files from `prev_workdir` to the current working directory
+            # Link base state and restart files from `prev_wdir` to the current working directory)
             print('Creating symlinks to restart files')
 
             hh = int(t_exp.total_seconds()/3600)
             mm = int(t_exp.total_seconds()-(hh*3600))
 
+            # Link base state profile
+            f_in  = '{0}/baseprof.inp.{1:03d}'.format(prev_workdir, expnr)
+            f_out = '{0}/baseprof.inp.{1:03d}'.format(workdir, expnr)
+
+            if not os.path.exists(f_out):
+                os.symlink(f_in, f_out)
+
+            # Link restart files
             for i in range(nl['run']['nprocx']):
                 for j in range(nl['run']['nprocy']):
                     for ftype in ['d','s','l']:
@@ -245,7 +253,7 @@ if __name__ == '__main__':
                         f_out = '{0}/init{1}000h00mx{2:03d}y{3:03d}.{4:03d}'\
                                     .format(workdir, ftype, i, j, expnr)
 
-                        if not os.path.islink(f_out):
+                        if not os.path.exists(f_out):
                             os.symlink(f_in, f_out)
 
         # Submit task, accounting for job dependencies in case of warm start

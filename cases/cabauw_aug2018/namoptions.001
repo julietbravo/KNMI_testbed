@@ -17,10 +17,8 @@ nprocy = 8
 /
 
 &DOMAIN
-itot = 96
-jtot = 96
-!itot = 192
-!jtot = 192
+itot = 192
+jtot = 192
 kmax  = 160
 
 xsize = 15000
@@ -197,11 +195,6 @@ column_y = 2500 2500 12500 12500 7500
 dtsamp = 15
 dtav = 600
 /
-
-
-
-
-
 
 &NAMLSMCROSSSECTION
 lcross = .false.
