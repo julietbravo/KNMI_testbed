@@ -124,11 +124,11 @@ class Grid_interpolator:
         calc_horz_interpolation_factors(self.ih0, self.ihfac, x_LS, xh+x0)
         calc_horz_interpolation_factors(self.jh0, self.jhfac, y_LS, yh+y0)
 
-        if z is not None:
-            self.kh0   = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.int)
-            self.khfac = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.float)
+        #if z is not None:
+        #    self.kh0   = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.int)
+        #    self.khfac = np.zeros((x_LS.size, y_LS.size, z.size), dtype=np.float)
 
-            calc_vert_interpolation_factors(self.kh0, self.khfac, z_LS, zh)
+        #    calc_vert_interpolation_factors(self.kh0, self.khfac, z_LS, zh)
 
 
     def interpolate_3d(self, field_LS, locx, locy, locz):

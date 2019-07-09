@@ -4,8 +4,8 @@ import numpy as np
 pl.close('all')
 
 # Numerical grid
-xsize = 64*500
-ysize = 64*500
+xsize = 64*200
+ysize = 64*200
 dx    = 200
 dy    = 200
 x     = np.arange(0.5*dx, xsize, dx)

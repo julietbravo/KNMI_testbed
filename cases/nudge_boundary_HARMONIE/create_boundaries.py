@@ -208,10 +208,12 @@ if __name__ == '__main__':
         nprocy = 2
 
         # Output directory (boundaries are LARGE)
-        output_dir = '/nobackup/users/stratum/KNMI_testbed/cases/nudge_boundary_HARMONIE/'
+        #output_dir = '/nobackup/users/stratum/KNMI_testbed/cases/nudge_boundary_HARMONIE/'
+        output_dir = '/Users/bart/meteo/data/KNMI_testbed/nudge_boundary_HARMONIE/'
 
         # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
-        data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+        #data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+        data_path = '/Users/bart/meteo/data/Harmonie_boundaries/'
 
 
 
@@ -311,7 +313,7 @@ if __name__ == '__main__':
 
                 # Create the interpolator for HARMONIE -> LES
                 sx = np.s_[mpiidx*blocksize_x:(mpiidx+1)*blocksize_x]
-                intp  = ip.Grid_interpolator(u['x'].values, u['y'].values, z,    grid.x[sx], grid.y, grid.z, grid.xh[sx], grid.yh, grid.zh, x0, y0)
+                intp  = ip.Grid_interpolator(u['x'].values, u['y'].values, z, grid.x[sx], grid.y, grid.z, grid.xh[sx], grid.yh, grid.zh, x0, y0)
 
                 # Interpolate HARMONIE onto LES grid
                 # `::-1` reverses the vertical dimension (HARMONIE's data

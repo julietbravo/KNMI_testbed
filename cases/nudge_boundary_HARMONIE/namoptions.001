@@ -124,13 +124,19 @@ tnudgefac = 10800
 
 &NAMNUDGEBOUNDARY
 lnudge_boundary = .true.
-nudge_offset = 3000
-nudge_width = 800
-nudge_radius = 3000
-tau = 10
-dt_input_lbc = 3600
 lperturb_boundary = .true.
+
+nudge_offset = 2500
+nudge_width = 600
+nudge_radius = 3000
+nudge_tau = 5
+
+perturb_offset = 3500
+perturb_width = 600
+perturb_radius = 3000
+perturb_zmax = 500
+perturb_blocksize=2
 perturb_ampl = 0.1
-zmax_perturb = 500
-blocksize=2
+
+dt_input_lbc = 3600
 /
