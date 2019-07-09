@@ -154,7 +154,7 @@ if __name__ == '__main__':
     # -----------------
     # Production domain
     # -----------------
-    if True:
+    if False:
         # Start and end time (index in HARMONIE files)
         t0 = 8
         t1 = 10
@@ -166,7 +166,6 @@ if __name__ == '__main__':
         # Domain size LES (m)
         xsize = 1680*200
         ysize = 1680*200
-        #zsize = 3200
 
         # Number of grid points LES
         itot = 1680
@@ -198,7 +197,6 @@ if __name__ == '__main__':
         # Domain size LES (m)
         xsize = 64*500
         ysize = 64*500
-        #zsize = 3200
 
         # Number of grid points LES
         itot = 64
@@ -206,11 +204,11 @@ if __name__ == '__main__':
         ktot = 128
 
         # Number of x,y MPI processes
-        nprocx = 4
-        nprocy = 4
+        nprocx = 2
+        nprocy = 2
 
         # Output directory (boundaries are LARGE)
-        output_dir = '/nobackup/users/stratum/tmp/nudge_boundary_HARMONIE/'
+        output_dir = '/nobackup/users/stratum/KNMI_testbed/cases/nudge_boundary_HARMONIE/'
 
         # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
         data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
