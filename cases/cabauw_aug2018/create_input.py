@@ -60,11 +60,11 @@ if __name__ == '__main__':
     # Settings
     # --------------------
 
-    expname   = 'cabauw_20160804_20160818_restart'
+    expname   = 'cabauw_20160804_20160818_20190910'
     expnr     = 1       # DALES experiment number
     iloc      = 7+12    # Location in DDH/NetCDF files (7+12 = 10x10km average Cabauw)
     n_accum   = 1       # Number of time steps to accumulate in the forcings
-    warmstart = True    # Run each day/run as a warm start from previous exp
+    warmstart = False   # Run each day/run as a warm start from previous exp
 
     if expnr == 1:
         # 24 hour runs (cold or warm starts), starting at 00 UTC.
@@ -221,7 +221,7 @@ if __name__ == '__main__':
                    'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str), 'mergecross.py']
         to_move = ['backrad.inp.{}.nc'.format(exp_str), 'lscale.inp.{}'.format(exp_str),\
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
-                   'nudge.inp.{}'.format(exp_str), 'run.PBS', 'post.PBS']
+                   'nudge.inp.{}'.format(exp_str), 'run.PBS']
 
         print('Copying/moving input files')
         for f in to_move:
@@ -266,6 +266,8 @@ if __name__ == '__main__':
         create_postscript('P{0:03d}_{1}'.format(expnr, n), walltime=24, work_dir=workdir, expnr=expnr,
                 itot=nl['domain']['itot'], jtot=nl['domain']['jtot'], ktot=nl['domain']['kmax'], 
                 nprocx=nl['run']['nprocx'], nprocy=nl['run']['nprocy'])
+
+        shutil.move('post.PBS', '{}/post.PBS'.format(workdir))
 
         post_id = submit('post.PBS', workdir, dependency=run_id)
 

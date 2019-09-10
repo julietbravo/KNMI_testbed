@@ -154,10 +154,10 @@ if __name__ == '__main__':
     # -----------------
     # Production domain
     # -----------------
-    if False:
+    if True:
         # Start and end time (index in HARMONIE files)
         t0 = 8
-        t1 = 10
+        t1 = 12
 
         # Lower left corner LES domain in HARMONIE (m)
         x0 = 700000
