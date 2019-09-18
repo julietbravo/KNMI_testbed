@@ -1,13 +1,10 @@
 !
-! Reference modified BOMEX case, without boundary nudging
-! Modifications BOMEX:
-!   (1) reversal u component wind
-!   (2) disabled coriolis
-!   (3) added nudging to reference wind profile
+! Modified BOMEX case, with boundary nudging
+! Like 004, but with perturbations in block sizes of 10
 !
 
 &RUN
-iexpnr     = 001
+iexpnr     = 004
 lwarmstart = .false.
 startfile  = 'initd001h00mx000y000.001'
 runtime    = 43200
@@ -115,5 +112,13 @@ tnudgefac = 10800
 /
 
 &NAMNUDGEBOUNDARY
-lnudge_boundary = .false.
+lnudge_boundary = .true.
+nudge_offset = 1000
+nudge_width = 250
+tau = 10
+nudge_mode = 2
+lperturb_boundary = .true.
+perturb_ampl = 0.5
+blocksize = 10
+zmax_perturb = 600      ! 600 m ~ cloudbase
 /
