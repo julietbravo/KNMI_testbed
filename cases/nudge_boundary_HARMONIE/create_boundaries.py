@@ -157,7 +157,7 @@ if __name__ == '__main__':
     if True:
         # Start and end time (index in HARMONIE files)
         t0 = 8
-        t1 = 10
+        t1 = 12
 
         # Lower left corner LES domain in HARMONIE (m)
         x0 = 700000
@@ -166,7 +166,6 @@ if __name__ == '__main__':
         # Domain size LES (m)
         xsize = 1680*200
         ysize = 1680*200
-        #zsize = 3200
 
         # Number of grid points LES
         itot = 1680
@@ -198,7 +197,6 @@ if __name__ == '__main__':
         # Domain size LES (m)
         xsize = 64*500
         ysize = 64*500
-        #zsize = 3200
 
         # Number of grid points LES
         itot = 64
@@ -206,14 +204,16 @@ if __name__ == '__main__':
         ktot = 128
 
         # Number of x,y MPI processes
-        nprocx = 4
-        nprocy = 4
+        nprocx = 2
+        nprocy = 2
 
         # Output directory (boundaries are LARGE)
-        output_dir = '/nobackup/users/stratum/tmp/nudge_boundary_HARMONIE/'
+        #output_dir = '/nobackup/users/stratum/KNMI_testbed/cases/nudge_boundary_HARMONIE/'
+        output_dir = '/Users/bart/meteo/data/KNMI_testbed/nudge_boundary_HARMONIE/'
 
         # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
-        data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+        #data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+        data_path = '/Users/bart/meteo/data/Harmonie_boundaries/'
 
 
 
@@ -313,7 +313,7 @@ if __name__ == '__main__':
 
                 # Create the interpolator for HARMONIE -> LES
                 sx = np.s_[mpiidx*blocksize_x:(mpiidx+1)*blocksize_x]
-                intp  = ip.Grid_interpolator(u['x'].values, u['y'].values, z,    grid.x[sx], grid.y, grid.z, grid.xh[sx], grid.yh, grid.zh, x0, y0)
+                intp  = ip.Grid_interpolator(u['x'].values, u['y'].values, z, grid.x[sx], grid.y, grid.z, grid.xh[sx], grid.yh, grid.zh, x0, y0)
 
                 # Interpolate HARMONIE onto LES grid
                 # `::-1` reverses the vertical dimension (HARMONIE's data

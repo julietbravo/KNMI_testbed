@@ -1,5 +1,6 @@
 !
 ! Modified BOMEX case, with boundary nudging
+! Like 002, but with random thl perturbations on inflow boundary
 !
 
 &RUN
@@ -18,10 +19,10 @@ nprocy     = 6
 /
 
 &DOMAIN
-itot       = 1680
+itot       = 1200
 jtot       = 240
 kmax       = 75
-xsize      = 84000.
+xsize      = 60000.
 ysize      = 12000.
 /
 
@@ -116,4 +117,9 @@ nudge_offset = 1000
 nudge_width = 250
 tau = 10
 nudge_mode = 2
+
+lperturb_boundary = .true.
+perturb_ampl = 0.5
+blocksize = 1
+zmax_perturb = 600.
 /

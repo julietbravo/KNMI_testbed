@@ -2,7 +2,7 @@
 iexpnr     = 001
 lwarmstart = .false.
 startfile  = 'initd001h00mx000y000.001'
-runtime    = 21600
+runtime    = 14400
 trestart   = 3600
 ladaptive  = .true.
 irandom    = 1
@@ -14,8 +14,8 @@ nprocy     = 24
 /
 
 &DOMAIN
-itot       = 840 !1680
-jtot       = 840 !1680
+itot       = 1680
+jtot       = 1680
 kmax       = 128
 xsize      = 336000
 ysize      = 336000
@@ -96,7 +96,7 @@ lcross      = .true.
 lxz         = .false.
 lyz         = .false.
 lspan       = .false.
-dtav        = 60
+dtav        = 30
 crossheight = 1 2 5 21
 /
 
@@ -124,12 +124,19 @@ tnudgefac = 10800
 
 &NAMNUDGEBOUNDARY
 lnudge_boundary = .true.
-nudge_offset = 3000
-nudge_width = 800
-tau = 10
-dt_input_lbc = 3600
 lperturb_boundary = .true.
+
+nudge_offset = 2500
+nudge_width = 600
+nudge_radius = 3000
+nudge_tau = 5
+
+perturb_offset = 3500
+perturb_width = 600
+perturb_radius = 3000
+perturb_zmax = 500
+perturb_blocksize=2
 perturb_ampl = 0.1
-zmax_perturb = 500
-blocksize=2
+
+dt_input_lbc = 3600
 /
