@@ -181,7 +181,6 @@ if __name__ == '__main__':
         replace_namelist_value(namelist, 'runtime',  t_exp.total_seconds())
         replace_namelist_value(namelist, 'trestart', t_exp.total_seconds())
         replace_namelist_value(namelist, 'xlat',     lat)
-        replace_namelist_value(namelist, 'xlat',     lat)
         replace_namelist_value(namelist, 'xlon',     lon)
         replace_namelist_value(namelist, 'xday',     date.timetuple().tm_yday)
         replace_namelist_value(namelist, 'xtime',    date.hour)
