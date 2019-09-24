@@ -203,7 +203,7 @@ if (True):
             pl.ylabel(v.label)
             pl.xlabel(r'$x$ (km)')
             if k == 0:
-                pl.legend(fontsize='small', ncol=1, frameon=True, framealpha=0.8, edgecolor='w')
+                pl.legend(fontsize='small', ncol=2, frameon=True, framealpha=0.8, edgecolor='w')
         pl.tight_layout()
 
 
