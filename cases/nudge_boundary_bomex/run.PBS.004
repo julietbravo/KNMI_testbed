@@ -1,7 +1,7 @@
 #!/bin/ksh
 #PBS -S /usr/bin/ksh
 #PBS -q np
-#PBS -N BOMEXref
+#PBS -N nudge1
 #PBS -m a
 #PBS -l walltime=12:00:00
 
@@ -17,4 +17,4 @@ module load netcdf4
 cd /scratch/ms/nl/nkbs/DALES/nudge_boundary_bomex
 
 # Run!
-aprun -n 144 ./dales4 namoptions.001 > dales4.001
+aprun -n 144 ./dales4 namoptions.004 > dales4.004
