@@ -7,18 +7,20 @@ pl.ion()
 
 np.random.seed(3)
 
-def spectral_mask(mask, itot, jtot, k0):
+def radial_distance(itot, jtot):
 
-    # Always keep the mean
     j0 = jtot//2
-    mask[j0,0] = 1.
+    jj,ii = np.indices((jtot, itot//2+1))
+    jj -= j0    # Shift center
+    return np.sqrt(ii**2 + jj**2)
 
-    # Calculate mask
-    for i in range(itot//2+1):
-        for j in range(jtot//2):
-            if (i**2 + j**2)**0.5 <= k0:
-                mask[j0-j,i] = 1.
-                mask[j0+j,i] = 1.
+
+def spectral_mask(itot, jtot, k0):
+
+    dist = radial_distance(itot, jtot)
+    mask = dist <= k0
+
+    return mask.astype(int)
 
 
 def spectral_filt_2d(field, k0, method='low'):
@@ -34,9 +36,8 @@ def spectral_filt_2d(field, k0, method='low'):
     f = np.fft.fftshift(f, axes=0)
 
     # Create/define wavenumber mask
-    mask = np.zeros_like(f, dtype=float)
-    spectral_mask(mask, itot, jtot, k0)
-
+    mask = spectral_mask(itot, jtot, k0)
+    
     if method == 'high':
         mask = 1.-mask
 
@@ -62,8 +63,7 @@ def spectral_blend_2d(field1, field2, k0):
     f2 = np.fft.fftshift(f2, axes=0)
 
     # Create/define wavenumber mask
-    mask1 = np.zeros_like(f1, dtype=float)
-    spectral_mask(mask1, itot, jtot, k0)
+    mask1 = spectral_mask(itot, jtot, k0)
     mask2 = 1-mask1
 
     # Blend
@@ -83,10 +83,7 @@ def spectral_noise(itot, jtot, k, fac, ks, ampl):
     afftrnd = np.fft.fftshift(afftrnd, axes=0)
 
     # Calculate the radial wave numbers
-    j0 = jtot//2
-    jj,ii = np.indices((jtot, itot//2+1))
-    jj -= j0    # Shift center
-    l = np.sqrt(ii**2 + jj**2)
+    l = radial_distance(itot, jtot)
 
     # Filter on radial wave number using a Gaussian function
     if isinstance(k, list):
@@ -113,8 +110,8 @@ def spectral_noise(itot, jtot, k, fac, ks, ampl):
 
 if True:
 
-    itot = 32
-    jtot = 32
+    itot = 512
+    jtot = 512
 
     xsize = 2*np.pi
     ysize = 2*np.pi
@@ -129,12 +126,15 @@ if True:
     ky = np.arange(jtot/2+1)
 
 
+
+
+
     if True:
         z1 = spectral_noise(itot, jtot, k=2, fac=1, ks=1, ampl=2)
         z2 = spectral_noise(itot, jtot, k=[4,20], fac=[2,1], ks=[3,1], ampl=1)
         z3 = spectral_blend_2d(z1, z2, 5)
 
-        if False:
+        if True:
             pl.figure(figsize=(10,4))
             pl.subplot(131, aspect='equal')
             pl.pcolormesh(x, y, z1, cmap=pl.cm.RdBu_r)
