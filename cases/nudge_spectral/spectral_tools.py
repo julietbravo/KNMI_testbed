@@ -83,13 +83,10 @@ def spectral_noise(itot, jtot, k, fac, ks, ampl):
     afftrnd = np.fft.fftshift(afftrnd, axes=0)
 
     # Calculate the radial wave numbers
-    l = np.zeros(afftrnd.shape)
     j0 = jtot//2
-    for i in range(itot//2+1):
-        for j in range(jtot//2+1):
-            l[j0-j,i] = (i**2. + j**2.)**.5
-        for j in range(jtot//2):
-            l[j0+j,i] = (i**2. + j**2.)**.5
+    jj,ii = np.indices((jtot, itot//2+1))
+    jj -= j0    # Shift center
+    l = np.sqrt(ii**2 + jj**2)
 
     # Filter on radial wave number using a Gaussian function
     if isinstance(k, list):
@@ -114,13 +111,10 @@ def spectral_noise(itot, jtot, k, fac, ks, ampl):
 
 
 
-
-
-
 if True:
 
-    itot = 512
-    jtot = 512
+    itot = 32
+    jtot = 32
 
     xsize = 2*np.pi
     ysize = 2*np.pi
@@ -135,32 +129,31 @@ if True:
     ky = np.arange(jtot/2+1)
 
 
-        
-
-
-
     if True:
         z1 = spectral_noise(itot, jtot, k=2, fac=1, ks=1, ampl=2)
         z2 = spectral_noise(itot, jtot, k=[4,20], fac=[2,1], ks=[3,1], ampl=1)
         z3 = spectral_blend_2d(z1, z2, 5)
 
-        pl.figure(figsize=(10,4))
-        pl.subplot(131, aspect='equal')
-        pl.pcolormesh(x, y, z1, cmap=pl.cm.RdBu_r)
+        if False:
+            pl.figure(figsize=(10,4))
+            pl.subplot(131, aspect='equal')
+            pl.pcolormesh(x, y, z1, cmap=pl.cm.RdBu_r)
 
-        pl.subplot(132, aspect='equal')
-        pl.pcolormesh(x, y, z2, cmap=pl.cm.RdBu_r)
+            pl.subplot(132, aspect='equal')
+            pl.pcolormesh(x, y, z2, cmap=pl.cm.RdBu_r)
 
-        pl.subplot(133, aspect='equal')
-        pl.pcolormesh(x, y, z3, cmap=pl.cm.RdBu_r)
+            pl.subplot(133, aspect='equal')
+            pl.pcolormesh(x, y, z3, cmap=pl.cm.RdBu_r)
 
-        pl.tight_layout()
+            pl.tight_layout()
+
+            pl.figure()
+            pl.plot(x, z1[jtot//2,:], 'k-', label='Large scale')
+            pl.plot(x, z2[jtot//2,:], 'r-', label='Small scale')
+            pl.plot(x, z3[jtot//2,:], 'k--', label='Blended')
 
 
-        pl.figure()
-        pl.plot(x, z1[jtot//2,:], 'k-', label='Large scale')
-        pl.plot(x, z2[jtot//2,:], 'r-', label='Small scale')
-        pl.plot(x, z3[jtot//2,:], 'k--', label='Blended')
+
 
 
 
