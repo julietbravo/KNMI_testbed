@@ -124,7 +124,7 @@ def radial_spectrum(field, kmax=None):
     return bins, n
 
 
-if True:
+if __name__ == '__main__':
 
     itot = 512
     jtot = 512
@@ -203,7 +203,7 @@ if True:
 #    qtpath_fft_power = abs(qtpath_fft)**2
 #    qtpath_fft_power[:,1:-1] *= 2
 #    qtpath_spectra[n,:,:] = qtpath_fft_power
-#​
+
 #bin_seq = (2.*np.pi/L)*np.arange(.5, k.size+10, 2)
 #n, bin_edges = np.histogram(K.flatten(), bin_seq, weights=(qtpath_spectra[0,:,:]).flatten())
 #pdfy = np.zeros((time.size, n.size))

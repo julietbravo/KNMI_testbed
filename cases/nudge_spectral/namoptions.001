@@ -1,24 +1,30 @@
 &RUN
 iexpnr     = 001
-lwarmstart = .false.
-startfile  = 'initd001h00mx000y000.001'
-runtime    = 14400
-trestart   = 300
+lwarmstart = .true.
+startfile  = 'initdlatestmx000y000.001'
+runtime    = 3600
+trestart   = 3600
 ladaptive  = .true.
 irandom    = 1
 randthl    = 0.1
 randqt     = 2.5e-5
 nsv        = 2
-nprocx     = 12
-nprocy     = 12
+nprocx     = 2
+nprocy     = 2
+!nprocx     = 12
+!nprocy     = 12
 /
 
 &DOMAIN
-itot       = 960
-jtot       = 960
+itot       = 8
+jtot       = 8
+!itot       = 960
+!jtot       = 960
 kmax       = 128
-xsize      = 240000
-ysize      = 240000
+xsize      = 4000
+ysize      = 4000
+!xsize      = 240000
+!ysize      = 240000
 
 xlat = 55. 
 xlon = 4.
@@ -26,7 +32,7 @@ xlon = 4.
 
 &PHYSICS
 z0         = 1e-3
-ps         = 120000.00
+ps         = 102400
 thls       = 287
 lmoist     = .true.
 lcoriol    = .true.
@@ -53,7 +59,8 @@ iadv_sv    = 52
 /
 
 &NAMMICROPHYSICS
-imicro = 2          ! 2 = warm, 5=simpleice
+!imicro = 2          ! 2 = warm, 5=simpleice
+imicro = 0          ! 2 = warm, 5=simpleice
 l_sb = .true.       ! true = Seiffert/Beheng, false = KK00
 Nc_0 = 300e6        ! cloud droplet conventration
 /
@@ -74,7 +81,7 @@ timeav     = 60.
 /
 
 &NAMCHECKSIM
-tcheck     = 1
+tcheck     = 60
 /
 
 &NAMSAMPLING
@@ -140,4 +147,6 @@ perturb_blocksize=2
 perturb_ampl = 0.25
 
 dt_input_lbc = 3600
+
+dt_nudge_spectral=900
 /

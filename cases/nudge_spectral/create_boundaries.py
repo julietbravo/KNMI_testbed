@@ -155,7 +155,7 @@ if __name__ == '__main__':
     # -----------------
     # Production domain
     # -----------------
-    if True:
+    if False:
         # Start and end time (index in HARMONIE files)
         t0 = 7
         t1 = 12
@@ -192,19 +192,19 @@ if __name__ == '__main__':
     else:
         # Start and end time (index in HARMONIE files)
         t0 = 8
-        t1 = 10
+        t1 = 11
 
         # Lower left corner LES domain in HARMONIE (m)
         x0 = 700000
         y0 = 1200000
 
         # Domain size LES (m)
-        xsize = 64*500
-        ysize = 64*500
+        xsize = 4000
+        ysize = 4000
 
         # Number of grid points LES
-        itot = 64
-        jtot = 64
+        itot = 8
+        jtot = 8
         ktot = 128
 
         # Number of x,y MPI processes

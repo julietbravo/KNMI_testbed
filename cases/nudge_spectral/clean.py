@@ -2,7 +2,8 @@ import glob
 import os
 
 all_files = glob.glob('*')
-exclude   = ['namoptions','run','dales4','lon_LES.npy','lat_LES.npy']
+exclude   = ['namoptions.001','run.PBS.001','dales4','lon_LES.npy','lat_LES.npy']
+
 
 for f in all_files:
     delete = True

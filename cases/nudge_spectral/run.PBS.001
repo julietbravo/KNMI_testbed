@@ -12,9 +12,19 @@
 
 prgenvswitchto intel
 module load netcdf4
+module load python3
 
 # Switch to working directory
-cd /scratch/ms/nl/nkbs/DALES/nudge_boundary_HARMONIE
+cd /scratch/ms/nl/nkbs/DALES/nudge_spectral
 
-# Run!
-aprun -n 576 ./dales4 namoptions.001 > dales4.001
+# Run -> cold start
+sed -i 's/^lwarmstart .*$/lwarmstart = .false./' namoptions.001
+aprun -n 576 ./dales4 namoptions.001 > dales4.0
+
+# Warm starts with spectral blending every hour
+sed -i 's/^lwarmstart .*$/lwarmstart = .true./' namoptions.001
+for i in {1..5}; do
+    time=$(( i*3600 ))
+    python3 blend.py $time
+    aprun -n 576 ./dales4 namoptions.001 > dales4.$time
+done
