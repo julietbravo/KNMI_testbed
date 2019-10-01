@@ -661,17 +661,18 @@ if __name__ == '__main__':
     #
 
     pl.close('all')
+    pl.ion()
 
-    if False:
+    if True:
         """
         Demo of the different vertical grids
         """
-        ktot = 64
-        dz0  = 25
+        ktot = 192
+        dz0  = 20
 
         equidist  = Grid_equidist(ktot, dz0)
-        linear    = Grid_linear_stretched(ktot, dz0, 0.005)
-        stretched = Grid_stretched(ktot, dz0, 40, 10, 40)
+        linear    = Grid_linear_stretched(ktot, dz0, 0.01)
+        stretched = Grid_stretched(ktot, dz0, 110, 30, 150)
 
         pl.figure()
         pl.plot(equidist.dz, equidist.z, '-x', label='equidistant')

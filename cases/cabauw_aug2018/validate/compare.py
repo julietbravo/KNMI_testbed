@@ -9,6 +9,16 @@ import numpy as np
 from datetime import datetime, timedelta
 from scipy import interpolate, stats
 
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
+
+# Enable LaTeX plotting
+from matplotlib import rc
+rc('text', usetex=True)
+rc('font', size=13)
+rc('legend', fontsize=11)
+rc('text.latex', preamble=r'\usepackage{sansmathfonts}')
+
 # Custom module (from LS2D)
 from IFS_tools import IFS_tools
 
@@ -25,9 +35,12 @@ class Read_LES:
         self.fp   = xr.open_dataset('{}/profiles_{}.nc'.format(nc_path, date_str))
         self.ft   = xr.open_dataset('{}/tmser_{}.nc'.format(nc_path, date_str))
 
+        exner = (self.fp['presh'] / 1e5)**(287.05/1004.)
+
         # Column sampled and averaged statistics
         self.fc   = xr.open_dataset('{}/column.i00097j00097_{}.nc'.format(nc_path, date_str))
         self.fc['Qnet'] = (('time'), -(self.fc['swd'][:,0] + self.fc['swu'][:,0] + self.fc['lwd'][:,0] + self.fc['lwu'][:,0]))
+        self.fc['T'] = (self.fc['thl'] + (2.45e6 / 1004.) * self.fc['ql'])*exner
 
         # Calculate LWP
         dz  = self.fp['zm'][1:].values - self.fp['zm'][:-1].values
@@ -79,6 +92,7 @@ def interp_zt(array, heights, goal):
     return out
 
 
+
 def calc_swd(lon, lat, hour, doy):
     """
     Calculate theoretical shortwave incoming radiation,
@@ -96,12 +110,6 @@ def calc_swd(lon, lat, hour, doy):
 
     return swin
 
-
-# ---------------------
-#
-# Help function for calculating/plotting (of statistics)
-#
-# ---------------------
 
 def lim_and_line(vmin, vmax):
     """
@@ -233,19 +241,17 @@ def scatter_stat2(obs, model, label, xlabel, ylabel, night_mask, c_day, c_nig, x
 
 if __name__ == '__main__':
     pl.close('all')
+    pl.ion()
 
     # Period to read/plot/..
     start = datetime(year=2016, month=8, day=4,  hour=0)
     end   = datetime(year=2016, month=8, day=18, hour=0)
     start_hour = 0
 
-    # Local file paths
-    base = 'cabauw_20160804_20160818'
-    #case = 'NBL'
-    case = 'alpha_z0'
-
     # ---- Macbook ----
-    LES_path  = '/Users/bart/meteo/data/KNMI_testbed/{}_{}'.format(base, case)
+    LES_path1  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_ref'
+    LES_path2  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_LS2D'
+
     CB_path   = '/Users/bart/meteo/observations/Cabauw'
     HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing'
     E5_path   = '/Users/bart/meteo/data//LS2D/cabauw/ERA5'
@@ -258,15 +264,36 @@ if __name__ == '__main__':
     E5_path   = '/nobackup/users/stratum/ERA5/LS2D/cabauw/ERA5'
     """
 
+    # Plot settings
+    c1 = '#4d4d4d'      # Green
+    c2 = '#4daf4a'      # Blue
 
+    c_cb  = '#4daf4a'   # Green
+    c_cb2 = '#377eb8'   # Blue
+    c_da  = '#4d4d4d'   # Gray
+    c_da2 = '#b2182b'   # DarkRed
+
+    c_day = '#b2182b'   # DarkRed
+    c_nig = '#4daf4a'   # Green
+
+    lw = 1.4
+
+    # --------------------------------
+    #
+    # Read all the data
+    #
+    # --------------------------------
+
+    #
     # Read the LES data
-    # -----------------
-    if 'runs' not in locals():
-        runs = read_all(start, end, start_hour, LES_path)
+    #
+    if 'runs1' not in locals():
+        runs1 = read_all(start, end, start_hour, LES_path1)  # Harmonie -> LES
+        runs2 = read_all(start, end, start_hour, LES_path2)  # ERA5 -> LES
 
-
+    #
     # Read HARMONIE data
-    # ------------------
+    #
     if 'hm' not in locals():
         print('Reading HARMONIE')
 
@@ -277,12 +304,12 @@ if __name__ == '__main__':
             files.append('{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/LES_forcing_{1:04d}{2:02d}{3:02d}{4:02d}.nc'\
                     .format(HM_path, t.year, t.month, t.day, t.hour))
             t += threehours
-        hm = xr.open_mfdataset(files)
+        hm = xr.open_mfdataset(files, combine='by_coords')
         hm = hm.loc[{'domain': iloc}]
 
-
+    #
     # Read ERA5 data
-    # --------------
+    #
     if 'e5' not in locals():
         print('Reading ERA5')
 
@@ -292,7 +319,7 @@ if __name__ == '__main__':
             files.append('{0:}/{1:04d}/{2:02d}/{3:02d}/model_an.nc'\
                     .format(E5_path, t.year, t.month, t.day))
             t += oneday
-        e5 = xr.open_mfdataset(files)
+        e5 = xr.open_mfdataset(files, combine='by_coords')
         e5 = e5.sel(longitude=4.91, latitude=51.97, method='nearest')
 
         # Calculate heights of model levels
@@ -305,14 +332,14 @@ if __name__ == '__main__':
             z  = IFS_tools.calc_full_level_Zg(ph, Tv)
             e5['zf'][t,:] = z[::-1]
 
-
+    #
     # Read Cabauw observations
-    # ------------------------
+    #
     if 'cb_sf' not in locals():
         print('Reading Cabauw')
 
         def open_and_sel(name, start, end):
-            f = xr.open_mfdataset(name, drop_variables=['valid_dates'])
+            f = xr.open_mfdataset(name, combine='by_coords', drop_variables=['valid_dates'])
             f = f.sel(time=slice(start, end))
             return f
 
@@ -332,183 +359,347 @@ if __name__ == '__main__':
             cb_k[int(cb_tm.z[i])] = i
 
 
-    # Sync times in a Pandas dataframe
-    # ------------------
-    if 'df' not in locals():
+    # --------------------------------
+    #
+    # Comparison LES - Cabauw
+    #
+    # --------------------------------
+    if False:
 
-        # Read selected LES variables in Pandas DataFrame's
-        dfs = []
-        for r in runs:
-            exner = (r.fp['presh'] / 1e5)**(287.05/1004.)
-            T     = (r.fc['thl'] + (2.45e6 / 1004.) * r.fc['ql']) * exner
-            r.fc['T'] = T
+        #
+        # Sync observastion and LES times in Pandas dataframe
+        #
+        if 'df' not in locals():
 
-            data = { 'LE_LES':   r.fc['LE'],
-                     'H_LES':    r.fc['H'],
-                     'G_LES':    r.fc['G'],
-                     'Qn_LES':   r.fc['Qnet'],
-                     'swd_LES':  r.fc['swd'][:,0],
-                     'swu_LES':  r.fc['swu'][:,0],
-                     'lwd_LES':  r.fc['lwd'][:,0],
-                     'lwu_LES':  r.fc['lwu'][:,0],
-                     'cc_LES':   r.ft['cfrac'],
-                     'rr_LES':   r.fc['rainrate'][:,0]*r.fp.rhobh[:,0],
-                     'lwp_LES':  r.fc['lwp'],
-                     'U010_LES': absval(interp_z(r.fc['u'], r.fc['zt'], 10),  interp_z(r.fc['v'], r.fc['zt'], 10)),
-                     'U200_LES': absval(interp_z(r.fc['u'], r.fc['zt'], 200), interp_z(r.fc['v'], r.fc['zt'], 200)),
-                     'T010_LES': interp_z(r.fc['T'],  r.fc['zt'], 10),
-                     'T200_LES': interp_z(r.fc['T'],  r.fc['zt'], 200),
-                     'q010_LES': interp_z(r.fc['qt'], r.fc['zt'], 10),
-                     'q200_LES': interp_z(r.fc['qt'], r.fc['zt'], 200)
+            # Read selected LES variables in Pandas DataFrame's
+            dfs = []
+            for r in runs1:
+                exner = (r.fp['presh'] / 1e5)**(287.05/1004.)
+                T     = (r.fc['thl'] + (2.45e6 / 1004.) * r.fc['ql']) * exner
+                r.fc['T'] = T
+
+                data = { 'LE_LES':   r.fc['LE'],
+                         'H_LES':    r.fc['H'],
+                         'G_LES':    r.fc['G'],
+                         'Qn_LES':   r.fc['Qnet'],
+                         'swd_LES':  r.fc['swd'][:,0],
+                         'swu_LES':  r.fc['swu'][:,0],
+                         'lwd_LES':  r.fc['lwd'][:,0],
+                         'lwu_LES':  r.fc['lwu'][:,0],
+                         'cc_LES':   r.ft['cfrac'],
+                         'rr_LES':   r.fc['rainrate'][:,0]*r.fp.rhobh[:,0],
+                         'lwp_LES':  r.fc['lwp'],
+                         'U010_LES': absval(interp_z(r.fc['u'], r.fc['zt'], 10),  interp_z(r.fc['v'], r.fc['zt'], 10)),
+                         'U200_LES': absval(interp_z(r.fc['u'], r.fc['zt'], 200), interp_z(r.fc['v'], r.fc['zt'], 200)),
+                         'T010_LES': interp_z(r.fc['T'],  r.fc['zt'], 10),
+                         'T200_LES': interp_z(r.fc['T'],  r.fc['zt'], 200),
+                         'q010_LES': interp_z(r.fc['qt'], r.fc['zt'], 10),
+                         'q200_LES': interp_z(r.fc['qt'], r.fc['zt'], 200)
+                       }
+
+                dfs.append( pd.DataFrame(data, index=r.time) )
+            df_LES = pd.concat(dfs)
+
+            # Put Cabauw observations in DataFrame
+            data = { 'LE_CB':   cb_sf['LE'],
+                     'LE2_CB':  cb_sf['LE2'],
+                     'H_CB':    cb_sf['H'],
+                     'G_CB':    cb_sf['G0'],
+                     'Qn_CB':   cb_sf['QN'],
+                     'swd_CB':  cb_sr['SWD'],
+                     'swu_CB':  cb_sr['SWU'],
+                     'lwd_CB':  cb_sr['LWD'],
+                     'lwu_CB':  cb_sr['LWU'],
+                     'rr_CB':   cb_sm['RAIN'],
+                     'U010_CB': cb_tm['F'] [:,cb_k[10] ],
+                     'U200_CB': cb_tm['F'] [:,cb_k[200]],
+                     'T010_CB': cb_tm['TA'][:,cb_k[10] ],
+                     'T200_CB': cb_tm['TA'][:,cb_k[200]],
+                     'q010_CB': cb_tm['Q'] [:,cb_k[10] ],
+                     'q200_CB': cb_tm['Q'] [:,cb_k[200]]
                    }
 
-            dfs.append( pd.DataFrame(data, index=r.time) )
-        df_LES = pd.concat(dfs)
+            data2 = {'cc_CB':  cb_ns.cldcover_total/100.}
 
-        # Put Cabauw observations in DataFrame
-        data = { 'LE_CB':   cb_sf['LE'],
-                 'LE2_CB':  cb_sf['LE2'],
-                 'H_CB':    cb_sf['H'],
-                 'G_CB':    cb_sf['G0'],
-                 'Qn_CB':   cb_sf['QN'],
-                 'swd_CB':  cb_sr['SWD'],
-                 'swu_CB':  cb_sr['SWU'],
-                 'lwd_CB':  cb_sr['LWD'],
-                 'lwu_CB':  cb_sr['LWU'],
-                 'rr_CB':   cb_sm['RAIN'],
-                 'U010_CB': cb_tm['F'] [:,cb_k[10] ],
-                 'U200_CB': cb_tm['F'] [:,cb_k[200]],
-                 'T010_CB': cb_tm['TA'][:,cb_k[10] ],
-                 'T200_CB': cb_tm['TA'][:,cb_k[200]],
-                 'q010_CB': cb_tm['Q'] [:,cb_k[10] ],
-                 'q200_CB': cb_tm['Q'] [:,cb_k[200]]
-               }
+            df_CB = pd.DataFrame(data, index=cb_sf.time.values)
+            df_CB.index = df_CB.index.round('1min')
 
-        data2 = {'cc_CB':  cb_ns.cldcover_total/100.}
+            df_CB2 = pd.DataFrame(data2, index=cb_ns.time.values)
+            df_CB2.index = df_CB2.index.round('1min')
 
-        df_CB = pd.DataFrame(data, index=cb_sf.time)
-        df_CB.index = df_CB.index.round('1min')
+            df_CB = pd.concat([df_CB, df_CB2], axis=1)
+            df_CB.dropna(inplace=True)
+
+            # Merge DataFrame's
+            df = pd.concat([df_LES, df_CB], axis=1)
+            df.dropna(inplace=True)
+
+            # Theoretical shortwave incoming radiation
+            hour = df.index.hour + df.index.minute/60.
+            doy  = df.index.dayofyear
+            df['swd_theory'] = calc_swd(4.9, 51.97, hour, doy)
+            df['is_night'] = df['swd_theory'] < 0.1
 
 
-        df_CB2 = pd.DataFrame(data2, index=cb_ns.time)
-        df_CB2.index = df_CB2.index.round('1min')
+        if True: 
+            #
+            # Wind 
+            #
 
-        df_CB = pd.concat([df_CB, df_CB2], axis=1)
-        df_CB.dropna(inplace=True)
+            pl.figure(figsize=(10,5))
+            gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
-        # Merge DataFrame's
-        df = pd.concat([df_LES, df_CB], axis=1)
-        df.dropna(inplace=True)
+            ax=pl.subplot(gs[0,0])
+            pl.plot(df.index, df['U010_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['U010_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'$U_\mathrm{10m}$ (m s$^{-1}$')
+            format_ax()
+            
+            ax=pl.subplot(gs[1,0])
+            pl.plot(df.index, df['U200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['U200_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'$U_\mathrm{200m}$ (m s$^{-1}$')
+            format_ax()
 
-        # Theoretical shortwave incoming radiation
-        hour = df.index.hour + df.index.minute/60.
-        doy  = df.index.dayofyear
-        df['swd_theory'] = calc_swd(4.9, 51.97, hour, doy)
-        df['is_night'] = df['swd_theory'] < 0.1
+            pl.subplot(gs[0,1])
+            scatter_stat(df['U010_CB'], df['U010_LES'], 'U_10m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
 
+            pl.subplot(gs[1,1])
+            scatter_stat(df['U200_CB'], df['U200_LES'], 'U_200m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
 
-
-    # LES vs. HARMONIE vs. ERA5 vs. Cabauw vs. ....
-    # --------------
-    if 'df2' not in locals():
-
-        # Heights to consider. Note: Cabauw data is not automatically
-        # interpolated to other heights...
-        heights = np.array((10,20,40,80,140,200))
-
-        # ---- LES ----
-        dfs = []
-        for r in runs:
-            data = {}
-            for z in heights:
-                data['U{0:03d}_LES'.format(z)] = absval(interp_z(r.fc['u'], r.fc['zt'], z), interp_z(r.fc['v'], r.fc['zt'], z))
-                data['T{0:03d}_LES'.format(z)] = interp_z(r.fc['T'],  r.fc['zt'], z)
-                data['q{0:03d}_LES'.format(z)] = interp_z(r.fc['qt'], r.fc['zt'], z)*1000
-            dfs.append( pd.DataFrame(data, index=r.time) )
-        df_LES = pd.concat(dfs)
-
-        # ---- HARMONIE ----
-        # Interpolate model levels to fixed heights
-        if 'u_tmp1' not in locals():
-            u_tmp1 = interp_zt(hm['u'], hm['z'], heights)
-            v_tmp1 = interp_zt(hm['v'], hm['z'], heights)
-            T_tmp1 = interp_zt(hm['T'], hm['z'], heights)
-            q_tmp1 = interp_zt(hm['q'], hm['z'], heights)
-
-        data = {}
-        for k,z in enumerate(heights):
-            data['U{0:03d}_HAM'.format(z)] = absval(u_tmp1[:,k], v_tmp1[:,k])
-            data['T{0:03d}_HAM'.format(z)] = T_tmp1[:,k]
-            data['q{0:03d}_HAM'.format(z)] = q_tmp1[:,k]*1000.
-
-        df_HAM = pd.DataFrame(data, index=hm.time)
-        df_HAM.index = df_HAM.index.round('1min')
-
-        # ---- ERA5 ----
-        # Interpolate model levels to fixed heights
-        if 'u_tmp2' not in locals():
-            u_tmp2 = interp_zt(e5['u'][:,::-1], e5['zf'][:,::-1], heights)
-            v_tmp2 = interp_zt(e5['v'][:,::-1], e5['zf'][:,::-1], heights)
-            T_tmp2 = interp_zt(e5['t'][:,::-1], e5['zf'][:,::-1], heights)
-            q_tmp2 = interp_zt(e5['q'][:,::-1], e5['zf'][:,::-1], heights)
-
-        data = {}
-        for k,z in enumerate(heights):
-            data['U{0:03d}_ERA'.format(z)] = absval(u_tmp2[:,k], v_tmp2[:,k])
-            data['T{0:03d}_ERA'.format(z)] = T_tmp2[:,k]
-            data['q{0:03d}_ERA'.format(z)] = q_tmp2[:,k]*1000.
-
-        df_ERA = pd.DataFrame(data, index=e5.time)
-        df_ERA.index = df_ERA.index.round('1min')
-
-        # ---- Cabauw ----
-        data = {}
-        cb_k = {200:0, 140:1, 80:2, 40:3, 20:4, 10:5}
-
-        for k,z in enumerate(heights):
-            kk = cb_k[int(z)]
-
-            data['U{0:03d}_CB'.format(z)] = cb_tm['F'] [:,kk]
-            data['T{0:03d}_CB'.format(z)] = cb_tm['TA'][:,kk]
-            data['q{0:03d}_CB'.format(z)] = cb_tm['Q'] [:,kk]
-
-        df_CB = pd.DataFrame(data, index=cb_tm.time)
-        df_CB.index = df_CB.index.round('1min')
-
-        # ---- Merge all data frames, and drop missing rows to sync times ----
-        df2 = pd.concat([df_LES, df_HAM, df_ERA, df_CB], axis=1)
-        df2.dropna(inplace=True)
-
-        # Add day/night flag based on incoming shortwave radiation
-        hour = df2.index.hour + df2.index.minute/60.
-        doy  = df2.index.dayofyear
-        df2['swd_theory'] = calc_swd(4.9, 51.97, hour, doy)
-        df2['is_night'] = df2['swd_theory'] < 0.1
+            pl.tight_layout()
+            pl.savefig('wind_tser_scatter.pdf')
 
 
-    # Plot settings
-    c1 = '#4d4d4d'      # Green
-    c2 = '#4daf4a'      # Blue
+        if True:
+            #
+            # Temperature
+            #
 
-    c_cb  = '#4daf4a'   # Green
-    c_cb2 = '#377eb8'   # Blue
-    c_da  = '#4d4d4d'   # Gray
-    c_da2 = '#b2182b'   # DarkRed
+            pl.figure(figsize=(10,5))
+            gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
-    c_day = '#b2182b'   # DarkRed
-    c_nig = '#4daf4a'   # Green
+            ax=pl.subplot(gs[0,0])
+            pl.plot(df.index, df['T010_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['T010_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'T$_\mathrm{10m}$ (K)')
+            format_ax()
 
-    lw = 1.4
+            ax=pl.subplot(gs[1,0])
+            pl.plot(df.index, df['T200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['T200_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'T$_\mathrm{200m}$ (K)')
+            format_ax()
+
+            pl.subplot(gs[0,1])
+            scatter_stat(df['T010_CB'], df['T010_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
+
+            pl.subplot(gs[1,1])
+            scatter_stat(df['T200_CB'], df['T200_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
+
+            pl.tight_layout()
+            pl.savefig('temperature_tser_scatter.pdf')
+
+
+        if True:
+            #
+            # Specific humidity
+            #
+
+            pl.figure(figsize=(10,5))
+            gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
+
+            ax=pl.subplot(gs[0,0])
+            pl.plot(df.index, df['q010_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['q010_LES']*1000, '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'q$_\mathrm{10m}$ (g kg$^{-1}$)')
+            format_ax()
+
+            ax=pl.subplot(gs[1,0])
+            pl.plot(df.index, df['q200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['q200_LES']*1000, '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'q$_\mathrm{200m}$ (g kg$^{-1}$)')
+            format_ax()
+
+            pl.subplot(gs[0,1])
+            scatter_stat(df['q010_CB'], df['q010_LES']*1000, 'q_10m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
+
+            pl.subplot(gs[1,1])
+            scatter_stat(df['q200_CB'], df['q200_LES']*1000, 'q_200m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
+
+            pl.tight_layout()
+            pl.savefig('spechum_tser_scatter.pdf')
+
+
+        if True:
+            #
+            # Surface fluxes
+            #
+
+            pl.figure(figsize=(10,8))
+            gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
+
+            ax=pl.subplot(gs[0,0])
+            pl.plot(df.index, df['H_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['H_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'H (W m$^{-2}$')
+            format_ax()
+
+            pl.subplot(gs[1,0], sharex=ax)
+            pl.plot(df.index, df['LE_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['LE_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'LE (W m$^{-2}$')
+            format_ax()
+
+            pl.subplot(gs[2,0], sharex=ax)
+            pl.plot(df.index, df['G_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['G_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'G (W m$^{-2}$')
+            format_ax()
+
+            pl.subplot(gs[3,0], sharex=ax)
+            pl.plot(df.index, df['Qn_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['Qn_LES'], '-', color=c1, linewidth=lw)
+            pl.xlim(start, end)
+            pl.ylabel(r'Q$_\mathrm{net}$ (W m$^{-2}$')
+            format_ax()
+
+            # Scatter plots
+            pl.subplot(gs[0,1])
+            scatter_stat(df['H_CB'], df['H_LES'], 'H (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.subplot(gs[1,1])
+            scatter_stat(df['LE_CB'], df['LE_LES'], 'LE (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.subplot(gs[2,1])
+            scatter_stat(df['G_CB'], df['G_LES'], 'G (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.subplot(gs[3,1])
+            scatter_stat(df['Qn_CB'], df['Qn_LES'], 'Qnet (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.tight_layout()
+            pl.savefig('surface_flux_tser_scatter.pdf')
+
+
+        if True:
+            #
+            # Surface radiation
+            #
+
+            pl.figure(figsize=(10,8))
+
+            gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
+
+            ax=pl.subplot(gs[0,0])
+            pl.plot(cb_sr.time.values, -cb_sr.SWD, 'o', mfc=c2, mec=c2, ms=2)
+            for i,r in enumerate(runs1):
+                pl.plot(r.time, r.fc.swd[:,0], '-', color=c1)   # Column
+            pl.xlim(start, end)
+            pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$')
+            format_ax()
+
+            pl.subplot(gs[1,0], sharex=ax)
+            pl.plot(cb_sr.time.values,  cb_sr.SWU, 'o', mfc=c2, mec=c2, ms=2)
+            for i,r in enumerate(runs1):
+                pl.plot(r.time, r.fc.swu[:,0], '-', color=c1)
+            pl.xlim(start, end)
+            pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$')
+            format_ax()
+
+            pl.subplot(gs[2,0], sharex=ax)
+            pl.plot(cb_sr.time.values, -cb_sr.LWD, 'o', mfc=c2, mec=c2, ms=2)
+            for i,r in enumerate(runs1):
+                pl.plot(r.time, r.fc.lwd[:,0], '-', color=c1)
+            pl.xlim(start, end)
+            pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$')
+            format_ax()
+
+            pl.subplot(gs[3,0], sharex=ax)
+            pl.plot(cb_sr.time.values, cb_sr.LWU, 'o', mfc=c2, mec=c2, ms=2)
+            for i,r in enumerate(runs1):
+                pl.plot(r.time, r.fc.lwu[:,0], '-', color=c1)
+            pl.xlim(start, end)
+            pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$')
+            format_ax()
+
+            pl.subplot(gs[0,1])
+            scatter_stat(-df['swd_CB'], df['swd_LES'], 'SWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.subplot(gs[1,1])
+            scatter_stat(df['swu_CB'], df['swu_LES'], 'SWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.subplot(gs[2,1])
+            scatter_stat(-df['lwd_CB'], df['lwd_LES'], 'LWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.subplot(gs[3,1])
+            scatter_stat(df['lwu_CB'], df['lwu_LES'], 'LWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+
+            pl.tight_layout()
+            pl.savefig('radiation_tser_scatter.pdf')
+
+
+        if False:
+            #
+            # Surface meteo
+            #
+
+            pl.figure(figsize=(10,4.8))
+            gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
+
+            ax=pl.subplot(gs[0,0])
+            for i,r in enumerate(runs1):
+                pl.plot(r.time, r.ft.cfrac, '-', color=c1)
+            pl.plot(cb_ns.time.values, cb_ns.cldcover_total/100., 'o', mfc=c2, mec=c2, ms=2)
+            pl.plot([start, end], [0,0], 'k:')
+            pl.xlim(start, end)
+            pl.ylim(0,1)
+            pl.ylabel(r'$cc$ (-)')
+
+            pl.subplot(gs[1,0], sharex=ax)
+            for i,r in enumerate(runs1):
+                pl.plot(r.time, r.fc.rainrate[:,0]*r.fp.rhobh[:,0]*3600, '-', color=c1)
+            pl.plot(cb_sm.time.values, cb_sm.RAIN*6, 'o', mfc=c2, mec=c2, ms=2)
+            pl.plot([start, end], [0,0], 'k:')
+            pl.xlim(start, end)
+            pl.ylim(0,1)
+            pl.ylabel(r'$rr$ (mm h$^{-1}$)')
+
+            ax=pl.subplot(gs[0,1])
+            pl.scatter(df['cc_CB'], df['cc_LES'], s=1, color=c2)
+            lim_and_line2(df['cc_CB'], df['cc_LES'])
+            pl.xlabel(r'OBS (-)')
+            pl.ylabel(r'LES (-)')
+
+            ax=pl.subplot(gs[1,1])
+            pl.scatter(df['rr_CB']*6, df['rr_LES']*3600, s=1, color=c2)
+            lim_and_line(0,2)
+            pl.xlabel(r'OBS (mm h$^{-1}$)')
+            pl.ylabel(r'LES (mm h$^{-1}$)')
+
+            pl.tight_layout()
+            pl.savefig('clouds_rain_tser_scatter.pdf')
 
 
 
 
-    if False:
-        # -------------
-        # Cloud statistics
-        # -------------
 
-        pl.figure()
+
+
+
+
+
+
+
+
 
 
 
@@ -516,12 +707,128 @@ if __name__ == '__main__':
 
 
     if True:
-        # --------------
-        # LES vs Harmonie vs ERA5 vs Cabauw
-        # --------------
 
-        if True:
+        # --------------------------------
+        #
+        # Sync Cabauw and LES + HARMONIE + ERA5 data in Pandas data frame
+        #
+        # --------------------------------
+        if 'df2' not in locals():
+
+            # Heights to consider. Note: Cabauw data is not automatically
+            # interpolated to other heights...
+            heights = np.array((10,20,40,80,140,200))
+
+            # ---- LES ----
+            dfs = []
+            for r in runs1:
+                data = {}
+                for z in heights:
+                    data['U{0:03d}_LES1'.format(z)] = absval(interp_z(r.fc['u'], r.fc['zt'], z), interp_z(r.fc['v'], r.fc['zt'], z))
+                    data['T{0:03d}_LES1'.format(z)] = interp_z(r.fc['T'],  r.fc['zt'], z)
+                    data['q{0:03d}_LES1'.format(z)] = interp_z(r.fc['qt'], r.fc['zt'], z)*1000
+                dfs.append( pd.DataFrame(data, index=r.time) )
+            df_LES1 = pd.concat(dfs)
+
+            dfs = []
+            for r in runs2:
+                data = {}
+                for z in heights:
+                    data['U{0:03d}_LES2'.format(z)] = absval(interp_z(r.fc['u'], r.fc['zt'], z), interp_z(r.fc['v'], r.fc['zt'], z))
+                    data['T{0:03d}_LES2'.format(z)] = interp_z(r.fc['T'],  r.fc['zt'], z)
+                    data['q{0:03d}_LES2'.format(z)] = interp_z(r.fc['qt'], r.fc['zt'], z)*1000
+                dfs.append( pd.DataFrame(data, index=r.time) )
+            df_LES2 = pd.concat(dfs)
+
+            # ---- HARMONIE ----
+            # Interpolate model levels to fixed heights
+            if 'u_tmp1' not in locals():
+                u_tmp1 = interp_zt(hm['u'], hm['z'], heights)
+                v_tmp1 = interp_zt(hm['v'], hm['z'], heights)
+                T_tmp1 = interp_zt(hm['T'], hm['z'], heights)
+                q_tmp1 = interp_zt(hm['q'], hm['z'], heights)
+
+            data = {}
+            for k,z in enumerate(heights):
+                data['U{0:03d}_HAM'.format(z)] = absval(u_tmp1[:,k], v_tmp1[:,k])
+                data['T{0:03d}_HAM'.format(z)] = T_tmp1[:,k]
+                data['q{0:03d}_HAM'.format(z)] = q_tmp1[:,k]*1000.
+
+            df_HAM = pd.DataFrame(data, index=hm.time.values)
+            df_HAM.index = df_HAM.index.round('1min')
+
+            # ---- ERA5 ----
+            # Interpolate model levels to fixed heights
+            if 'u_tmp2' not in locals():
+                u_tmp2 = interp_zt(e5['u'][:,::-1], e5['zf'][:,::-1], heights)
+                v_tmp2 = interp_zt(e5['v'][:,::-1], e5['zf'][:,::-1], heights)
+                T_tmp2 = interp_zt(e5['t'][:,::-1], e5['zf'][:,::-1], heights)
+                q_tmp2 = interp_zt(e5['q'][:,::-1], e5['zf'][:,::-1], heights)
+
+            data = {}
+            for k,z in enumerate(heights):
+                data['U{0:03d}_ERA'.format(z)] = absval(u_tmp2[:,k], v_tmp2[:,k])
+                data['T{0:03d}_ERA'.format(z)] = T_tmp2[:,k]
+                data['q{0:03d}_ERA'.format(z)] = q_tmp2[:,k]*1000.
+
+            df_ERA = pd.DataFrame(data, index=e5.time.values)
+            df_ERA.index = df_ERA.index.round('1min')
+
+            # ---- Cabauw ----
+            data = {}
+            cb_k = {200:0, 140:1, 80:2, 40:3, 20:4, 10:5}
+
+            for k,z in enumerate(heights):
+                kk = cb_k[int(z)]
+
+                data['U{0:03d}_CB'.format(z)] = cb_tm['F'] [:,kk]
+                data['T{0:03d}_CB'.format(z)] = cb_tm['TA'][:,kk]
+                data['q{0:03d}_CB'.format(z)] = cb_tm['Q'] [:,kk]
+
+            df_CB = pd.DataFrame(data, index=cb_tm.time.values)
+            df_CB.index = df_CB.index.round('1min')
+
+            # ---- Merge all data frames, and drop missing rows to sync times ----
+            df2 = pd.concat([df_LES1, df_LES2, df_HAM, df_ERA, df_CB], axis=1)
+            df2.dropna(inplace=True)
+
+            # Add day/night flag based on incoming shortwave radiation
+            hour = df2.index.hour + df2.index.minute/60.
+            doy  = df2.index.dayofyear
+            df2['swd_theory'] = calc_swd(4.9, 51.97, hour, doy)
+            df2['is_night'] = df2['swd_theory'] < 0.1
+
+
+    
+        if False:
+            #
+            # Print statistics
+            #
+            vars = ['q','T','U']
+            units = ['g kg-1', 'K', 'm s-1']
+
+            for var, unit in zip(vars, units):
+                print('--------------------------')
+                for z in heights:
+                    CB   = df2['{0:}{1:03d}_CB' .format(var, z)]
+                    vLES = df2['{0:}{1:03d}_LES'.format(var, z)]
+                    vHAM = df2['{0:}{1:03d}_HAM'.format(var, z)]
+                    vERA = df2['{0:}{1:03d}_ERA'.format(var, z)]
+
+                    # Statistics
+                    cLES = Stats(CB, vLES)
+                    cHAM = Stats(CB, vHAM)
+                    cERA = Stats(CB, vERA)
+
+                    print('{0}_{1:03d} | LES: RMSE={2:6.2f}, diff={3:6.2f} | HAM: RMSE={4:6.2f}, diff={5:6.2f} | ERA: RMSE={6:6.2f}, diff={7:6.2f}'\
+                            .format(var, z, cLES.rmse, cLES.diff, cHAM.rmse, cHAM.diff, cERA.rmse, cERA.diff ))
+
+
+
+        if False:
+            #
             # Scatter plots with statistics
+            #
 
             vars = ['q','T','U']
             units = [r'g kg$^\mathrm{-1}$', 'K', r'm s$^\mathrm{-1}$']
@@ -549,7 +856,9 @@ if __name__ == '__main__':
 
 
         if True:
+            #
             # Line plots of statistics vs height
+            #
 
             heights = np.array((10,20,40,80,140,200))
             is_night = df2['is_night']
@@ -558,7 +867,7 @@ if __name__ == '__main__':
 
             for i,var in enumerate(['U','T','q']):
 
-                for model,name,color in zip(['HAM','ERA','LES'], ['HARMONIE','ERA5','LES'], [c_cb, c_cb2, c_da2]):
+                for model,name,color in zip(['HAM','ERA','LES1','LES2'], ['HARM','ERA5','LES-HM','LES-ERA'], ['b', 'r', 'k', 'm']):
 
                     rmse_all = np.zeros_like(heights, dtype=np.float)
                     diff_all = np.zeros_like(heights, dtype=np.float)
@@ -585,11 +894,14 @@ if __name__ == '__main__':
                         rmse_night[k] = stat.rmse
                         diff_night[k] = stat.diff
 
-                    ax[i,0].plot(rmse_day,   heights, '-', color=color, label='{}-day'.format(name))
-                    ax[i,1].plot(diff_day,   heights, '-', color=color, label='{}-day'.format(name))
-                                                    
-                    ax[i,0].plot(rmse_night, heights, '-', color=color, dashes=[4,2], label='{}-night'.format(name))
-                    ax[i,1].plot(diff_night, heights, '-', color=color, dashes=[4,2], label='{}-night'.format(name))
+                    ax[i,0].plot(rmse_all,   heights, '-', color=color, linewidth=1.4, label='{}'.format(name))
+                    ax[i,1].plot(diff_all,   heights, '-', color=color, linewidth=1.4, label='{}'.format(name))
+
+                    #ax[i,0].plot(rmse_day,   heights, '-', color=color, dashes=[1,1], label='{}-day'.format(name))
+                    #ax[i,1].plot(diff_day,   heights, '-', color=color, dashes=[1,1], label='{}-day'.format(name))
+                    #                                
+                    #ax[i,0].plot(rmse_night, heights, '-', color=color, dashes=[4,2], label='{}-night'.format(name))
+                    #ax[i,1].plot(diff_night, heights, '-', color=color, dashes=[4,2], label='{}-night'.format(name))
 
 
             ax[0,0].set_xlabel(r'RMSE U (m s$^{-1}$)')
@@ -603,264 +915,11 @@ if __name__ == '__main__':
             ax[1,0].set_ylabel('z (m)') 
             ax[2,0].set_ylabel('z (m)') 
 
-            ax[0,0].legend(ncol=2, fontsize=10)
+            ax[0,1].vlines(0, ymin=0, ymax=200, colors='g', linestyles='dotted') 
+            ax[1,1].vlines(0, ymin=0, ymax=200, colors='g', linestyles='dotted') 
+            ax[2,1].vlines(0, ymin=0, ymax=200, colors='g', linestyles='dotted') 
+
+            ax[0,0].legend(ncol=3, fontsize=10)
 
             pl.tight_layout()
-
-
-
-    if False:
-        # --------------
-        # Atmospheric variables (wind, temp, moisture)
-        # --------------
-
-        # ---- Wind ----
-        pl.figure(figsize=(10,5))
-        gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
-
-        ax=pl.subplot(gs[0,0])
-        pl.plot(df.index, df['U010_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['U010_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'$U_\mathrm{10m}$ (m s$^{-1}$')
-        format_ax()
-        
-        ax=pl.subplot(gs[1,0])
-        pl.plot(df.index, df['U200_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['U200_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'$U_\mathrm{200m}$ (m s$^{-1}$')
-        format_ax()
-
-        pl.subplot(gs[0,1])
-        scatter_stat(df['U010_CB'], df['U010_LES'], 'U_10m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
-
-        pl.subplot(gs[1,1])
-        scatter_stat(df['U200_CB'], df['U200_LES'], 'U_200m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
-
-        pl.tight_layout()
-        pl.savefig('wind_tser_scatter.pdf')
-
-
-        # ---- Temperature ----
-        pl.figure(figsize=(10,5))
-        gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
-
-        ax=pl.subplot(gs[0,0])
-        pl.plot(df.index, df['T010_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['T010_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'T$_\mathrm{10m}$ (K)')
-        format_ax()
-
-        ax=pl.subplot(gs[1,0])
-        pl.plot(df.index, df['T200_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['T200_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'T$_\mathrm{200m}$ (K)')
-        format_ax()
-
-        pl.subplot(gs[0,1])
-        scatter_stat(df['T010_CB'], df['T010_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
-
-        pl.subplot(gs[1,1])
-        scatter_stat(df['T200_CB'], df['T200_LES'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
-
-        pl.tight_layout()
-        pl.savefig('temperature_tser_scatter.pdf')
-
-
-        # ---- Specific humidity ----
-        pl.figure(figsize=(10,5))
-        gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
-
-        ax=pl.subplot(gs[0,0])
-        pl.plot(df.index, df['q010_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['q010_LES']*1000, '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'q$_\mathrm{10m}$ (g kg$^{-1}$)')
-        format_ax()
-
-        ax=pl.subplot(gs[1,0])
-        pl.plot(df.index, df['q200_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['q200_LES']*1000, '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'q$_\mathrm{200m}$ (g kg$^{-1}$)')
-        format_ax()
-
-        pl.subplot(gs[0,1])
-        scatter_stat(df['q010_CB'], df['q010_LES']*1000, 'q_10m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
-
-        pl.subplot(gs[1,1])
-        scatter_stat(df['q200_CB'], df['q200_LES']*1000, 'q_200m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
-
-        pl.tight_layout()
-        pl.savefig('spechum_tser_scatter.pdf')
-
-
-    if False:
-        # --------------
-        # Surface fluxes
-        # --------------
-        pl.figure(figsize=(10,8))
-        gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
-
-        # Time series
-        # Time series
-        ax=pl.subplot(gs[0,0])
-        pl.plot(df.index, df['H_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['H_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'H (W m$^{-2}$')
-        format_ax()
-
-        pl.subplot(gs[1,0], sharex=ax)
-        pl.plot(df.index, df['LE_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['LE_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'LE (W m$^{-2}$')
-        format_ax()
-
-        pl.subplot(gs[2,0], sharex=ax)
-        pl.plot(df.index, df['G_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['G_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'G (W m$^{-2}$')
-        format_ax()
-
-        pl.subplot(gs[3,0], sharex=ax)
-        pl.plot(df.index, df['Qn_CB'], 'o', mec=c2, mfc=c2, ms=2)
-        pl.plot(df.index, df['Qn_LES'], '-', color=c1, linewidth=lw)
-        pl.xlim(start, end)
-        pl.ylabel(r'Q$_\mathrm{net}$ (W m$^{-2}$')
-        format_ax()
-
-        # Scatter plots
-        pl.subplot(gs[0,1])
-        scatter_stat(df['H_CB'], df['H_LES'], 'H (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.subplot(gs[1,1])
-        scatter_stat(df['LE_CB'], df['LE_LES'], 'LE (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.subplot(gs[2,1])
-        scatter_stat(df['G_CB'], df['G_LES'], 'G (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.subplot(gs[3,1])
-        scatter_stat(df['Qn_CB'], df['Qn_LES'], 'Qnet (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.tight_layout()
-        pl.savefig('surface_flux_tser_scatter.pdf')
-
-
-    if False:
-        # --------------
-        # Surface radiation
-        # --------------
-
-        pl.figure(figsize=(10,8))
-
-        gs = gridspec.GridSpec(4, 2, width_ratios=[3.8,1])
-
-        ax=pl.subplot(gs[0,0])
-        pl.plot(cb_sr.time.values, -cb_sr.SWD, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.swd[:,0], '-', color=c1)   # Column
-        pl.xlim(start, end)
-        pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$')
-        format_ax()
-
-        pl.subplot(gs[1,0], sharex=ax)
-        pl.plot(cb_sr.time.values,  cb_sr.SWU, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.swu[:,0], '-', color=c1)
-        pl.xlim(start, end)
-        pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$')
-        format_ax()
-
-        pl.subplot(gs[2,0], sharex=ax)
-        pl.plot(cb_sr.time.values, -cb_sr.LWD, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.lwd[:,0], '-', color=c1)
-        pl.xlim(start, end)
-        pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$')
-        format_ax()
-
-        pl.subplot(gs[3,0], sharex=ax)
-        pl.plot(cb_sr.time.values, cb_sr.LWU, 'o', mfc=c2, mec=c2, ms=2)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.lwu[:,0], '-', color=c1)
-        pl.xlim(start, end)
-        pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$')
-        format_ax()
-
-        pl.subplot(gs[0,1])
-        scatter_stat(-df['swd_CB'], df['swd_LES'], 'SWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.subplot(gs[1,1])
-        scatter_stat(df['swu_CB'], df['swu_LES'], 'SWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.subplot(gs[2,1])
-        scatter_stat(-df['lwd_CB'], df['lwd_LES'], 'LWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.subplot(gs[3,1])
-        scatter_stat(df['lwu_CB'], df['lwu_LES'], 'LWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
-
-        pl.tight_layout()
-        pl.savefig('radiation_tser_scatter.pdf')
-
-
-    if False:
-        # --------------
-        # Surface meteo
-        # --------------
-
-        pl.figure(figsize=(10,4.8))
-        gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
-
-        ax=pl.subplot(gs[0,0])
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.ft.cfrac, '-', color=c1)
-        pl.plot(cb_ns.time.values, cb_ns.cldcover_total/100., 'o', mfc=c2, mec=c2, ms=2)
-        pl.plot([start, end], [0,0], 'k:')
-        pl.xlim(start, end)
-        pl.ylim(0,1)
-        pl.ylabel(r'$cc$ (-)')
-
-        pl.subplot(gs[1,0], sharex=ax)
-        for i,r in enumerate(runs):
-            pl.plot(r.time, r.fc.rainrate[:,0]*r.fp.rhobh[:,0]*3600, '-', color=c1)
-        pl.plot(cb_sm.time.values, cb_sm.RAIN*6, 'o', mfc=c2, mec=c2, ms=2)
-        pl.plot([start, end], [0,0], 'k:')
-        pl.xlim(start, end)
-        pl.ylim(0,1)
-        pl.ylabel(r'$rr$ (mm h$^{-1}$)')
-
-        ax=pl.subplot(gs[0,1])
-        pl.scatter(df['cc_CB'], df['cc_LES'], s=1, color=c2)
-        lim_and_line2(df['cc_CB'], df['cc_LES'])
-        pl.xlabel(r'OBS (-)')
-        pl.ylabel(r'LES (-)')
-
-        ax=pl.subplot(gs[1,1])
-        pl.scatter(df['rr_CB']*6, df['rr_LES']*3600, s=1, color=c2)
-        lim_and_line(0,2)
-        pl.xlabel(r'OBS (mm h$^{-1}$)')
-        pl.ylabel(r'LES (mm h$^{-1}$)')
-
-        pl.tight_layout()
-        pl.savefig('clouds_rain_tser_scatter.pdf')
-
-
-    if False:
-        # --------------
-        # Check SEB closure observations
-        # --------------
-
-        pl.figure()
-        pl.scatter(cb_sf['QN'], cb_sf['H']+cb_sf['LE']+cb_sf['G0'], s=1, color='r')
-        lim_and_line(-100,600)
-        pl.plot([-50,0], [-100,0], 'k:')
-        pl.xlabel(r'Q$_\mathrm{net}$ (W m$^{-2}$)')
-        pl.ylabel(r'LE+H+G (W m$^{-2}$)')
-
 

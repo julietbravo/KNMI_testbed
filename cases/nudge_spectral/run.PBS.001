@@ -1,0 +1,30 @@
+#!/bin/ksh
+#PBS -S /usr/bin/ksh
+#PBS -q np
+#PBS -N LES_NL
+#PBS -m a
+#PBS -l walltime=24:10:00
+
+#PBS -l EC_total_tasks=576
+#PBS -l EC_threads_per_task=1
+#PBS -l EC_memory_per_task=1GB
+#PBS -l EC_hyperthreads=1
+
+prgenvswitchto intel
+module load netcdf4
+module load python3
+
+# Switch to working directory
+cd /scratch/ms/nl/nkbs/DALES/nudge_spectral
+
+# Run -> cold start
+sed -i 's/^lwarmstart .*$/lwarmstart = .false./' namoptions.001
+aprun -n 576 ./dales4 namoptions.001 > dales4.0
+
+# Warm starts with spectral blending every hour
+sed -i 's/^lwarmstart .*$/lwarmstart = .true./' namoptions.001
+for i in {1..5}; do
+    time=$(( i*3600 ))
+    python3 blend.py $time
+    aprun -n 576 ./dales4 namoptions.001 > dales4.$time
+done
