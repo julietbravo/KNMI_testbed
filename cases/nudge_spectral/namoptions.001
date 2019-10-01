@@ -131,14 +131,12 @@ tnudgefac = 10800
 
 &NAMNUDGEBOUNDARY
 lnudge_boundary = .true.
-lperturb_boundary = .true.
-lnudge_spectral = .true.
-
 nudge_offset = 2500
 nudge_width = 600
 nudge_radius = 3000
 nudge_tau = 5
 
+lperturb_boundary = .true.
 perturb_offset = 3500
 perturb_width = 600
 perturb_radius = 3000
@@ -148,5 +146,6 @@ perturb_ampl = 0.25
 
 dt_input_lbc = 3600
 
+lnudge_spectral = .true.
 dt_nudge_spectral=900
 /
