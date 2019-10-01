@@ -196,12 +196,12 @@ if __name__ == '__main__':
         y0 = 1200000
 
         # Domain size LES (m)
-        xsize = 4000
-        ysize = 4000
+        xsize = 25600
+        ysize = 25600
 
         # Number of grid points LES
-        itot = 8
-        jtot = 8
+        itot = 64
+        jtot = 64
         ktot = 128
 
         # Number of x,y MPI processes
