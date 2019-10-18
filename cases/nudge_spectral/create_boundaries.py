@@ -7,9 +7,6 @@ import xarray as xr
 import numpy as np
 import datetime
 
-import cartopy
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 
 # Custom scripts
 import hybrid_sigma_grid as hsg
@@ -199,12 +196,12 @@ if __name__ == '__main__':
         y0 = 1200000
 
         # Domain size LES (m)
-        xsize = 4000
-        ysize = 4000
+        xsize = 25600
+        ysize = 25600
 
         # Number of grid points LES
-        itot = 8
-        jtot = 8
+        itot = 64
+        jtot = 64
         ktot = 128
 
         # Number of x,y MPI processes
@@ -217,9 +214,9 @@ if __name__ == '__main__':
         output_dir = '.'
 
         # Harmonie data path (with yyyy/mm/dd/hh directory structure underneath)
-        data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
+        #data_path = '/nobackup/users/stratum/DOWA/DOWA_fulldomain/'
         #data_path = '/Users/bart/meteo/data/Harmonie_boundaries/'
-
+        data_path = '/home/scratch1/meteo_data/Harmonie_boundaries'
 
 
     # DALES constants (modglobal.f90)
@@ -357,6 +354,10 @@ if __name__ == '__main__':
 
     # Plot ~location of LES domain
     if False:
+
+        import cartopy
+        import cartopy.crs as ccrs
+        import cartopy.feature as cfeature
 
         for t in range(t0, t1+1):
 

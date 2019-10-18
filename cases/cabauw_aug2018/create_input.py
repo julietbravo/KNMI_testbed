@@ -105,6 +105,12 @@ if __name__ == '__main__':
         path_e5  = '/nobackup/users/stratum/ERA5/soil/'
         path_out = '/nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018/{}'.format(expname)
 
+    elif 'arch' in host:
+        # Home desktop BvS
+        path     = '/home/scratch1/meteo_data/Harmonie_LES_forcing/'
+        path_e5  = '/home/scratch1/meteo_data/ERA5/soil/'
+        path_out = '/home/scratch1/meteo_data/KNMI_testbed/cases/cabauw_aug2018/'
+
     else:
         raise Exception('Unknown compute system!')
 

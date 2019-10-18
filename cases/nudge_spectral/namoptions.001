@@ -1,8 +1,8 @@
 &RUN
 iexpnr     = 001
-lwarmstart = .true.
+lwarmstart = .false.
 startfile  = 'initdlatestmx000y000.001'
-runtime    = 3600
+runtime    = 120
 trestart   = 3600
 ladaptive  = .true.
 irandom    = 1
@@ -16,13 +16,13 @@ nprocy     = 2
 /
 
 &DOMAIN
-itot       = 8
-jtot       = 8
+itot       = 64
+jtot       = 64
 !itot       = 960
 !jtot       = 960
 kmax       = 128
-xsize      = 4000
-ysize      = 4000
+xsize      = 25600
+ysize      = 25600
 !xsize      = 240000
 !ysize      = 240000
 
@@ -131,14 +131,12 @@ tnudgefac = 10800
 
 &NAMNUDGEBOUNDARY
 lnudge_boundary = .true.
-lperturb_boundary = .true.
-lnudge_spectral = .true.
-
 nudge_offset = 2500
 nudge_width = 600
 nudge_radius = 3000
 nudge_tau = 5
 
+lperturb_boundary = .true.
 perturb_offset = 3500
 perturb_width = 600
 perturb_radius = 3000
@@ -148,5 +146,6 @@ perturb_ampl = 0.25
 
 dt_input_lbc = 3600
 
+lnudge_spectral = .true.
 dt_nudge_spectral=900
 /

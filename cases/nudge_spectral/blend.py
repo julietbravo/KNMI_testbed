@@ -123,71 +123,55 @@ if __name__ == '__main__':
     write_binary('{0}/inc{1:03d}h{2:02d}m'.format(path, hour, minute), u_diff, v_diff, thl_diff, qt_diff)
 
 
-    if False:
+
+    if True:
         #
         # Visualisation of blending / increment / ...
         #
 
         import matplotlib.pyplot as pl
         pl.close('all')
+        pl.ion()
 
-        k = 0
-    
-        pl.figure()
-        vmin=280
-        vmax=283
-    
-        ax=pl.subplot(221, aspect='equal')
-        pl.title('HARMONIE', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, thl_hrm[:,:,k].T, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
-    
-        pl.subplot(222, aspect='equal', sharex=ax, sharey=ax)
-        pl.title('LES', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, thl_les[:,:,k].T, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
-    
-        pl.subplot(223, aspect='equal', sharex=ax, sharey=ax)
-        pl.title('Blended', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, thl_blend[:,:,k].T, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
-    
-        pl.subplot(224, aspect='equal', sharex=ax, sharey=ax)
-        pl.title('Increment', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, thl_diff[:,:,k].T, vmin=-2, vmax=2, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
-    
-    
-        pl.figure()
-        vmin=3
-        vmax=8
-    
-        ax=pl.subplot(221, aspect='equal')
-        pl.title('HARMONIE', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, qt_hrm[:,:,k].T*1e3, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
-    
-        pl.subplot(222, aspect='equal', sharex=ax, sharey=ax)
-        pl.title('LES', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, qt_les[:,:,k].T*1e3, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
-    
-        pl.subplot(223, aspect='equal', sharex=ax, sharey=ax)
-        pl.title('Blended', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, qt_blend[:,:,k].T*1e3, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
-    
-        pl.subplot(224, aspect='equal', sharex=ax, sharey=ax)
-        pl.title('Increment', loc='left')
-        pl.pcolormesh(x/1e3, y/1e3, qt_diff[:,:,k].T*1e3, vmin=-3, vmax=3, cmap=pl.cm.RdBu_r)
-        pl.xlabel('x (km)')
-        pl.xlabel('y (km)')
 
+        def plot(label, hrm, les, blend, increment, k):
+
+            vmin = min(min(hrm[:,:,k].min(), les[:,:,k].min()), blend[:,:,k].min())
+            vmax = max(max(hrm[:,:,k].max(), les[:,:,k].max()), blend[:,:,k].max())
+
+            pl.figure()
+    
+            ax=pl.subplot(221, aspect='equal')
+            pl.title('{} HARMONIE'.format(label), loc='left')
+            pl.pcolormesh(x/1e3, y/1e3, hrm[:,:,k].T, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
+            pl.colorbar()
+            pl.xlabel('x (km)')
+            pl.xlabel('y (km)')
+    
+            pl.subplot(222, aspect='equal', sharex=ax, sharey=ax)
+            pl.title('{} LES'.format(label), loc='left')
+            pl.pcolormesh(x/1e3, y/1e3, les[:,:,k].T, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
+            pl.colorbar()
+            pl.xlabel('x (km)')
+            pl.xlabel('y (km)')
+    
+            pl.subplot(223, aspect='equal', sharex=ax, sharey=ax)
+            pl.title('{} blended'.format(label), loc='left')
+            pl.pcolormesh(x/1e3, y/1e3, blend[:,:,k].T, vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r)
+            pl.colorbar()
+            pl.xlabel('x (km)')
+            pl.xlabel('y (km)')
+    
+            pl.subplot(224, aspect='equal', sharex=ax, sharey=ax)
+            pl.title('{} increment'.format(label), loc='left')
+            pl.pcolormesh(x/1e3, y/1e3, increment[:,:,k].T, cmap=pl.cm.RdBu_r)
+            pl.colorbar()
+            pl.xlabel('x (km)')
+            pl.xlabel('y (km)')
+
+
+        plot('thl', thl_hrm, thl_les, thl_blend, thl_diff, k=0)
+        plot('qt',  qt_hrm,  qt_les,  qt_blend,  qt_diff,  k=0)
+        plot('u',   u_hrm,   u_les,   u_blend,   u_diff,   k=0)
+        plot('v',   v_hrm,   v_les,   v_blend,   v_diff,   k=0)
 
