@@ -9,7 +9,14 @@ import cartopy.feature as cfeature
 
 from spatial_tools import *
 
+from matplotlib import rc
+rc('text', usetex=True)
+rc('font', size=13)
+rc('legend', fontsize=11)
+rc('text.latex', preamble=r'\usepackage{sansmathfonts}')
+
 pl.close('all')
+pl.ion()
 
 def create_namelist(locations, sizes):
     """
@@ -49,18 +56,18 @@ def create_namelist(locations, sizes):
 
 def get_DOWA_domains():
     # Pretty much hardcoded for the specific DOWA setup...................
-    domains = [dict(name='FINO1',        lat=54.01, lon=6.59, c='C1', a=0.9, ls='solid'),
-               dict(name='Goeree',       lat=51.93, lon=3.67, c='C2', a=0.9, ls='solid'),
-               dict(name='Europlatform', lat=52.00, lon=3.27, c='C3', a=0.9, ls='solid'),
-               dict(name='K13',          lat=53.22, lon=3.22, c='C4', a=0.9, ls='solid'),
-               dict(name='HKZ',          lat=52.30, lon=4.10, c='C5', a=0.9, ls='solid'),
-               dict(name='P11B',         lat=52.36, lon=3.34, c='C6', a=0.9, ls='solid'),
-               dict(name='F3-FB-1',      lat=54.85, lon=4.70, c='C7', a=0.9, ls='solid'),
-               dict(name='Cabauw',       lat=51.97, lon=4.90, c='C1', a=0.5, ls='dotted'),
-               dict(name='Loobos',       lat=52.17, lon=5.74, c='C2', a=0.5, ls='dotted'),
-               dict(name='Lutjewad',     lat=53.40, lon=6.35, c='C3', a=0.5, ls='dotted'),
-               dict(name='Schiphol',     lat=52.31, lon=4.76, c='C4', a=0.5, ls='dotted'),
-               dict(name='Rotterdam',    lat=51.91, lon=4.47, c='C5', a=0.5, ls='dotted')]
+    domains = [dict(name='FINO1',        lat=54.01, lon=6.59, c=pl.cm.Paired( 0), a=0.9, ls='solid'),
+               dict(name='Goeree',       lat=51.93, lon=3.67, c=pl.cm.Paired( 1), a=0.9, ls='solid'),
+               dict(name='Europlatform', lat=52.00, lon=3.27, c=pl.cm.Paired( 2), a=0.9, ls='solid'),
+               dict(name='K13',          lat=53.22, lon=3.22, c=pl.cm.Paired( 3), a=0.9, ls='solid'),
+               dict(name='HKZ',          lat=52.30, lon=4.10, c=pl.cm.Paired( 4), a=0.9, ls='solid'),
+               dict(name='P11B',         lat=52.36, lon=3.34, c=pl.cm.Paired( 5), a=0.9, ls='solid'),
+               dict(name='F3-FB-1',      lat=54.85, lon=4.70, c=pl.cm.Paired( 6), a=0.9, ls='solid'),
+               dict(name='Cabauw',       lat=51.97, lon=4.90, c=pl.cm.Paired( 7), a=0.9, ls='dotted'),
+               dict(name='Loobos',       lat=52.17, lon=5.74, c=pl.cm.Paired( 8), a=0.9, ls='dotted'),
+               dict(name='Lutjewad',     lat=53.40, lon=6.35, c=pl.cm.Paired( 9), a=0.9, ls='dotted'),
+               dict(name='Schiphol',     lat=52.31, lon=4.76, c=pl.cm.Paired(10), a=0.9, ls='dotted'),
+               dict(name='Rotterdam',    lat=51.91, lon=4.47, c=pl.cm.Paired(11), a=0.9, ls='dotted')]
 
     sizes = [-1, 10000, 30000]
 
@@ -130,13 +137,18 @@ def plot_locations(locations, size):
         diff_lon = np.abs(dlon(size/2, loc['lat']))
         diff_lat = np.abs(dlat(size/2))
 
-        label='{} ({}N, {}E)'.format(loc['name'], loc['lat'], loc['lon'])
+        #label='{} ({}N, {}E)'.format(loc['name'], loc['lat'], loc['lon'])
+        label='{}'.format(loc['name'])
 
         ax.add_patch(mpatches.Rectangle(xy=[loc['lon']-diff_lon, loc['lat']-diff_lat],
                                         width=2*diff_lon, height=2*diff_lat, ls=loc['ls'],
                                         edgecolor=loc['c'], facecolor=loc['c'], alpha=loc['a'],
                                         transform=ccrs.PlateCarree(), label=label))
     pl.legend(fontsize=9, loc='upper left')
+
+    # Remove frame around map
+    ax.outline_patch.set_visible(False)
+    pl.tight_layout()
 
 
 
@@ -153,6 +165,6 @@ if __name__ == '__main__':
         # Create Harmonie namelist
         create_namelist(domains, sizes)
 
-    if (False):
+    if (True):
         # Plot domains on map
-        plot_domains(domains, 30000)
+        plot_locations(domains, 30000)

@@ -123,7 +123,6 @@ if __name__ == '__main__':
     write_binary('{0}/inc{1:03d}h{2:02d}m'.format(path, hour, minute), u_diff, v_diff, thl_diff, qt_diff)
 
 
-
     if False:
         #
         # Visualisation of blending / increment / ...
