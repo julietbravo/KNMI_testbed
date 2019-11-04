@@ -249,8 +249,8 @@ if __name__ == '__main__':
     start_hour = 0
 
     # ---- Macbook ----
-    LES_path1  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_ref'
-    LES_path2  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_LS2D'
+    LES_path1  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_ref_lr'
+    LES_path2  = '/Users/bart/meteo/data/KNMI_testbed/cabauw_20160804_20160818_LS2D_lr'
 
     CB_path   = '/Users/bart/meteo/observations/Cabauw'
     HM_path   = '/Users/bart/meteo/data/Harmonie_LES_forcing'
@@ -366,7 +366,7 @@ if __name__ == '__main__':
     # Comparison LES - Cabauw
     #
     # --------------------------------
-    if False:
+    if True:
 
         #
         # Sync observastion and LES times in Pandas dataframe
