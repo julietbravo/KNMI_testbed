@@ -1,0 +1,49 @@
+#!/bin/ksh
+#PBS -S /usr/bin/ksh
+#PBS -q ns
+#PBS -N PS001_0
+#PBS -m a
+#PBS -l walltime=24:00:00
+
+module load python3
+
+cd /scratch/ms/nl/nkbs/DALES/nudge_boundary_HARMONIE_20180907
+
+python3 mergecross.py crossxy.0001 thl 1 --skip 50 &
+python3 mergecross.py crossxy.0042 thl 1 --skip 50 &
+python3 mergecross.py crossxy.0089 thl 1 --skip 50 &
+python3 mergecross.py crossxy.0111 thl 1 --skip 50 &
+
+python3 mergecross.py crossxy.0001 qt 1 --skip 50 &
+python3 mergecross.py crossxy.0042 qt 1 --skip 50 &
+python3 mergecross.py crossxy.0089 qt 1 --skip 50 &
+python3 mergecross.py crossxy.0111 qt 1 --skip 50 &
+
+#python3 mergecross.py crossxy lwp 1 &
+#python3 mergecross.py crossxy rwp 1 &
+#
+#python3 mergecross.py crossxy.0001 u 1 &
+#python3 mergecross.py crossxy.0001 v 1 &
+#
+#python3 mergecross.py crossxy.0004 u 1 &
+#python3 mergecross.py crossxy.0004 v 1 &
+#
+#python3 mergecross.py crossxy.0015 u 1 &
+#python3 mergecross.py crossxy.0015 v 1 &
+#
+#python3 mergecross.py crossxy.0026 u 1 &
+#python3 mergecross.py crossxy.0026 v 1 &
+#
+#python3 mergecross.py crossxy.0042 u 1 &
+#python3 mergecross.py crossxy.0042 v 1 &
+#
+#python3 mergecross.py crossxy.0066 u 1 &
+#python3 mergecross.py crossxy.0066 v 1 &
+#
+#python3 mergecross.py crossxy.0089 u 1 &
+#python3 mergecross.py crossxy.0089 v 1 &
+#
+#python3 mergecross.py crossxy.0111 u 1 &
+#python3 mergecross.py crossxy.0111 v 1 &
+
+wait
