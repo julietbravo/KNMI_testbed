@@ -26,7 +26,7 @@ threehours = timedelta(hours=3)
 oneday = timedelta(hours=24)
 
 class Read_LES:
-    def __init__(self, nc_path, start_date, start_hour):
+    def __init__(self, nc_path, column_i, column_j, start_date, start_hour):
         print('Reading LES for {}'.format(start_date))
 
         date_str  = '{0:04d}{1:02d}{2:02d}'.format(start_date.year, start_date.month, start_date.day)
@@ -38,7 +38,7 @@ class Read_LES:
         exner = (self.fp['presh'] / 1e5)**(287.05/1004.)
 
         # Column sampled and averaged statistics
-        self.fc   = xr.open_dataset('{}/column.i00097j00097_{}.nc'.format(nc_path, date_str))
+        self.fc   = xr.open_dataset('{0}/column.i{1:05d}j{2:05d}_{3}.nc'.format(nc_path, column_i, column_j, date_str))
         self.fc['Qnet'] = (('time'), -(self.fc['swd'][:,0] + self.fc['swu'][:,0] + self.fc['lwd'][:,0] + self.fc['lwu'][:,0]))
         self.fc['T'] = (self.fc['thl'] + (2.45e6 / 1004.) * self.fc['ql'])*exner
 
@@ -54,11 +54,11 @@ class Read_LES:
         self.ft['cfrac'] = self.ft['cfrac'].fillna(0)
 
 
-def read_all(start, end, start_hour, LES_path):
+def read_all(start, end, start_hour, LES_path, column_i, column_j):
     runs = []
     date  = start
     while date < end:
-        l = Read_LES(LES_path, date, start_hour)
+        l = Read_LES(LES_path, column_i, column_j, date, start_hour)
         l.fp['rainrate'] /= (l.fp['rhof']*2.45e6)
         runs.append(l)
         date += timedelta(hours=24)
@@ -141,8 +141,16 @@ def lim_and_line2(v1, v2, round_lims=True):
     pl.plot([vmin,vmax], [vmin,vmax], 'k:', linewidth=1)
     pl.plot([vmin,vmax], [0,0], 'k:', linewidth=1)
     pl.plot([0,0], [vmin,vmax], 'k:', linewidth=1)
-    ax.set_xlim(vmin, vmax)
-    ax.set_ylim(vmin, vmax)
+
+    # Aarghh
+    for i in range(2):
+        ticks = ax.get_yticks()
+        ax.set_xticks(ticks)
+
+        ax.set_xlim(vmin, vmax)
+        ax.set_ylim(vmin, vmax)
+
+
 
 
 def format_ax():
@@ -151,10 +159,13 @@ def format_ax():
     """
 
     ax = pl.gca()
-    h24 = mdates.HourLocator(interval=48)
+    h24 = mdates.HourLocator(interval=24)
+    h48 = mdates.HourLocator(interval=48)
     fmt = mdates.DateFormatter('%d-%m')
-    ax.xaxis.set_major_locator(h24)
+    ax.xaxis.set_minor_locator(h24)
+    ax.xaxis.set_major_locator(h48)
     ax.xaxis.set_major_formatter(fmt)
+    ax.grid(which='both', axis='x')
 
 
 class Stats:
@@ -169,15 +180,16 @@ class Stats:
         self.slope, self.intercept, self.rvalue, self.pvalue, self.stderr = stats.linregress(obs, model)
 
 
-def scatter_stat(obs, model, label, xlabel, ylabel):
+def scatter_stat(obs, model, label, xlabel, ylabel, rasterized=False):
     """
     Scatter plot of `model` vs `obs`
     """
 
-    pl.scatter(obs, model, s=1, color=c2)
+    pl.scatter(obs, model, s=1, color=c2, rasterized=rasterized)
     lim_and_line2(obs, model)
     pl.xlabel(xlabel)
     pl.ylabel(ylabel)
+
 
 
 def pretty_align(label, names, values):
@@ -290,8 +302,9 @@ if __name__ == '__main__':
     # Read the LES data
     #
     if 'runs1' not in locals():
-        runs1 = read_all(start, end, start_hour, LES_path1)  # Harmonie -> LES
-        runs2 = read_all(start, end, start_hour, LES_path2)  # ERA5 -> LES
+        runs1 = read_all(start, end, start_hour, LES_path1, 97, 97)  # Harmonie -> LES
+        #runs1 = read_all(start, end, start_hour, LES_path1, 161, 161)  # Harmonie -> LES
+        runs2 = read_all(start, end, start_hour, LES_path2, 97, 97)  # ERA5 -> LES
 
     #
     # Read HARMONIE data
@@ -414,26 +427,28 @@ if __name__ == '__main__':
                 T     = (r.fc['thl'] + (2.45e6 / 1004.) * r.fc['ql']) * exner
                 r.fc['T'] = T
 
-                data = { 'LE_LES2':   r.fc['LE'],
-                         'H_LES2':    r.fc['H'],
-                         'G_LES2':    r.fc['G'],
-                         'Qn_LES2':   r.fc['Qnet'],
-                         'swd_LES2':  r.fc['swd'][:,0],
-                         'swu_LES2':  r.fc['swu'][:,0],
-                         'lwd_LES2':  r.fc['lwd'][:,0],
-                         'lwu_LES2':  r.fc['lwu'][:,0],
-                         'cc_LES2':   r.ft['cfrac'],
-                         'rr_LES2':   r.fc['rainrate'][:,0]*r.fp.rhobh[:,0],
-                         'lwp_LES2':  r.fc['lwp'],
-                         'U010_LES2': absval(interp_z(r.fc['u'], r.fc['zt'], 10),  interp_z(r.fc['v'], r.fc['zt'], 10)),
-                         'U200_LES2': absval(interp_z(r.fc['u'], r.fc['zt'], 200), interp_z(r.fc['v'], r.fc['zt'], 200)),
-                         'T010_LES2': interp_z(r.fc['T'],  r.fc['zt'], 10),
-                         'T200_LES2': interp_z(r.fc['T'],  r.fc['zt'], 200),
-                         'q010_LES2': interp_z(r.fc['qt'], r.fc['zt'], 10),
-                         'q200_LES2': interp_z(r.fc['qt'], r.fc['zt'], 200)
+                t0=1    # Remove first output time LES -> bug RRTMG
+
+                data = { 'LE_LES2':   r.fc['LE'][t0:],
+                         'H_LES2':    r.fc['H'][t0:],
+                         'G_LES2':    r.fc['G'][t0:],
+                         'Qn_LES2':   r.fc['Qnet'][t0:],
+                         'swd_LES2':  r.fc['swd'][t0:,0],
+                         'swu_LES2':  r.fc['swu'][t0:,0],
+                         'lwd_LES2':  r.fc['lwd'][t0:,0],
+                         'lwu_LES2':  r.fc['lwu'][t0:,0],
+                         'cc_LES2':   r.ft['cfrac'][t0:],
+                         'rr_LES2':   r.fc['rainrate'][t0:,0]*r.fp.rhobh[t0:,0],
+                         'lwp_LES2':  r.fc['lwp'][t0:],
+                         'U010_LES2': absval(interp_z(r.fc['u'][t0:], r.fc['zt'], 10),  interp_z(r.fc['v'][t0:], r.fc['zt'], 10)),
+                         'U200_LES2': absval(interp_z(r.fc['u'][t0:], r.fc['zt'], 200), interp_z(r.fc['v'][t0:], r.fc['zt'], 200)),
+                         'T010_LES2': interp_z(r.fc['T'][t0:],  r.fc['zt'], 10),
+                         'T200_LES2': interp_z(r.fc['T'][t0:],  r.fc['zt'], 200),
+                         'q010_LES2': interp_z(r.fc['qt'][t0:], r.fc['zt'], 10),
+                         'q200_LES2': interp_z(r.fc['qt'][t0:], r.fc['zt'], 200)
                        }
 
-                dfs.append( pd.DataFrame(data, index=r.time) )
+                dfs.append( pd.DataFrame(data, index=r.time[t0:]) )
             df_LES2 = pd.concat(dfs)
 
             # Put Cabauw observations in DataFrame
@@ -477,19 +492,18 @@ if __name__ == '__main__':
             df['is_night'] = df['swd_theory'] < 0.1
 
 
-        def add_stat(obs, model, x, unit):
-            ax=pl.gca()
-            y_min, y_max = ax.get_ylim()
+        def add_stat(label, obs, model, x, unit):
             s = Stats(obs, model)
-            y = y_min + 0.9*(y_max - y_min)
-            pl.text(x, y, 'RMSE={0:.1f} {2:}, ME={1:.1f} {2:}'.format(s.rmse, s.diff, unit), fontsize=10)
+            pl.title('{0}) RMSE={1:.1f} {3:}, ME={2:.1f} {3:}'.format(label, s.rmse, s.diff, unit), loc='left', fontsize=10)
 
 
         figsize2 = (8,5)
         figsize4 = (8,8)
         ratio = (2.5,1)
+        raster = True
+        ms = 1
 
-        if False: 
+        if True: 
             #
             # Wind 
             #
@@ -498,34 +512,36 @@ if __name__ == '__main__':
             gs = gridspec.GridSpec(2, 2, width_ratios=ratio)
 
             ax=pl.subplot(gs[0,0])
-            pl.plot(df.index, df['U010_CB'], 'o', mec=c2, mfc=c2, ms=2, alpha=1)
+            pl.plot(df.index, df['U010_CB'], 'o', mec=c2, mfc=c2, ms=ms, alpha=1, rasterized=raster)
             pl.plot(df.index, df['U010_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
-            pl.ylim(0,18)
-            add_stat(df['U010_CB'], df['U010_LES1'], df.index[50], r'm s$^{-1}$')
+            pl.ylim(0,17)
+            add_stat('a', df['U010_CB'], df['U010_LES1'], df.index[50], r'm s$^{-1}$')
             pl.ylabel(r'$U_\mathrm{10m}$ (m s$^{-1}$)')
             format_ax()
             
             ax=pl.subplot(gs[1,0])
-            pl.plot(df.index, df['U200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['U200_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['U200_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
-            pl.ylim(0,18)
-            add_stat(df['U200_CB'], df['U200_LES1'], df.index[50], r'm s$^{-1}$')
+            pl.ylim(0,17)
+            add_stat('c', df['U200_CB'], df['U200_LES1'], df.index[50], r'm s$^{-1}$')
             pl.ylabel(r'$U_\mathrm{200m}$ (m s$^{-1}$)')
             format_ax()
 
             pl.subplot(gs[0,1])
-            scatter_stat(df['U010_CB'], df['U010_LES1'], 'U_10m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
+            pl.title('b)', loc='left', fontsize=10)
+            scatter_stat(df['U010_CB'], df['U010_LES1'], 'U_10m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)', rasterized=raster)
 
             pl.subplot(gs[1,1])
-            scatter_stat(df['U200_CB'], df['U200_LES1'], 'U_200m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)')
+            pl.title('d)', loc='left', fontsize=10)
+            scatter_stat(df['U200_CB'], df['U200_LES1'], 'U_200m (m/s)', r'OBS (m s$^{-1}$)', r'LES (m s$^{-1}$)', rasterized=raster)
 
             pl.tight_layout()
             pl.savefig('{}/wind_tser_scatter.pdf'.format(fig_path))
 
 
-        if False:
+        if True:
             #
             # Temperature
             #
@@ -534,32 +550,35 @@ if __name__ == '__main__':
             gs = gridspec.GridSpec(2, 2, width_ratios=ratio)
 
             ax=pl.subplot(gs[0,0])
-            pl.plot(df.index, df['T010_CB'], 'o', mec=c2, mfc=c2, ms=2)
-            pl.plot(df.index, df['T010_LES1'], '-', color=c1, linewidth=lw)
+            pl.plot(df.index, df['T010_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster, label='LES')
+            pl.plot(df.index, df['T010_LES1'], '-', color=c1, linewidth=lw, label='OBS')
             pl.xlim(start, end)
             pl.ylabel(r'T$_\mathrm{10m}$ (K)')
-            add_stat(df['T010_CB'], df['T010_LES1'], df.index[50], r'K')
+            add_stat('a', df['T010_CB'], df['T010_LES1'], df.index[50], r'K')
             format_ax()
+            pl.legend()
 
             ax=pl.subplot(gs[1,0])
-            pl.plot(df.index, df['T200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['T200_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['T200_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
             pl.ylabel(r'T$_\mathrm{200m}$ (K)')
-            add_stat(df['T200_CB'], df['T200_LES1'], df.index[50], r'K')
+            add_stat('c', df['T200_CB'], df['T200_LES1'], df.index[50], r'K')
             format_ax()
 
             pl.subplot(gs[0,1])
-            scatter_stat(df['T010_CB'], df['T010_LES1'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
+            pl.title('b)', loc='left', fontsize=10)
+            scatter_stat(df['T010_CB'], df['T010_LES1'], 'T_10m (K)', r'OBS (K)', r'LES (K)', rasterized=raster)
 
             pl.subplot(gs[1,1])
-            scatter_stat(df['T200_CB'], df['T200_LES1'], 'T_10m (K)', r'OBS (K)', r'LES (K)')
+            pl.title('d)', loc='left', fontsize=10)
+            scatter_stat(df['T200_CB'], df['T200_LES1'], 'T_10m (K)', r'OBS (K)', r'LES (K)', rasterized=raster)
 
             pl.tight_layout()
             pl.savefig('{}/temperature_tser_scatter.pdf'.format(fig_path))
 
 
-        if False:
+        if True:
             #
             # Specific humidity
             #
@@ -568,32 +587,34 @@ if __name__ == '__main__':
             gs = gridspec.GridSpec(2, 2, width_ratios=ratio)
 
             ax=pl.subplot(gs[0,0])
-            pl.plot(df.index, df['q010_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['q010_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['q010_LES1']*1000, '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
             pl.ylabel(r'q$_\mathrm{10m}$ (g kg$^{-1}$)')
-            add_stat(df['q010_CB'], df['q010_LES1']*1000, df.index[50], r'g kg$^{-1}$')
+            add_stat('a', df['q010_CB'], df['q010_LES1']*1000, df.index[50], r'g kg$^{-1}$')
             format_ax()
 
             ax=pl.subplot(gs[1,0])
-            pl.plot(df.index, df['q200_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['q200_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['q200_LES1']*1000, '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
             pl.ylabel(r'q$_\mathrm{200m}$ (g kg$^{-1}$)')
-            add_stat(df['q200_CB'], df['q200_LES1']*1000, df.index[50], r'g kg$^{-1}$')
+            add_stat('c', df['q200_CB'], df['q200_LES1']*1000, df.index[50], r'g kg$^{-1}$')
             format_ax()
 
             pl.subplot(gs[0,1])
-            scatter_stat(df['q010_CB'], df['q010_LES1']*1000, 'q_10m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
+            pl.title('b)', loc='left', fontsize=10)
+            scatter_stat(df['q010_CB'], df['q010_LES1']*1000, 'q_10m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)', rasterized=raster)
 
             pl.subplot(gs[1,1])
-            scatter_stat(df['q200_CB'], df['q200_LES1']*1000, 'q_200m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)')
+            pl.title('d)', loc='left', fontsize=10)
+            scatter_stat(df['q200_CB'], df['q200_LES1']*1000, 'q_200m (g/kg)', r'OBS (g kg$^{-1}$)', r'LES (g kg$^{-1}$)', rasterized=raster)
 
             pl.tight_layout()
             pl.savefig('{}/spechum_tser_scatter.pdf'.format(fig_path))
 
 
-        if False:
+        if True:
             #
             # Surface fluxes
             #
@@ -602,49 +623,53 @@ if __name__ == '__main__':
             gs = gridspec.GridSpec(4, 2, width_ratios=ratio)
 
             ax=pl.subplot(gs[0,0])
-            pl.plot(df.index, df['H_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['H_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['H_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
             pl.ylabel(r'H (W m$^{-2}$')
-            add_stat(df['H_CB'], df['H_LES1'], df.index[50], r'W m$^{-2}$')
+            add_stat('a', df['H_CB'], df['H_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             pl.subplot(gs[1,0], sharex=ax)
-            pl.plot(df.index, df['LE_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['LE_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['LE_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
             pl.ylabel(r'LE (W m$^{-2}$')
-            add_stat(df['LE_CB'], df['LE_LES1'], df.index[50], r'W m$^{-2}$')
+            add_stat('c', df['LE_CB'], df['LE_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             pl.subplot(gs[2,0], sharex=ax)
-            pl.plot(df.index, df['G_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['G_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['G_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
             pl.ylabel(r'G (W m$^{-2}$')
-            add_stat(df['G_CB'], df['G_LES1'], df.index[50], r'W m$^{-2}$')
+            add_stat('e', df['G_CB'], df['G_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             pl.subplot(gs[3,0], sharex=ax)
-            pl.plot(df.index, df['Qn_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['Qn_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['Qn_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
             pl.ylabel(r'Q$_\mathrm{net}$ (W m$^{-2}$')
-            add_stat(df['Qn_CB'], df['Qn_LES1'], df.index[50], r'W m$^{-2}$')
+            add_stat('g', df['Qn_CB'], df['Qn_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             # Scatter plots
             pl.subplot(gs[0,1])
-            scatter_stat(df['H_CB'], df['H_LES1'], 'H (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('b)', loc='left', fontsize=10)
+            scatter_stat(df['H_CB'], df['H_LES1'], 'H (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.subplot(gs[1,1])
-            scatter_stat(df['LE_CB'], df['LE_LES1'], 'LE (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('d)', loc='left', fontsize=10)
+            scatter_stat(df['LE_CB'], df['LE_LES1'], 'LE (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.subplot(gs[2,1])
-            scatter_stat(df['G_CB'], df['G_LES1'], 'G (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('f)', loc='left', fontsize=10)
+            scatter_stat(df['G_CB'], df['G_LES1'], 'G (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.subplot(gs[3,1])
-            scatter_stat(df['Qn_CB'], df['Qn_LES1'], 'Qnet (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('h)', loc='left', fontsize=10)
+            scatter_stat(df['Qn_CB'], df['Qn_LES1'], 'Qnet (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.tight_layout()
             pl.savefig('{}/surface_flux_tser_scatter.pdf'.format(fig_path))
@@ -660,49 +685,53 @@ if __name__ == '__main__':
             gs = gridspec.GridSpec(4, 2, width_ratios=ratio)
 
             ax=pl.subplot(gs[0,0])
-            pl.plot(df.index, -df['swd_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, -df['swd_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['swd_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
-            pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$')
-            pl.ylim(-1000,200)
-            add_stat(-df['swd_CB'], df['swd_LES1'], df.index[50], r'W m$^{-2}$')
+            pl.ylabel(r'$SW_\mathrm{down}$ (W m$^{-2}$)')
+            pl.ylim(-1000,20)
+            add_stat('a', -df['swd_CB'], df['swd_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             pl.subplot(gs[1,0], sharex=ax)
-            pl.plot(df.index, df['swu_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['swu_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['swu_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
-            pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$')
-            add_stat(df['swu_CB'], df['swu_LES1'], df.index[50], r'W m$^{-2}$')
+            pl.ylabel(r'$SW_\mathrm{up}$ (W m$^{-2}$)')
+            add_stat('c', df['swu_CB'], df['swu_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             pl.subplot(gs[2,0], sharex=ax)
-            pl.plot(df.index, -df['lwd_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, -df['lwd_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['lwd_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
-            pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$')
-            add_stat(-df['lwd_CB'], df['lwd_LES1'], df.index[50], r'W m$^{-2}$')
+            pl.ylabel(r'$LW_\mathrm{down}$ (W m$^{-2}$)')
+            add_stat('e', -df['lwd_CB'], df['lwd_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             pl.subplot(gs[3,0], sharex=ax)
-            pl.plot(df.index, df['lwu_CB'], 'o', mec=c2, mfc=c2, ms=2)
+            pl.plot(df.index, df['lwu_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
             pl.plot(df.index, df['lwu_LES1'], '-', color=c1, linewidth=lw)
             pl.xlim(start, end)
-            pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$')
-            add_stat(df['lwu_CB'], df['lwu_LES1'], df.index[50], r'W m$^{-2}$')
+            pl.ylabel(r'$LW_\mathrm{up}$ (W m$^{-2}$)')
+            add_stat('g', df['lwu_CB'], df['lwu_LES1'], df.index[50], r'W m$^{-2}$')
             format_ax()
 
             pl.subplot(gs[0,1])
-            scatter_stat(-df['swd_CB'], df['swd_LES1'], 'SWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('b)', loc='left', fontsize=10)
+            scatter_stat(-df['swd_CB'], df['swd_LES1'], 'SWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.subplot(gs[1,1])
-            scatter_stat(df['swu_CB'], df['swu_LES1'], 'SWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('d)', loc='left', fontsize=10)
+            scatter_stat(df['swu_CB'], df['swu_LES1'], 'SWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.subplot(gs[2,1])
-            scatter_stat(-df['lwd_CB'], df['lwd_LES1'], 'LWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('f)', loc='left', fontsize=10)
+            scatter_stat(-df['lwd_CB'], df['lwd_LES1'], 'LWdown (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.subplot(gs[3,1])
-            scatter_stat(df['lwu_CB'], df['lwu_LES1'], 'LWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)')
+            pl.title('h)', loc='left', fontsize=10)
+            scatter_stat(df['lwu_CB'], df['lwu_LES1'], 'LWup (W/m2)', r'OBS (W m$^{-2}$)', r'LES (W m$^{-2}$)', rasterized=raster)
 
             pl.tight_layout()
             pl.savefig('{}/radiation_tser_scatter.pdf'.format(fig_path))
@@ -718,31 +747,31 @@ if __name__ == '__main__':
             gs = gridspec.GridSpec(2, 2, width_ratios=[3.8,1])
 
             ax=pl.subplot(gs[0,0])
-            for i,r in enumerate(runs1):
-                pl.plot(r.time, r.ft.cfrac, '-', color=c1)
-            pl.plot(cb_ns.time.values, cb_ns.cldcover_total/100., 'o', mfc=c2, mec=c2, ms=2)
+            pl.plot(df.index, df['cc_CB'], 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
+            pl.plot(df.index, df['cc_LES1'], '-', color=c1, linewidth=lw)
+            pl.plot(cb_ns.time.values, cb_ns.cldcover_total/100., 'o', mfc=c2, mec=c2, ms=ms)
             pl.plot([start, end], [0,0], 'k:')
             pl.xlim(start, end)
-            pl.ylim(0,1)
+            pl.ylim(-0.01,1.01)
             pl.ylabel(r'$cc$ (-)')
 
             pl.subplot(gs[1,0], sharex=ax)
-            for i,r in enumerate(runs1):
-                pl.plot(r.time, r.fc.rainrate[:,0]*r.fp.rhobh[:,0]*3600, '-', color=c1)
-            pl.plot(cb_sm.time.values, cb_sm.RAIN*6, 'o', mfc=c2, mec=c2, ms=2)
+            pl.plot(df.index, df['rr_CB']*6, 'o', mec=c2, mfc=c2, ms=ms, rasterized=raster)
+            pl.plot(df.index, df['rr_LES1']*3600, '-', color=c1, linewidth=lw)
+            pl.plot(cb_sm.time.values, cb_sm.RAIN*6, 'o', mfc=c2, mec=c2, ms=ms)
             pl.plot([start, end], [0,0], 'k:')
             pl.xlim(start, end)
-            pl.ylim(0,1)
+            pl.ylim(0,2.5)
             pl.ylabel(r'$rr$ (mm h$^{-1}$)')
 
             ax=pl.subplot(gs[0,1])
-            pl.scatter(df['cc_CB'], df['cc_LES'], s=1, color=c2)
-            lim_and_line2(df['cc_CB'], df['cc_LES'])
+            pl.scatter(df['cc_CB'], df['cc_LES1'], s=1, color=c2)
+            lim_and_line2(df['cc_CB'], df['cc_LES1'])
             pl.xlabel(r'OBS (-)')
             pl.ylabel(r'LES (-)')
 
             ax=pl.subplot(gs[1,1])
-            pl.scatter(df['rr_CB']*6, df['rr_LES']*3600, s=1, color=c2)
+            pl.scatter(df['rr_CB']*6, df['rr_LES1']*3600, s=1, color=c2)
             lim_and_line(0,2)
             pl.xlabel(r'OBS (mm h$^{-1}$)')
             pl.ylabel(r'LES (mm h$^{-1}$)')
@@ -768,7 +797,7 @@ if __name__ == '__main__':
 
 
 
-    if True:
+    if False:
 
         # --------------------------------
         #
