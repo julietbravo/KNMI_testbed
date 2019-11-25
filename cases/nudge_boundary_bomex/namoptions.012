@@ -1,9 +1,10 @@
 !
 ! Modified BOMEX case, with boundary nudging
+! Like 004, but with perturbations in block sizes of 10
 !
 
 &RUN
-iexpnr     = 002
+iexpnr = 12
 lwarmstart = .false.
 startfile  = 'initd001h00mx000y000.001'
 runtime    = 43200
@@ -13,8 +14,8 @@ irandom    = 1
 randthl    = 0.1
 randqt     = 2.5e-5
 nsv        = 0
-nprocx     = 24
-nprocy     = 6
+nprocx     = 6
+nprocy     = 12
 /
 
 &DOMAIN
@@ -105,6 +106,11 @@ dtav = 60
 ltend = .false.
 /
 
+&NAMNETCDFSTATS
+lnetcdf = .true.
+lsync = .true.
+/
+
 &NAMNUDGE
 lnudge = .true.
 tnudgefac = 10800
@@ -116,4 +122,18 @@ nudge_offset = 500
 nudge_width = 125
 tau = 10
 nudge_mode = 2
+
+lperturb_boundary = .true.
+perturb_offset = 1000
+perturb_width = 125
+perturb_ampl = 0.25
+blocksize = 10
+zmax_perturb = 600      ! 600 m ~ cloudbase
+
+lrecycle=.true.
+recycle_source=170
+recycle_target=32
+recycle_width=20
+tau_recycle=10
+zmax_recycle=2000
 /

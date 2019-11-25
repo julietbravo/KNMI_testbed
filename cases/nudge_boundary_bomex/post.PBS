@@ -1,0 +1,40 @@
+#!/bin/ksh
+#PBS -S /usr/bin/ksh
+#PBS -q ns
+#PBS -N P001_1
+#PBS -m a
+#PBS -l walltime=04:00:00
+
+module load python
+
+cd /scratch/ms/nl/nkbs/DALES/nudge_boundary_bomex/013
+
+itot=1200
+jtot=240
+ktot=75
+
+nprocx=6
+nprocy=12
+
+exp=13
+
+python mergecross.py crossxy lwp $exp $nprocx $nprocy $itot $jtot $ktot &
+
+python mergecross.py crossxzspan u2r   $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxzspan w2r   $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxzspan thl2r $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxzspan qt2r  $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxzspan ql    $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxzspan w     $exp $nprocx $nprocy $itot $jtot $ktot &
+
+python mergecross.py crossxy.0002 u   $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxy.0002 w   $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxy.0002 thl $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxy.0002 qt  $exp $nprocx $nprocy $itot $jtot $ktot &
+
+python mergecross.py crossxy.0007 u   $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxy.0007 w   $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxy.0007 thl $exp $nprocx $nprocy $itot $jtot $ktot &
+python mergecross.py crossxy.0007 qt  $exp $nprocx $nprocy $itot $jtot $ktot &
+
+wait

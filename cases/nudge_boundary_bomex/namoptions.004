@@ -113,12 +113,15 @@ tnudgefac = 10800
 
 &NAMNUDGEBOUNDARY
 lnudge_boundary = .true.
-nudge_offset = 1000
-nudge_width = 250
+nudge_offset = 500
+nudge_width = 125
 tau = 10
 nudge_mode = 2
+
 lperturb_boundary = .true.
-perturb_ampl = 0.5
+perturb_offset = 1000
+perturb_width = 125
+perturb_ampl = 0.1
 blocksize = 10
 zmax_perturb = 600      ! 600 m ~ cloudbase
 /
