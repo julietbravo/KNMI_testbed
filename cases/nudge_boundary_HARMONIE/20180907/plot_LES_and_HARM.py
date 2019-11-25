@@ -6,6 +6,7 @@ from numba import jit
 
 # Custom code
 from hybrid_sigma_grid import Sigma_grid
+import tick_labels as tl
 
 import cartopy
 import cartopy.crs as ccrs
@@ -57,6 +58,30 @@ def setup_map(mask_land=False, ccolor='k', extent=[-0.5, 7, 53.0, 57.5], subplot
     return ax
 
 
+def add_labels(gridlines=True, xlabels=True, ylabels=True):
+    fig = pl.gcf()
+    ax  = pl.gca()
+
+    # *must* call draw in order to get the axis boundary used to add ticks:
+    fig.canvas.draw()
+
+    # Define gridline locations and draw the lines using cartopy's built-in gridliner:
+    xticks = np.arange(-5, 11, 2)
+    yticks = np.arange(49, 65, 2)
+    if gridlines:
+        ax.gridlines(xlocs=xticks, ylocs=yticks, linestyle=':', color='0.3')
+
+    # Label the end-points of the gridlines using the custom tick makers:
+    if xlabels:
+        ax.xaxis.set_major_formatter(LONGITUDE_FORMATTER)
+        tl.lambert_xticks(ax, list(xticks))
+    
+    if ylabels:
+        ax.yaxis.set_major_formatter(LATITUDE_FORMATTER)
+        tl.lambert_yticks(ax, list(yticks))
+
+
+
 def calc_abs(a,b):
     return np.sqrt(a**2 + b**2)
 
@@ -100,13 +125,18 @@ def interp_z(fld_out, fld_in, z, zg, itot, jtot, ktot):
             # Extrapolate if requested height is below first grid level
             if k0 == -1:
                 k0 = 0
+            k1 = k0+1
 
-            # Interpolation factor, and interpolation
-            f0 = (z[k,j,i] - zg) / (z[k+1,j,i] - z[k,j,i])
-            fld_out[j,i] = f0 * fld_in[k0,j,i] + (1.-f0) * fld_in[k0+1,j,i]
-                
+            # Interpolation factors
+            f0 = (z[k1,j,i] - zg) / (z[k1,j,i] - z[k0,j,i])
+            f1 = 1.-f0
+            
+            # Interpolate!
+            fld_out[j,i] = f0*fld_in[k0,j,i] + f1*fld_in[k1,j,i]
 
-
+def albedo(lwp):
+    tau = 0.19 * lwp**(5./6.) * 300e6**(1./3.)
+    return tau / (6.8 + tau)
 
 
 if __name__ == '__main__':
@@ -122,20 +152,21 @@ if __name__ == '__main__':
 
     proj = pyproj.Proj(proj_str)
 
+    path = '/nobackup/users/stratum/KNMI_testbed/cases/nudge_boundary_HARMONIE_20180907/'
 
     #
     # Read HARMONIE data
     #
     if 'hm_u' not in locals():
         # Read HARMONIE 3D fields
-        hm_u = xr.open_dataset('data/HARMONIE/ua.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc')
-        hm_v = xr.open_dataset('data/HARMONIE/va.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc')
-        hm_t = xr.open_dataset('data/HARMONIE/ta.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc')
-        hm_q = xr.open_dataset('data/HARMONIE/hus.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc')
-        hm_p = xr.open_dataset('data/HARMONIE/ps.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc')
+        hm_u = xr.open_dataset('{}/HARMONIE/ua.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc'.format(path))
+        hm_v = xr.open_dataset('{}/HARMONIE/va.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc'.format(path))
+        hm_t = xr.open_dataset('{}/HARMONIE/ta.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc'.format(path))
+        hm_q = xr.open_dataset('{}/HARMONIE/hus.Slev.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc'.format(path))
+        hm_p = xr.open_dataset('{}/HARMONIE/ps.his.MINI.DOWA_40h12tg2_fERA5_ptF.20180907.nc'.format(path))
 
         # Calculate HARMONIE pressure/height levels
-        grid = Sigma_grid('data/H40_65lev.txt')
+        grid = Sigma_grid('{}/H40_65lev.txt'.format(path))
 
         # Time in seconds since 00 UTC
         time = [float(hm_u['time'][i] - hm_u['time'][0])/1e9 for i in range(hm_u.dims['time'])]
@@ -144,22 +175,23 @@ if __name__ == '__main__':
     jtot_hm = hm_u.dims['y']
     ktot_hm = hm_u.dims['lev']
 
-
-
     #
     # Read DALES data
     #
-    k_les = 1  # {1,4,15,26,42,66,89,111}
-    f0001_u = xr.open_dataset('data/DALES/crossxy.{0:04d}.u.001.nc'.format(k_les))
-    f0001_v = xr.open_dataset('data/DALES/crossxy.{0:04d}.v.001.nc'.format(k_les))
-    f0001_q = xr.open_dataset('data/DALES/crossxy.{0:04d}.qt.001.nc'.format(k_les))
-    f0001_t = xr.open_dataset('data/DALES/crossxy.{0:04d}.thl.001.nc'.format(k_les))
+    k_les = 42  # {1,4,15,26,42,66,89,111}
+    les_u = xr.open_dataset('{0}/DALES/crossxy.{1:04d}.u.001.nc'  .format(path, k_les))
+    les_v = xr.open_dataset('{0}/DALES/crossxy.{1:04d}.v.001.nc'  .format(path, k_les))
+    les_q = xr.open_dataset('{0}/DALES/crossxy.{1:04d}.qt.001.nc' .format(path, k_les))
+    les_t = xr.open_dataset('{0}/DALES/crossxy.{1:04d}.thl.001.nc'.format(path, k_les))
     k_les -= 1
-        
-    lon = np.load('data/DALES/lon_les.npy')
-    lat = np.load('data/DALES/lat_les.npy')
+    
+    les_lwp = xr.open_dataset('{0}/DALES/crossxy.lwp.001.nc'.format(path, k_les))
+    les_alb = albedo(les_lwp['lwpxy'].values)
 
-    z_les = np.loadtxt('data/DALES/prof.inp.001', skiprows=2, usecols=0)
+    lon = np.load('{}/DALES/lon_LES.npy'.format(path))
+    lat = np.load('{}/DALES/lat_LES.npy'.format(path))
+
+    z_les = np.loadtxt('{}/DALES/prof.inp.001'.format(path), skiprows=2, usecols=0)
 
     #
     # Time indices in HARMONIE dan DALES data
@@ -181,12 +213,43 @@ if __name__ == '__main__':
     x0_les = 700000
     y0_les = 1200000
 
+    print('z_LES={}'.format(z_les[k_les]))
 
-    print('z={}'.format(z_les[k_les]))
-
-    # Tes test
+    # Test test
     ztest = np.zeros((jtot_hm, itot_hm), dtype=np.float64)
-    interp_z(ztest, z_hm[::-1,:,:], z_hm[::-1,:,:], 15., itot_hm, jtot_hm, ktot_hm)  
+    interp_z(ztest, z_hm[::-1,:,:], z_hm[::-1,:,:], z_les[k_les], itot_hm, jtot_hm, ktot_hm)  
+    print('z_HARMONIE=', ztest.min(), ztest.max())
+
+
+    if True:
+        #
+        # Clouds
+        #
+        vmin = 0
+        vmax = 1
+
+        #
+        # Plot!
+        #
+        fig = pl.figure(figsize=(6, 6))
+        fig.subplots_adjust(left=0.03, bottom=0.05, right=0.98, top=0.9)
+
+        ax = setup_map(subplot=111)
+        ax.outline_patch.set_visible(False)
+
+        pc = ax.pcolormesh(
+                lon, lat, les_alb[t_les,:,:].T,
+                vmin=vmin, vmax=vmax, cmap=pl.cm.Blues_r, 
+                rasterized=True, transform=ccrs.PlateCarree()) 
+
+        plot_LES_domain(lon, lat, 'r')
+        add_labels()
+
+        cax = fig.add_axes([1-0.45, 0.96, 0.35, 0.015]) 
+        cb = pl.colorbar(pc, orientation='horizontal', cax=cax) 
+        pl.figtext(1-0.46, 0.96, r'albedo (-)', ha='right', fontsize=10)
+
+        pl.savefig('albedo.pdf'.format(z_les[k_les]))
 
 
     if False:
@@ -205,9 +268,10 @@ if __name__ == '__main__':
         # Plot!
         #
         fig = pl.figure(figsize=(8, 4.5))
-        fig.subplots_adjust(left=0.03, bottom=0.05, right=0.98, top=0.88, wspace=0.08)
+        fig.subplots_adjust(left=0.07, bottom=0.05, right=0.98, top=0.88, wspace=0.08)
 
         ax = setup_map(subplot=121)
+        pl.title(r'$z$ = {0:.1f} m'.format(z_les[k_les]), loc='left')
         ax.outline_patch.set_visible(False)
 
         ax.pcolormesh(
@@ -220,26 +284,28 @@ if __name__ == '__main__':
         s = np.s_[ev//2::ev,ev//2::ev]
         pl.barbs(
                 hm_u['lon'].values[s], hm_u['lat'].values[s], ua[s], va[s],
-                length=5, pivot='middle', transform=ccrs.PlateCarree())
+                length=5, pivot='middle', linewidth=0.8, transform=ccrs.PlateCarree())
 
         plot_LES_domain(lon, lat, 'r')
+        add_labels()
 
         ax = setup_map(subplot=122)
         ax.outline_patch.set_visible(False)
 
         pc = ax.pcolormesh(
                 lon, lat, 
-                calc_abs(f0001_u['uxy'][t_les,:,:].values, f0001_v['vxy'][t_les,:,:].values).T, 
+                calc_abs(les_u['uxy'][t_les,:,:].values, les_v['vxy'][t_les,:,:].values).T, 
                 vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, 
                 rasterized=True, transform=ccrs.PlateCarree()) 
 
         ev=100
         s = np.s_[ev//2::ev,ev//2::ev]
         pl.barbs(
-                lon[s], lat[s], f0001_u['uxy'][t_les,:].values[s].T, f0001_v['vxy'][t_les,:].values[s].T,
-                length=5, pivot='middle', transform=ccrs.PlateCarree())
+                lon[s], lat[s], les_u['uxy'][t_les,:].values[s].T, les_v['vxy'][t_les,:].values[s].T,
+                length=5, pivot='middle', linewidth=0.8, transform=ccrs.PlateCarree())
 
         plot_LES_domain(lon, lat, 'r')
+        add_labels(ylabels=False)
 
         cax = fig.add_axes([1-0.28, 0.96, 0.25, 0.02]) 
         cb = pl.colorbar(pc, orientation='horizontal', cax=cax) 
@@ -259,7 +325,10 @@ if __name__ == '__main__':
 
         if k_les == 0:
             vmin = 5
-            vmax=10
+            vmax = 10
+        elif k_les == 41:
+            vmin = 1
+            vmax = 8
         else:
             vmin, vmax = minmax(hus*1e3)
 
@@ -267,9 +336,10 @@ if __name__ == '__main__':
         # Plot!
         #
         fig = pl.figure(figsize=(6, 6))
-        fig.subplots_adjust(left=0.02, bottom=0.04, right=0.98, top=0.9)
+        fig.subplots_adjust(left=0.03, bottom=0.05, right=0.98, top=0.9)
 
         ax = setup_map(subplot=111)
+        pl.title(r'$z$ = {0:.1f} m'.format(z_les[k_les]), loc='left')
         ax.outline_patch.set_visible(False)
 
         ax.pcolormesh(
@@ -278,15 +348,17 @@ if __name__ == '__main__':
                 rasterized=True, transform=ccrs.PlateCarree()) 
 
         pc = ax.pcolormesh(
-                lon, lat, f0001_q['qtxy'][t_les,:,:].values.T*1e3,
+                lon, lat, les_q['qtxy'][t_les,:,:].values.T*1e3,
                 vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, 
                 rasterized=True, transform=ccrs.PlateCarree()) 
 
-        plot_LES_domain(lon, lat, 'k')
+        plot_LES_domain(lon, lat, 'r')
+        add_labels()
 
-        cax = fig.add_axes([1-0.35, 0.96, 0.25, 0.015]) 
+        cax = fig.add_axes([1-0.45, 0.96, 0.35, 0.015]) 
         cb = pl.colorbar(pc, orientation='horizontal', cax=cax) 
-        pl.figtext(1-0.36, 0.96, r'$q_\mathrm{t}$ (g kg$^{-1}$)', ha='right', fontsize=10)
+        pl.figtext(1-0.46, 0.96, r'$q_\mathrm{t}$ (g kg$^{-1}$)', ha='right', fontsize=10)
+
 
         pl.savefig('qt_{0:.0f}m.pdf'.format(z_les[k_les]))
 
@@ -295,103 +367,52 @@ if __name__ == '__main__':
         #
         # Potential temperature
         #
-        vmin = 284
-        vmax = 289
 
-        pl.figure(figsize=(8,8))
-        ax = setup_map(subplot=111)
+        ta = np.zeros((jtot_hm, itot_hm))
+        p  = np.zeros((jtot_hm, itot_hm))
 
-        exn   = (1e5 / hm_p['ps'][t_hm,:,:].values)**(287.05/1004.)
-        hm_th = hm_t['ta'][t_hm,k_hm,:,:].values * exn
-        
-        ax.pcolormesh(
-                hm_u['lon'], hm_u['lat'], hm_th, 
-                vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, transform=ccrs.PlateCarree()) 
+        interp_z(ta, hm_t['ta'][t_hm,::-1,:,:].values, z_hm[::-1,:,:], z_les[k_les], itot_hm, jtot_hm, ktot_hm)  
+        interp_z(p,  p_hm      [     ::-1,:,:],        z_hm[::-1,:,:], z_les[k_les], itot_hm, jtot_hm, ktot_hm)  
 
-        ax.pcolormesh(
-                lon, lat, f0001_t['thlxy'][t,:,:].values.T,
-                vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, transform=ccrs.PlateCarree()) 
+        # Potential temperature
+        th  = ta * (1e5 / p)**(287.05/1004.)
 
-        plot_LES_domain(lon, lat)
-
-
-    if False:
-        #
-        # Wind speed
-        #
-        ua = np.zeros((jtot_hm, itot_hm))
-        va = np.zeros((jtot_hm, itot_hm))
-
-        interp_z(ua, hm_u['ua'][t_hm,::-1,:,:].values, z_hm[::-1,:,:], z_les[k_les], itot_hm, jtot_hm, ktot_hm)  
-        interp_z(va, hm_v['va'][t_hm,::-1,:,:].values, z_hm[::-1,:,:], z_les[k_les], itot_hm, jtot_hm, ktot_hm)  
-
-        vmin, vmax = minmax(calc_abs(ua, va))
+        if k_les == 0:
+            vmin = 284
+            vmax = 289
+        else:
+            vmin, vmax = minmax(th)
 
         #
         # Plot!
         #
-        pl.figure(figsize=(8,8))
+        fig = pl.figure(figsize=(6, 6))
+        fig.subplots_adjust(left=0.02, bottom=0.04, right=0.98, top=0.9)
+
         ax = setup_map(subplot=111)
-
-        ax.pcolormesh(
-                hm_u['lon'], hm_u['lat'], 
-                calc_abs(ua, va), 
-                vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, transform=ccrs.PlateCarree()) 
-
-        ax.pcolormesh(
-                lon, lat, 
-                calc_abs(f0001_u['uxy'][t_les,:,:].values, f0001_v['vxy'][t_les,:,:].values).T, 
-                vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, transform=ccrs.PlateCarree()) 
-
-
-
-    if False:
-        pl.figure()
-        #ax = setup_map(subplot=121)
-        #ax.pcolormesh(
-        #        hm_u['lon'], hm_u['lat'], 
-        #        calc_abs(hm_u['ua'][t_hm,k_hm,:,:].values, hm_v['va'][t_hm,k_hm,:,:].values), 
-        #        vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, transform=ccrs.PlateCarree()) 
-
-        ## Overlay LES domain
-        #plot_LES_domain(lon, lat)
-
-        #ax = setup_map(subplot=111)
-
-        #pl.streamplot(
-        #        hm_u['lon'].values, hm_u['lat'].values,
-        #        hm_u['ua'][t_hm,k_hm,:,:].values, hm_v['va'][t_hm,k_hm,:,:].values,
-        #        transform=ccrs.PlateCarree())
+        pl.title(r'$z$ = {0:.1f} m'.format(z_les[k_les]), loc='left')
+        ax.outline_patch.set_visible(False)
         
+        ax.pcolormesh(
+                hm_u['lon'], hm_u['lat'], th, 
+                vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, 
+                rasterized=True, transform=ccrs.PlateCarree()) 
 
-        #ax.pcolormesh(
-        #        hm_u['lon'], hm_u['lat'], 
-        #        calc_abs(hm_u['ua'][t_hm,k_hm,:,:].values, hm_v['va'][t_hm,k_hm,:,:].values), 
-        #        vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, transform=ccrs.PlateCarree()) 
+        pc=ax.pcolormesh(
+                lon, lat, les_t['thlxy'][t_les,:,:].values.T,
+                vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, 
+                rasterized=True, transform=ccrs.PlateCarree()) 
 
-        #ax.pcolormesh(
-        #        lon, lat, 
-        #        calc_abs(f0001_u['uxy'][t,:,:].values, f0001_v['vxy'][t,:,:].values).T, 
-        #        vmin=vmin, vmax=vmax, cmap=pl.cm.RdBu_r, transform=ccrs.PlateCarree()) 
+        plot_LES_domain(lon, lat)
 
-        #plot_LES_domain(lon, lat)
+        cax = fig.add_axes([1-0.45, 0.96, 0.35, 0.015]) 
+        cb = pl.colorbar(pc, orientation='horizontal', cax=cax) 
+        pl.figtext(1-0.46, 0.96, r'$\theta$ (K)', ha='right', fontsize=10)
+
+        pl.savefig('T_{0:.0f}m.pdf'.format(z_les[k_les]))
+
+
 
 
     
-    
-
-
-
-    if False:
-        pl.figure()
-        pl.subplot(121)
-        pl.streamplot(hm_u['x'].values, hm_u['y'].values, hm_u['ua'][t_hm,k_hm,:,:].values, hm_v['va'][t_hm,k_hm,:,:].values, density=1)
-        pl.xlim(500000, 1300000)
-        pl.ylim(1000000, 1800000)
-
-        pl.subplot(122)
-        pl.streamplot(f0001_u['xt'].values+x0_les, f0001_u['yt'].values+y0_les, f0001_u['uxy'][t_les,:,:].values, f0001_v['vxy'][t_les,:,:].values, density=1)
-        pl.xlim(500000, 1300000)
-        pl.ylim(1000000, 1800000)
-
-
+   
