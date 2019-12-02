@@ -13,6 +13,13 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
 
+# Enable LaTeX plotting
+from matplotlib import rc
+rc('text', usetex=True)
+rc('font', size=13)
+rc('legend', fontsize=11)
+rc('text.latex', preamble=r'\usepackage{sansmathfonts}')
+
 proj_str = '+proj=lcc +lat_1=52.500000 +lat_2=52.500000 +lat_0=52.500000 +lon_0=.000000 +k_0=1.0 +x_0=649536.512574 +y_0=1032883.739533 +a=6371220.000000 +b=6371220.000000'
 
 
@@ -66,8 +73,8 @@ def add_labels(gridlines=True, xlabels=True, ylabels=True):
     fig.canvas.draw()
 
     # Define gridline locations and draw the lines using cartopy's built-in gridliner:
-    xticks = np.arange(-5, 11, 2)
-    yticks = np.arange(49, 65, 2)
+    xticks = np.arange(-10, 20, 2)
+    yticks = np.arange(45, 65, 2)
     if gridlines:
         ax.gridlines(xlocs=xticks, ylocs=yticks, linestyle=':', color='0.3')
 
@@ -152,7 +159,8 @@ if __name__ == '__main__':
 
     proj = pyproj.Proj(proj_str)
 
-    path = '/nobackup/users/stratum/KNMI_testbed/cases/nudge_boundary_HARMONIE_20180907/'
+    #path = '/nobackup/users/stratum/KNMI_testbed/cases/nudge_boundary_HARMONIE_20180907/'
+    path = '/Users/bart/meteo/data/KNMI_testbed/nudge_boundary_HARMONIE_20180907/data/'
 
     #
     # Read HARMONIE data
@@ -221,7 +229,23 @@ if __name__ == '__main__':
     print('z_HARMONIE=', ztest.min(), ztest.max())
 
 
-    if True:
+    if False:
+        #
+        # Plot LES domain
+        #
+
+        fig = pl.figure(figsize=(5, 5.))
+        fig.subplots_adjust(left=0.11, bottom=0.07, right=0.98, top=0.98, wspace=0.08)
+
+        ax = setup_map(subplot=111, extent=[-5, 12, 50, 60])
+        ax.outline_patch.set_visible(False)
+
+        plot_LES_domain(lon, lat, 'r')
+        add_labels()
+
+        pl.savefig('large_les_domain.pdf')
+
+    if False:
         #
         # Clouds
         #
@@ -314,7 +338,7 @@ if __name__ == '__main__':
         pl.savefig('U_{0:.0f}m.pdf'.format(z_les[k_les]))
 
     
-    if False:
+    if True:
         #
         # Specific humidity
         #
