@@ -10,6 +10,7 @@ def replace_namelist_value(namelist, variable, new_value):
         for line in lines:
             source.write(re.sub(r'({}).*'.format(variable), r'\1 = {}'.format(new_value), line))
 
+
 def replace_value(file, old, new):
     with open(file, 'r') as source:
         lines = source.readlines()
@@ -17,12 +18,14 @@ def replace_value(file, old, new):
         for line in lines:
             source.write(re.sub(old, new, line))
 
+
 def copy(src, dst):
     # Prevent overwriting existing files
     if not os.path.exists(dst):
         copyfile(src, dst)
     else:
         sys.exit('Cannot copy {} to {}: file exists'.format(src, dst))
+
 
 # Process command line input (old and new expnr)
 old = int(sys.argv[1])
