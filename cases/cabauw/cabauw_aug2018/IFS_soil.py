@@ -25,7 +25,7 @@ def array_to_string(arr):
 # Soil types
 # ------------------
 class Soil_type:
-    def __init__(self, phi_sat, phi_fc, phi_wp, 
+    def __init__(self, phi_sat, phi_fc, phi_wp,
                  gammasat, nvg, lvg, alphavg, phir, name):
 
         # Save soil properties
@@ -61,11 +61,11 @@ class Soil_type:
 
 
 # ECMWF soil types (a few of them at least...) and Wosten's soil
-soil_fine     = Soil_type(phi_sat=0.520, phi_fc=0.448, phi_wp=0.279, 
-                          gammasat=2.87e-6, nvg=1.10, lvg=-1.977, 
+soil_fine     = Soil_type(phi_sat=0.520, phi_fc=0.448, phi_wp=0.279,
+                          gammasat=2.87e-6, nvg=1.10, lvg=-1.977,
                           alphavg=3.67, phir=0.01, name='ECMWF fine')
 
-soil_med_fine = Soil_type(phi_sat=0.430, phi_fc=0.383, phi_wp=0.133, 
+soil_med_fine = Soil_type(phi_sat=0.430, phi_fc=0.383, phi_wp=0.133,
                           gammasat=0.26e-6, nvg=1.25, lvg=-0.588,
                           alphavg=0.83, phir=0.01, name='ECMWF medium fine')
 
@@ -92,12 +92,12 @@ if __name__ == '__main__':
     phi  = np.array([0.3106892,  0.2866719,  0.29377648, 0.35078132])
     phi2 = soil_med_fine.rescale(phi, soil_fine)
     phi3 = soil_med_fine.rescale(phi, soil_wosten)
-    
+
     f21 = soil_med_fine.calc_f2(phi)
     f22 = soil_wosten.  calc_f2(phi2)
-    
+
     cc = pl.cm.bwr(np.linspace(0,1,4))
-    
+
     def scatter_phi(phi, x, ha='left'):
         pl.scatter(np.ones(3)*x, phi, marker='x', color='k')
         labels = ['wp','fc','sat']
