@@ -60,11 +60,13 @@ if __name__ == '__main__':
     # Settings
     # --------------------
 
-    expname   = 'cabauw_20160804_20160818_ref_lr'
-    expnr     = 1       # DALES experiment number
-    iloc      = 7+12    # Location in DDH/NetCDF files (7+12 = 10x10km average Cabauw)
-    n_accum   = 1       # Number of time steps to accumulate in the forcings
-    warmstart = False   # Run each day/run as a warm start from previous exp
+    expname     = 'cabauw_20160804_20160818_ref_lr'
+    expnr       = 1       # DALES experiment number
+    iloc        = 7+12    # Location in DDH/NetCDF files (7+12 = 10x10km average Cabauw)
+    n_accum     = 1       # Number of time steps to accumulate in the forcings
+    warmstart   = False   # Run each day/run as a warm start from previous exp
+    auto_submit = False   # Directly submit the experiments (ECMWF only..)
+
 
     if expnr == 1:
         # 24 hour runs (cold or warm starts), starting at 00 UTC.
@@ -93,7 +95,7 @@ if __name__ == '__main__':
         path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
         path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/{}'.format(expname)
 
-    elif 'barts-mbp' in host or 'Barts-MacBook-Pro.local' in host:
+    elif 'barts-mbp' in host or 'Barts-MBP' in host or 'Barts-MacBook-Pro.local' in host:
         # Macbook
         path     = '/Users/bart/meteo/data/HARMONIE_LES_forcing/'
         path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
@@ -262,10 +264,11 @@ if __name__ == '__main__':
                             os.symlink(f_in, f_out)
 
         # Submit task, accounting for job dependencies in case of warm start
-        if start_is_warm:
-            run_id = submit('run.PBS', workdir, dependency=prev_run_id)
-        else:
-            run_id = submit('run.PBS', workdir)
+        if auto_submit:
+            if start_is_warm:
+                run_id = submit('run.PBS', workdir, dependency=prev_run_id)
+            else:
+                run_id = submit('run.PBS', workdir)
 
         # Create and submit post-processing task
         create_postscript('P{0:03d}_{1}'.format(expnr, n), walltime=24, work_dir=workdir, expnr=expnr,
@@ -274,7 +277,8 @@ if __name__ == '__main__':
 
         shutil.move('post.PBS', '{}/post.PBS'.format(workdir))
 
-        post_id = submit('post.PBS', workdir, dependency=run_id)
+        if auto_submit:
+            post_id = submit('post.PBS', workdir, dependency=run_id)
 
         # Advance time and store some settings
         date += dt_exp
