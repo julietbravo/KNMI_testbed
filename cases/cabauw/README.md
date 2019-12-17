@@ -48,7 +48,36 @@ Without errors, this should produce the `dales4` executable in the `build_releas
 ### 2. Dynamic tendencies HARMONIE
 ----
 
-blabla
+
+![](https://i.stack.imgur.com/EwFEVl.png)
+
+    # Single column:
+    0  = FINO1,        lat=54.01, lon=6.59
+    1  = Goeree,       lat=51.93, lon=3.67
+    2  = Europlatform, lat=52.00, lon=3.27
+    3  = K13,          lat=53.22, lon=3.22
+    4  = HKZ,          lat=52.30, lon=4.10
+    5  = P11B,         lat=52.36, lon=3.34
+    6  = F3-FB-1,      lat=54.85, lon=4.70
+    7  = Cabauw,       lat=51.97, lon=4.90
+    8  = Loobos,       lat=52.17, lon=5.74
+    9  = Lutjewad,     lat=53.40, lon=6.35
+    10 = Schiphol,     lat=52.31, lon=4.76
+    11 = Rotterdam,    lat=51.91, lon=4.47
+    
+    # 10x10 & 30x30 km mean:
+    12 / 24 = FINO1
+    13 / 25 = Goeree
+    14 / 26 = Europlatform
+    15 / 27 = K13
+    16 / 28 = HKZ
+    17 / 29 = P11B
+    18 / 30 = F3-FB-1
+    19 / 31 = Cabauw
+    20 / 32 = Loobos
+    21 / 33 = Lutjewad
+    22 / 34 = Schiphol
+    23 / 35 = Rotterdam
 
 ----
 ### 3. ERA5 soil temperature/moisture
