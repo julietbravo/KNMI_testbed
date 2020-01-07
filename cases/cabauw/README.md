@@ -4,7 +4,7 @@ This readme file briefly describes the steps needed to setup and run DALES on EC
 ----
 ### 1. DALES
 ----
-As described in the DOWA/KNMI technical report (TO-DO: ADD LINK), the dynamic forcings for LES consist of the total dynamic tendencies of the liquid water potential temperature, total specific humidity, and both horizontal wind components. The default DALES version can not handle large-scale/dynamic tendencies for momentum, so a slightly modified version of DALES is required, which can be obtained using `git` (use `module load git` if required):
+As described in the DOWA/KNMI technical report (https://www.dutchoffshorewindatlas.nl/publications/reports/2019/12/10/knmi-report---downscaling-harmonie-arome-with-large-eddy-simulation), the dynamic forcings for LES consist of the total dynamic tendencies of the liquid water potential temperature, total specific humidity, and both horizontal wind components. The default DALES version can not handle large-scale/dynamic tendencies for momentum, so a slightly modified version of DALES is required, which can be obtained on the ECMWF login nodes using `git` (use `module load git` if required):
 
     git clone https://github.com/julietbravo/dales.git
     cd dales
@@ -47,10 +47,14 @@ Next, generate the `makefile` with `cmake`, and compile the code:
 Without errors, this should produce the `dales4` executable in the `build_release/src` directory.
 
 ----
-### 2. Dynamic tendencies HARMONIE
+### 2. Dynamic tendencies HARMONIE & ERA5 data
 ----
 
-The dynamic tendencies are available (2016 + 2017) for 12 locations, as shown in the figure below. The data is stored in the ECMWF tape archive under `ec:/nkl/harmonie/DOWA/DOWA_40h12tg2_fERA5/LES_forcing/`, as compressed monthly files. Copy the required files to some location at `/scratch`:
+The dynamic tendencies are available (2016 + 2017) for 12 locations, as shown in the figure below. 
+
+![](https://i.stack.imgur.com/EwFEVl.png)
+
+The data is stored in the ECMWF tape archive under `ec:/nkl/harmonie/DOWA/DOWA_40h12tg2_fERA5/LES_forcing/`, as compressed monthly files. Copy the required files to some location at `/scratch`:
 
     cd $SCRATCH
     mkdir LES_forcing
@@ -58,7 +62,7 @@ The dynamic tendencies are available (2016 + 2017) for 12 locations, as shown in
     ecp ec:/nkl/harmonie/DOWA/DOWA_40h12tg2_fERA5/LES_forcing/LES_forcings_201608.tar.gz .
     tar -zxvf LES_forcings_201608.tar.gz
 
-The land surface is initialised from ERA5 data, which can easily be retrieved from MARS with a simple script (here called `request.mars`:
+The land surface is initialised from ERA5 data, which can easily be retrieved from MARS with a simple script (here called `request.mars`):
 
     retrieve,
     class=ea,
@@ -79,12 +83,19 @@ which is passed to MARS:
     
 The resulting GRIB file can be converted to NetCDF with `grib_to_netcdf`:
 
-    grib_to_netcdf soil_201608.grib -o soil_201608.nc
+    grib_to_netcdf surface_an.grib -o soil_201608.nc
+
+That should provide all the input files required to run the DALES testbed!
+
+----
+### 3. Testbed setup
+----
 
 
 
 
-![](https://i.stack.imgur.com/EwFEVl.png)
+
+
 
     # Single column:
     0  = FINO1,        lat=54.01, lon=6.59
@@ -114,8 +125,4 @@ The resulting GRIB file can be converted to NetCDF with `grib_to_netcdf`:
     22 / 34 = Schiphol
     23 / 35 = Rotterdam
 
-----
-### 3. ERA5 soil temperature/moisture
-----
 
-blabla
