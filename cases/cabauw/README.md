@@ -50,6 +50,39 @@ Without errors, this should produce the `dales4` executable in the `build_releas
 ### 2. Dynamic tendencies HARMONIE
 ----
 
+The dynamic tendencies are available (2016 + 2017) for 12 locations, as shown in the figure below. The data is stored in the ECMWF tape archive under `ec:/nkl/harmonie/DOWA/DOWA_40h12tg2_fERA5/LES_forcing/`, as compressed monthly files. Copy the required files to some location at `/scratch`:
+
+    cd $SCRATCH
+    mkdir LES_forcing
+    cd LES_forcing
+    ecp ec:/nkl/harmonie/DOWA/DOWA_40h12tg2_fERA5/LES_forcing/LES_forcings_201608.tar.gz .
+    tar -zxvf LES_forcings_201608.tar.gz
+
+The land surface is initialised from ERA5 data, which can easily be retrieved from MARS with a simple script (here called `request.mars`:
+
+    retrieve,
+    class=ea,
+    expver=1,
+    stream=oper,
+    date=2016-08-01/to/2016-08-31,
+    area=52.971/3.927/50.971/5.927,
+    grid=0.3/0.3,
+    levtype=sfc,
+    type=an,
+    time=0/to/23/by/1,
+    param=39.128/40.128/41.128/42.128/139.128/170.128/183.128/236.128/43.128,
+    target="surface_an.grib"
+
+which is passed to MARS:
+
+    mars request.mars
+    
+The resulting GRIB file can be converted to NetCDF with `grib_to_netcdf`:
+
+    grib_to_netcdf soil_201608.grib -o soil_201608.nc
+
+
+
 
 ![](https://i.stack.imgur.com/EwFEVl.png)
 
