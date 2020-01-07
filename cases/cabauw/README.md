@@ -77,7 +77,7 @@ The land surface is initialised from ERA5 data, which can easily be retrieved fr
     param=39.128/40.128/41.128/42.128/139.128/170.128/183.128/236.128/43.128,
     target="surface_an.grib"
 
-which is passed to MARS:
+which is passed to MARS as:
 
     mars request.mars
     
@@ -90,6 +90,21 @@ That should provide all the input files required to run the DALES testbed!
 ----
 ### 3. Testbed setup
 ----
+
+The testbed code is also hosted at github, and therefore has to be downloaded from the login nodes. Exit cca, clone the git repository, copy the files to cca/ccb, and login to cca/ccb again:
+
+    exit
+    cd ~
+    git clone https://github.com/julietbravo/KNMI_testbed.git
+    scp -r KNMI_testbed cca:~/
+    ssh cca
+    
+The Cabauw case is located in the `cases/cabauw` subdirectory:
+
+    cd KNMI_testbed/cases/cabauw
+    
+The main script used to drive the testbed is `create_input.py`
+    
 
 
 
