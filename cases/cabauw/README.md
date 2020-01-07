@@ -7,12 +7,14 @@ This readme file briefly describes the steps needed to setup and run DALES on EC
 As described in the DOWA/KNMI technical report (TO-DO: ADD LINK), the dynamic forcings for LES consist of the total dynamic tendencies of the liquid water potential temperature, total specific humidity, and both horizontal wind components. The default DALES version can not handle large-scale/dynamic tendencies for momentum, so a slightly modified version of DALES is required, which can be obtained using `git` (use `module load git` if required):
 
     git clone https://github.com/julietbravo/dales.git
+    cd dales
     git checkout to4.2_knmi_testbed
     
 At some point, these modifications will be merged in the main release of DALES. 
 
 DALES needs to be compiled on the `cca` or `ccb` compute nodes, so first copy the code to the home directory at `cca/ccb` (both compute nodes share the same home directory):
 
+    cd ..
     scp -r dales cca:~/
 
 Next, login at `cca` or `ccb` and go the the `dales` directory:
