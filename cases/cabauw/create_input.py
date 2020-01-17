@@ -76,9 +76,14 @@ if __name__ == '__main__':
     eps    = datetime.timedelta(hours=1)
 
     # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
-    path     = '/Users/bart/meteo/data/HARMONIE/LES_forcings/'
-    path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
-    path_out = '/Users/bart/meteo/data/KNMI_testbed_runs/'
+    #path     = '/Users/bart/meteo/data/HARMONIE/LES_forcings/'
+    #path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
+    #path_out = '/Users/bart/meteo/data/KNMI_testbed_runs/'
+
+    path = '/scratch/ms/nl/nkbs/LES_forcing/'
+    path_e5 = '/scratch/ms/nl/nkbs/LES_forcing/'
+    path_out = '/scratch/ms/nl/nkbs/DALES_runs/'
+
 
     # ------------------------
     # End settings
@@ -104,7 +109,10 @@ if __name__ == '__main__':
 
         # Get list of NetCDF files which need to be processed, and open them with xarray
         nc_files = get_file_list(path, date+offset, date+t_exp+eps)
-        nc_data  = xr.open_mfdataset(nc_files, combine='by_coords')
+        try:
+            nc_data  = xr.open_mfdataset(nc_files, combine='by_coords')
+        except TypeError:
+            nc_data  = xr.open_mfdataset(nc_files)
 
         # Get indices of start/end date/time in `nc_data`
         t0, t1 = get_start_end_indices(date, date + t_exp + eps, nc_data.time.values)
@@ -183,7 +191,7 @@ if __name__ == '__main__':
         # Copy/move files to work directory
         exp_str = '{0:03d}'.format(expnr)
         to_copy = ['namoptions.{}'.format(exp_str), 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'dales4',
-                   'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str)]
+                   'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str), 'mergecross.py']
         to_move = ['backrad.inp.{}.nc'.format(exp_str), 'lscale.inp.{}'.format(exp_str),\
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
                    'nudge.inp.{}'.format(exp_str), 'run.PBS']
