@@ -75,7 +75,7 @@ The land surface is initialised from ERA5 data, which can easily be retrieved fr
     type=an,
     time=0/to/23/by/1,
     param=39.128/40.128/41.128/42.128/139.128/170.128/183.128/236.128/43.128,
-    target="surface_an.grib"
+    target="soil_201608.grib"
 
 which is passed to MARS as:
 
@@ -83,7 +83,7 @@ which is passed to MARS as:
     
 The resulting GRIB file can be converted to NetCDF with `grib_to_netcdf`:
 
-    grib_to_netcdf surface_an.grib -o soil_201608.nc
+    grib_to_netcdf soil_201608.grib -o soil_201608.nc
 
 That should provide all the input files required to run the DALES testbed!
 
@@ -103,15 +103,8 @@ The Cabauw case is located in the `cases/cabauw` subdirectory:
 
     cd KNMI_testbed/cases/cabauw
     
-The main script used to drive the testbed is `create_input.py`
+The main script used to drive the testbed is `create_input.py`. Modify the script so the paths point to the LES forcings (`path`), ERA5 soil data (`path_e5`), and output directory for the experiments (`path_out`). The variable `iloc` defines which location is used:
     
-
-
-
-
-
-
-
     # Single column:
     0  = FINO1,        lat=54.01, lon=6.59
     1  = Goeree,       lat=51.93, lon=3.67
@@ -140,4 +133,5 @@ The main script used to drive the testbed is `create_input.py`
     22 / 34 = Schiphol
     23 / 35 = Rotterdam
 
+Before running the script, the `dales4` executable should be copied to the `cases/cabauw` directory. Running the `create_input.py` script should now create the full case setup in the `path_out` directory, including the `run.PBS` and `post.PBS` scripts. The submission can be automated by enabling the `auto_submit` switch in `create_input.py`.
 
