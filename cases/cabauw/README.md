@@ -133,4 +133,5 @@ The main script used to drive the testbed is `create_input.py`. Modify the scrip
     22 / 34 = Schiphol
     23 / 35 = Rotterdam
 
+Before running the script, the `dales4` executable should be copied to the `cases/cabauw` directory. Running the `create_input.py` script should now create the full case setup in the `path_out` directory, including the `run.PBS` and `post.PBS` scripts. The submission can be automated by enabling the `auto_submit` switch in `create_input.py`.
 
