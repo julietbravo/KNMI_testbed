@@ -16,6 +16,7 @@ from DALES_tools import *
 from IFS_soil import *
 from pbs_scripts import create_runscript, create_postscript
 
+
 def execute_c(task):
     """
     Execute `task` and return return code
@@ -60,74 +61,31 @@ if __name__ == '__main__':
     # Settings
     # --------------------
 
-    expname     = 'cabauw_20160804_20160818_ref_lr'
+    expname     = 'cabauw_20160804_20160818'
     expnr       = 1       # DALES experiment number
     iloc        = 7+12    # Location in DDH/NetCDF files (7+12 = 10x10km average Cabauw)
     n_accum     = 1       # Number of time steps to accumulate in the forcings
     warmstart   = False   # Run each day/run as a warm start from previous exp
     auto_submit = False   # Directly submit the experiments (ECMWF only..)
 
-
-    if expnr == 1:
-        # 24 hour runs (cold or warm starts), starting at 00 UTC.
-        start  = datetime.datetime(year=2016, month=8, day=4)
-        end    = datetime.datetime(year=2016, month=8, day=19)
-        dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
-        t_exp  = datetime.timedelta(hours=24)   # Length of experiment
-        eps    = datetime.timedelta(hours=1)
-
-    elif expnr == 2:
-        # 8 hour runs (cold start), Small domain, high resolution, starting at 17 UTC
-        start  = datetime.datetime(year=2016, month=8, day=4, hour=17)
-        end    = datetime.datetime(year=2016, month=8, day=19, hour=17)
-        dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
-        t_exp  = datetime.timedelta(hours=12)   # Length of experiment
-        eps    = datetime.timedelta(hours=1)
-    else:
-        raise Exception('Undefined experiment number')
-
+    # 24 hour runs (cold or warm starts), starting at 00 UTC.
+    start  = datetime.datetime(year=2016, month=8, day=4)
+    end    = datetime.datetime(year=2016, month=8, day=5)
+    dt_exp = datetime.timedelta(hours=24)   # Time interval between experiments
+    t_exp  = datetime.timedelta(hours=24)   # Length of experiment
+    eps    = datetime.timedelta(hours=1)
 
     # Paths to the LES forcings, and ERA5/Cabauw for soil initialisation
-    host = socket.gethostname()
-    if 'cca' in host or 'ccb' in host or 'ecgb' in host:
-        # ECMWF CCA/CCB/ECGATE
-        path     = '/scratch/ms/nl/nkbs/LES_forcing'
-        path_e5  = '/scratch/ms/nl/nkbs/ERA_soil'
-        path_out = '/scratch/ms/nl/nkbs/DALES/KNMI_testbed/{}'.format(expname)
-
-    elif 'barts-mbp' in host or 'Barts-MBP' in host or 'Barts-MacBook-Pro.local' in host:
-        # Macbook
-        path     = '/Users/bart/meteo/data/HARMONIE_LES_forcing/'
-        path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
-        path_out = '/Users/bart/meteo/models/KNMI_testbed/cases/cabauw_aug2018/{}'.format(expname)
-
-    elif 'knmi' in host:
-        # KNMI desktop
-        path     = '/nobackup/users/stratum/DOWA/LES_forcing/'
-        path_e5  = '/nobackup/users/stratum/ERA5/soil/'
-        path_out = '/nobackup/users/stratum/KNMI_testbed/cases/cabauw_aug2018/{}'.format(expname)
-
-    elif 'arch' in host:
-        # Home desktop BvS
-        path     = '/home/scratch1/meteo_data/Harmonie_LES_forcing/'
-        path_e5  = '/home/scratch1/meteo_data/ERA5/soil/'
-        path_out = '/home/scratch1/meteo_data/KNMI_testbed/cases/cabauw_aug2018/'
-
-    else:
-        raise Exception('Unknown compute system!')
+    path     = '/Users/bart/meteo/data/HARMONIE/LES_forcings/'
+    path_e5  = '/Users/bart/meteo/data/ERA5/soil/'
+    path_out = '/Users/bart/meteo/data/KNMI_testbed_runs/'
 
     # ------------------------
     # End settings
     # ------------------------
 
     # Create stretched vertical grid for LES
-    if expnr == 1:
-        # Grid for full diurnal cycle
-        grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
-        #grid = Grid_stretched(kmax=64, dz0=30, nloc1=40, nbuf1=20, dz1=150)    # Debug
-    elif expnr == 2:
-        # High resolution grid for nocturnal runs
-        grid = Grid_stretched(kmax=160, dz0=2, nloc1=120, nbuf1=30, dz1=10)
+    grid = Grid_stretched(kmax=160, dz0=20, nloc1=80, nbuf1=20, dz1=150)
     #grid.plot()
 
     date = start
@@ -146,7 +104,7 @@ if __name__ == '__main__':
 
         # Get list of NetCDF files which need to be processed, and open them with xarray
         nc_files = get_file_list(path, date+offset, date+t_exp+eps)
-        nc_data  = xr.open_mfdataset(nc_files)
+        nc_data  = xr.open_mfdataset(nc_files, combine='by_coords')
 
         # Get indices of start/end date/time in `nc_data`
         t0, t1 = get_start_end_indices(date, date + t_exp + eps, nc_data.time.values)
@@ -225,7 +183,7 @@ if __name__ == '__main__':
         # Copy/move files to work directory
         exp_str = '{0:03d}'.format(expnr)
         to_copy = ['namoptions.{}'.format(exp_str), 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'dales4',
-                   'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str), 'mergecross.py']
+                   'prof.inp.{}'.format(exp_str), 'scalar.inp.{}'.format(exp_str)]
         to_move = ['backrad.inp.{}.nc'.format(exp_str), 'lscale.inp.{}'.format(exp_str),\
                    'ls_flux.inp.{}'.format(exp_str), 'ls_fluxsv.inp.{}'.format(exp_str),\
                    'nudge.inp.{}'.format(exp_str), 'run.PBS']
@@ -284,4 +242,6 @@ if __name__ == '__main__':
         date += dt_exp
         n += 1
         prev_workdir = workdir
-        prev_run_id = run_id
+
+        if auto_submit:
+            prev_run_id = run_id

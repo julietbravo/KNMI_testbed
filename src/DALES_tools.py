@@ -405,7 +405,11 @@ def get_file_list(path, starttime, endtime):
     success = True
     for t in range(n_cycles):
         date    = starttime + t * datetime.timedelta(hours=3)
-        in_file = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/LES_forcing_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.\
+
+        #in_file = '{0:}/{1:04d}/{2:02d}/{3:02d}/{4:02d}/LES_forcing_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.\
+        #    format(path, date.year, date.month, date.day, date.hour)
+
+        in_file = '{0:}/LES_forcing_{1:04d}{2:02d}{3:02d}{4:02d}.nc'.\
             format(path, date.year, date.month, date.day, date.hour)
 
         files.append(in_file)
